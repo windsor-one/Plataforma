@@ -30,6 +30,7 @@ import type {
 type ManagedCollection = "customers" | "reservations" | "payments" | "users";
 
 const normalizedEmail = (email: string) => email.trim().toLowerCase();
+const bootstrapAdminEmail = normalizedEmail(import.meta.env.VITE_BOOTSTRAP_ADMIN_EMAIL || "");
 
 export function subscribeCollection<T extends { id: string }>(
   name: ManagedCollection,
@@ -96,7 +97,19 @@ export async function completeInvitationOnboarding(user: User): Promise<UserProf
 
     if (profileSnapshot.exists()) return;
     if (!invitationSnapshot.exists()) {
-      throw new Error("No existe una invitación activa para este correo. Pide al administrador que te invite.");
+      if (!bootstrapAdminEmail || email !== bootstrapAdminEmail) {
+        throw new Error("No existe una invitación activa para este correo. Pide al administrador que te invite.");
+      }
+
+      transaction.set(profileRef, {
+        email,
+        displayName: user.displayName || email.split("@")[0],
+        role: "admin",
+        status: "active",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      return;
     }
 
     const invitation = invitationSnapshot.data() as Omit<Invitation, "id">;
@@ -138,4 +151,3 @@ export async function deleteEmployeeProfile(employeeId: string) {
 export async function updateOwnProfile(userId: string, displayName: string) {
   await updateDoc(doc(db, "users", userId), { displayName: displayName.trim(), updatedAt: serverTimestamp() });
 }
-

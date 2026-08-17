@@ -17,6 +17,10 @@ service cloud.firestore {
       return activeEmployee() && profile().data.role == 'admin';
     }
 
+    function bootstrapAdmin() {
+      return signedIn() && request.auth.token.email == 'alexhrnndz32@gmail.com';
+    }
+
     function immutableFieldsUnchanged(keys) {
       return request.resource.diff(resource).unchangedKeys().hasAll(keys);
     }
@@ -27,13 +31,18 @@ service cloud.firestore {
       allow list: if admin();
 
       // El perfil inicial se crea únicamente a partir de una invitación pendiente y vinculada al correo autenticado.
-      allow create: if signedIn()
+      allow create: if (signedIn()
         && request.auth.uid == userId
         && exists(/databases/$(database)/documents/invitations/$(request.auth.token.email))
         && get(/databases/$(database)/documents/invitations/$(request.auth.token.email)).data.status == 'pending'
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.role == get(/databases/$(database)/documents/invitations/$(request.auth.token.email)).data.role
-        && request.resource.data.status == 'active';
+        && request.resource.data.status == 'active')
+        || (bootstrapAdmin()
+          && request.auth.uid == userId
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.role == 'admin'
+          && request.resource.data.status == 'active');
 
       // Un empleado solo puede cambiar su nombre. Rol, estado y correo se mantienen fuera de su alcance.
       allow update: if admin() || (

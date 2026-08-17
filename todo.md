@@ -22,3 +22,7 @@
 - [ ] Crear un usuario administrador, su perfil `users/{uid}` y verificar su estado activo.
 - [ ] Autorizar `windsor-one.github.io` y comprobar el inicio de sesión final en la plataforma publicada.
 - [ ] Confirmar por lectura de consola que las reglas activas dejaron de ser `allow read, write: if false` antes de continuar con cualquier otra configuración.
+- [ ] Verificar que las variables de Firebase estén incluidas en la compilación de producción publicada.
+- [ ] Confirmar que el dominio publicado está autorizado para Firebase Authentication.
+- [ ] Ejecutar una prueba real de inicio de sesión y operaciones administrativas desde GitHub Pages.
+- [ ] Permitir que la primera cuenta autenticada cree únicamente su propio perfil administrativo cuando todavía no exista ningún usuario de la plataforma.

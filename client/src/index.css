@@ -1,0 +1,48 @@
+/**
+ * Sala de Operaciones Editorial: tinta mineral, jade operativo y una jerarquía suiza cálida.
+ * Cada superficie es plana y legible; el color se reserva para estados y decisiones.
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Manrope", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border); --color-destructive: var(--destructive);
+}
+
+:root { --background: oklch(0.975 0.005 92); --foreground: oklch(0.205 0.027 205); --card: oklch(1 0 0); --card-foreground: oklch(0.205 0.027 205); --muted: oklch(0.946 0.01 92); --muted-foreground: oklch(0.49 0.022 205); --border: oklch(0.89 0.014 180); --destructive: oklch(0.55 0.19 25); --radius: 0.9rem; }
+.dark { --background: oklch(0.16 0.018 205); --foreground: oklch(0.93 0.012 100); --card: oklch(0.205 0.02 205); --card-foreground: oklch(0.93 0.012 100); --muted: oklch(0.25 0.018 205); --muted-foreground: oklch(0.7 0.022 185); --border: oklch(0.34 0.02 205); --destructive: oklch(0.72 0.16 25); }
+
+@layer base { * { @apply border-border; } body { @apply bg-background text-foreground antialiased; } button, input, select, textarea { font: inherit; } button:not(:disabled) { cursor: pointer; } button:disabled { cursor: not-allowed; opacity: .6; } }
+@layer components {
+  .app-shell { @apply min-h-screen lg:grid lg:grid-cols-[17.5rem_minmax(0,1fr)]; }
+  .sidebar-panel { @apply flex h-full min-h-screen flex-col border-r bg-card px-4 py-7; }
+  .side-link { @apply flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-muted-foreground transition-[transform,background-color,color] duration-150 hover:bg-muted hover:text-foreground active:scale-[.98]; }
+  .side-link.active { @apply bg-[#0F8F73] text-white shadow-lg shadow-[#0F8F73]/20; }
+  .primary-button { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#0F8F73] px-4 py-2.5 text-sm font-extrabold text-white shadow-lg shadow-[#0F8F73]/20 transition-transform duration-150 hover:bg-[#08745D] active:scale-[.97]; }
+  .secondary-button { @apply inline-flex items-center justify-center rounded-xl border bg-card px-4 py-2.5 text-sm font-extrabold transition-transform duration-150 hover:bg-muted active:scale-[.97]; }
+  .icon-button { @apply grid h-9 w-9 place-items-center rounded-lg border border-transparent text-muted-foreground transition-[transform,background-color,color] duration-150 hover:bg-muted hover:text-foreground active:scale-[.94]; }
+  .icon-button.danger { @apply hover:bg-red-500/10 hover:text-destructive; }
+  .field { @apply mt-1.5 block w-full rounded-xl border bg-background px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-[#0F8F73] focus:ring-2 focus:ring-[#0F8F73]/20; }
+  .form-stack { @apply space-y-4 text-sm font-bold; }
+  .form-stack label { @apply block; }
+  .eyebrow { @apply text-[10px] font-extrabold uppercase tracking-[.16em] text-[#08745D] dark:text-[#5DDBC0]; }
+  .metric-card { @apply flex min-h-36 justify-between rounded-2xl border bg-card p-5 shadow-sm; }
+  .metric-number, .time-code { font-family: "IBM Plex Mono", monospace; letter-spacing: -.045em; }
+  .metric-icon { @apply grid h-10 w-10 place-items-center rounded-xl; }
+  .metric-icon.jade { @apply bg-[#0F8F73]/10 text-[#08745D] dark:text-[#5DDBC0]; } .metric-icon.amber { @apply bg-amber-500/10 text-amber-700 dark:text-amber-300; } .metric-icon.ink { @apply bg-slate-500/10 text-slate-700 dark:text-slate-300; } .metric-icon.rose { @apply bg-rose-500/10 text-rose-700 dark:text-rose-300; }
+  .panel-card { @apply rounded-2xl border bg-card shadow-sm; }
+  .status-pill { @apply inline-flex w-fit items-center rounded-md px-2 py-1 text-[10px] font-extrabold uppercase tracking-[.08em]; }
+  .status-pill.success { @apply bg-[#0F8F73]/10 text-[#08745D] dark:text-[#5DDBC0]; }.status-pill.warning { @apply bg-amber-400/15 text-amber-700 dark:text-amber-300; }.status-pill.danger { @apply bg-red-500/10 text-red-700 dark:text-red-300; }.status-pill.muted { @apply bg-muted text-muted-foreground; }
+  .agenda-row { @apply flex items-center gap-3 px-5 py-4; }.status-marker { @apply h-9 w-1 rounded-full bg-muted; }.status-marker.confirmed, .status-marker.completed { @apply bg-[#0F8F73]; }.status-marker.pending { @apply bg-amber-400; }.status-marker.cancelled { @apply bg-red-400; }
+  .signal-card { @apply flex gap-3 rounded-xl bg-muted/65 p-3; }.signal-card p { @apply text-sm leading-5; }.signal-card span { @apply mt-0.5 block text-xs text-muted-foreground; }
+  .table-toolbar { @apply flex items-center gap-2 border-b px-4 py-3 text-muted-foreground; }.table-toolbar input { @apply w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70; }
+  .table-wrap { @apply overflow-x-auto; } table { @apply w-full text-left text-sm; } th { @apply bg-muted/60 px-5 py-3 text-[10px] font-extrabold uppercase tracking-[.12em] text-muted-foreground; } td { @apply border-t px-5 py-3.5 align-middle; } td span { @apply text-xs text-muted-foreground; }
+}
+@media (prefers-reduced-motion: no-preference) { .metric-card, .panel-card { animation: rise .24s cubic-bezier(.23,1,.32,1) both; } @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } }

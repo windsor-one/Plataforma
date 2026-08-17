@@ -11,10 +11,10 @@ import {
   onSnapshot,
   orderBy,
   query,
-  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
+  writeBatch,
   type DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -31,6 +31,10 @@ type ManagedCollection = "customers" | "reservations" | "payments" | "users";
 
 const normalizedEmail = (email: string) => email.trim().toLowerCase();
 const bootstrapAdminEmail = normalizedEmail(import.meta.env.VITE_BOOTSTRAP_ADMIN_EMAIL || "");
+
+function withoutUndefined(payload: DocumentData) {
+  return Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
+}
 
 export function subscribeCollection<T extends { id: string }>(
   name: ManagedCollection,
@@ -50,7 +54,7 @@ export async function createRecord(
   payload: Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">,
 ) {
   const record = doc(collection(db, name));
-  await setDoc(record, { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  await setDoc(record, { ...withoutUndefined(payload), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
 }
 
 export async function updateRecord(
@@ -58,7 +62,7 @@ export async function updateRecord(
   id: string,
   payload: DocumentData,
 ) {
-  await updateDoc(doc(db, name, id), { ...payload, updatedAt: serverTimestamp() });
+  await updateDoc(doc(db, name, id), { ...withoutUndefined(payload), updatedAt: serverTimestamp() });
 }
 
 export async function removeRecord(name: "customers" | "reservations" | "payments", id: string) {
@@ -89,35 +93,31 @@ export async function completeInvitationOnboarding(user: User): Promise<UserProf
   const profileRef = doc(db, "users", user.uid);
   const invitationRef = doc(db, "invitations", email);
 
-  await runTransaction(db, async (transaction) => {
-    const [profileSnapshot, invitationSnapshot] = await Promise.all([
-      transaction.get(profileRef),
-      transaction.get(invitationRef),
-    ]);
+  const profileSnapshot = await getDoc(profileRef);
+  if (profileSnapshot.exists()) return { id: profileSnapshot.id, ...profileSnapshot.data() } as UserProfile;
 
-    if (profileSnapshot.exists()) return;
-    if (!invitationSnapshot.exists()) {
-      if (!bootstrapAdminEmail || email !== bootstrapAdminEmail) {
-        throw new Error("No existe una invitación activa para este correo. Pide al administrador que te invite.");
-      }
-
-      transaction.set(profileRef, {
-        email,
-        displayName: user.displayName || email.split("@")[0],
-        role: "admin",
-        status: "active",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      return;
+  const invitationSnapshot = await getDoc(invitationRef);
+  if (!invitationSnapshot.exists()) {
+    if (!bootstrapAdminEmail || email !== bootstrapAdminEmail) {
+      throw new Error("No existe una invitación activa para este correo. Pide al administrador que te invite.");
     }
 
+    await setDoc(profileRef, {
+      email,
+      displayName: user.displayName || email.split("@")[0],
+      role: "admin",
+      status: "active",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } else {
     const invitation = invitationSnapshot.data() as Omit<Invitation, "id">;
-    if (invitation.status !== "pending" || invitation.email !== email) {
+    if (invitation.status !== "pending" || normalizedEmail(invitation.email) !== email) {
       throw new Error("La invitación no está disponible. Solicita una nueva invitación al administrador.");
     }
 
-    transaction.set(profileRef, {
+    const batch = writeBatch(db);
+    batch.set(profileRef, {
       email,
       displayName: invitation.displayName || user.displayName || email.split("@")[0],
       role: invitation.role,
@@ -125,12 +125,13 @@ export async function completeInvitationOnboarding(user: User): Promise<UserProf
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    transaction.update(invitationRef, {
+    batch.update(invitationRef, {
       status: "accepted",
       acceptedBy: user.uid,
       acceptedAt: serverTimestamp(),
     });
-  });
+    await batch.commit();
+  }
 
   const completed = await getDoc(profileRef);
   if (!completed.exists()) throw new Error("No se pudo finalizar el acceso a la plataforma.");

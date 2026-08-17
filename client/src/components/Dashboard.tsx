@@ -3,7 +3,7 @@
  * La UI refleja permisos, pero Firestore sigue siendo la capa que los hace obligatorios.
  */
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { signOut, updatePassword, type User } from "firebase/auth";
+import { EmailAuthProvider, reauthenticateWithCredential, signOut, updatePassword, updateProfile as updateAuthProfile, type User } from "firebase/auth";
 import {
   CalendarDays, CheckCircle2, ChevronRight, CircleDollarSign, ClipboardList, CreditCard,
   LayoutDashboard, LogOut, Menu, Moon, Pencil, Plus, Search, ShieldAlert, Sun, Trash2,
@@ -84,8 +84,44 @@ function PaymentForm({ initial, customers, reservations, userId, onDone }: { ini
 
 function EmployeeForm({ initial, adminId, onDone }: { initial?: UserProfile; adminId: string; onDone: () => void }) {
   const [submitting, setSubmitting] = useState(false);
-  const submit = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setSubmitting(true); const form = new FormData(event.currentTarget); try { if (initial) { await updateEmployee(initial.id, { displayName: String(form.get("displayName")).trim(), role: String(form.get("role")) as UserRole, status: String(form.get("status")) as "active" | "suspended" }); toast.success("Empleado actualizado."); } else { const email = await inviteEmployee(String(form.get("email")), String(form.get("displayName")), String(form.get("role")) as UserRole, adminId); toast.success(`Invitación preparada para ${email}.`); } onDone(); } catch { toast.error("No fue posible guardar la información del empleado."); } finally { setSubmitting(false); } };
-  return <form className="form-stack" onSubmit={submit}><label>Nombre completo<input className="field" name="displayName" required defaultValue={initial?.displayName} /></label>{initial ? <p className="rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">Correo: <strong className="text-foreground">{initial.email}</strong></p> : <label>Correo de invitación<input className="field" type="email" name="email" required placeholder="persona@empresa.com" /></label>}<label>Rol<select className="field" name="role" defaultValue={initial?.role || "personal"}><option value="personal">Personal</option><option value="admin">Administrador</option></select></label>{initial && <label>Estado<select className="field" name="status" defaultValue={initial.status}><option value="active">Activo</option><option value="suspended">Suspendido</option></select></label>}<button className="primary-button" disabled={submitting}>{submitting ? "Guardando…" : initial ? "Guardar cambios" : "Crear invitación"}<ChevronRight size={16} /></button>{!initial && <p className="text-xs leading-5 text-muted-foreground">La persona podrá crear su contraseña con este mismo correo. Comparte la instrucción de registro tras crear la invitación.</p>}</form>;
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSubmitting(true);
+    const form = new FormData(event.currentTarget);
+    const displayName = String(form.get("displayName")).trim();
+    const role = String(form.get("role")) as UserRole;
+    const status = String(form.get("status")) as "active" | "suspended";
+    const email = String(form.get("email")).trim().toLowerCase();
+    try {
+      if (!initial) {
+        const invitationEmail = await inviteEmployee(email, displayName, role, adminId);
+        toast.success(`Invitación preparada para ${invitationEmail}.`);
+      } else if (email !== initial.email.toLowerCase()) {
+        await inviteEmployee(email, displayName, role, adminId);
+        await updateEmployee(initial.id, { displayName, role, status: "suspended" });
+        toast.success("Nueva invitación creada y acceso anterior suspendido. La persona podrá activar su nueva cuenta con el correo actualizado.");
+      } else {
+        await updateEmployee(initial.id, { displayName, role, status });
+        toast.success("Empleado actualizado.");
+      }
+      onDone();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "No fue posible guardar la información del empleado.";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return <form className="form-stack" onSubmit={submit}>
+    <label>Nombre completo<input className="field" name="displayName" required defaultValue={initial?.displayName} /></label>
+    <label>Correo de acceso<input className="field" type="email" name="email" required defaultValue={initial?.email} placeholder="persona@empresa.com" /></label>
+    {initial && <p className="rounded-lg bg-muted px-3 py-2 text-xs leading-5 text-muted-foreground">Al cambiar el correo se genera automáticamente una invitación para el nuevo acceso y se suspende el acceso anterior. Así no se modifican usuarios manualmente desde la base de datos.</p>}
+    <label>Rol<select className="field" name="role" defaultValue={initial?.role || "personal"}><option value="personal">Personal</option><option value="admin">Administrador</option></select></label>
+    {initial && <label>Estado<select className="field" name="status" defaultValue={initial.status}><option value="active">Activo</option><option value="suspended">Suspendido</option></select></label>}
+    <button className="primary-button" disabled={submitting}>{submitting ? "Guardando…" : initial ? "Guardar cambios" : "Crear invitación"}<ChevronRight size={16} /></button>
+    {!initial && <p className="text-xs leading-5 text-muted-foreground">La persona podrá crear su contraseña con este mismo correo. Comparte la instrucción de registro tras crear la invitación.</p>}
+  </form>;
 }
 
 export default function Dashboard({ user, profile }: { user: User; profile: UserProfile }) {
@@ -121,7 +157,49 @@ export default function Dashboard({ user, profile }: { user: User; profile: User
   const modalBody = modal && (modal.type === "customer" ? <CustomerForm initial={modal.data as Customer | undefined} userId={user.uid} onDone={closeModal} /> : modal.type === "reservation" ? <ReservationForm initial={modal.data as Reservation | undefined} customers={customers} userId={user.uid} onDone={closeModal} /> : modal.type === "payment" ? <PaymentForm initial={modal.data as Payment | undefined} customers={customers} reservations={reservations} userId={user.uid} onDone={closeModal} /> : <EmployeeForm initial={modal.data as UserProfile | undefined} adminId={user.uid} onDone={closeModal} />);
   const modalTitle = modal?.type === "customer" ? `${modal.data ? "Editar" : "Nuevo"} cliente` : modal?.type === "reservation" ? `${modal.data ? "Editar" : "Nueva"} reserva` : modal?.type === "payment" ? `${modal.data ? "Editar" : "Registrar"} pago` : modal?.data ? "Configurar empleado" : "Invitar empleado";
 
-  const profilePanel = <section className="max-w-2xl"><PageTitle eyebrow="Cuenta personal" title="Mi perfil" /><div className="panel-card mt-8 overflow-hidden"><div className="border-b bg-[#0F8F73]/5 px-6 py-5"><p className="text-sm font-bold">Tu identidad de acceso</p><p className="mt-1 text-sm text-muted-foreground">El correo y el rol los controla la administración.</p></div><form className="form-stack p-6" onSubmit={async (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); try { await updateOwnProfile(user.uid, String(form.get("displayName"))); toast.success("Tu nombre fue actualizado. Refresca la página para verlo en toda la interfaz."); } catch { toast.error("No se pudo actualizar tu perfil."); } }}><label>Nombre visible<input className="field" name="displayName" defaultValue={profile.displayName} required /></label><label>Correo<input className="field bg-muted" disabled value={profile.email} /></label><div className="grid gap-4 sm:grid-cols-2"><label>Rol<div className="field flex items-center"><StatusPill status={profile.role} /></div></label><label>Estado<div className="field flex items-center"><StatusPill status={profile.status} /></div></label></div><button className="primary-button w-fit">Guardar nombre<ChevronRight size={16} /></button></form><form className="border-t p-6" onSubmit={async (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); const newPassword = String(form.get("password")); try { await updatePassword(user, newPassword); event.currentTarget.reset(); toast.success("Contraseña actualizada."); } catch { toast.error("Para cambiar la contraseña, vuelve a iniciar sesión e inténtalo otra vez."); } }}><p className="font-bold">Cambiar contraseña</p><p className="mt-1 text-sm text-muted-foreground">Usa al menos seis caracteres. Por seguridad puede requerirse una sesión reciente.</p><div className="mt-4 flex flex-col gap-3 sm:flex-row"><input className="field flex-1" required minLength={6} type="password" name="password" placeholder="Nueva contraseña" /><button className="secondary-button">Actualizar contraseña</button></div></form></div></section>;
+  const profilePanel = <section className="max-w-2xl">
+    <PageTitle eyebrow="Cuenta personal" title="Mi perfil" />
+    <div className="panel-card mt-8 overflow-hidden">
+      <div className="border-b bg-[#0F8F73]/5 px-6 py-5"><p className="text-sm font-bold">Tu identidad de acceso</p><p className="mt-1 text-sm text-muted-foreground">El correo y el rol los controla la administración.</p></div>
+      <form className="form-stack p-6" onSubmit={async (event) => {
+        event.preventDefault();
+        const displayName = String(new FormData(event.currentTarget).get("displayName")).trim();
+        try {
+          await updateOwnProfile(user.uid, displayName);
+          await updateAuthProfile(user, { displayName });
+          toast.success("Tu nombre fue actualizado.");
+          window.setTimeout(() => window.location.reload(), 350);
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : "No se pudo actualizar tu perfil.");
+        }
+      }}>
+        <label>Nombre visible<input className="field" name="displayName" defaultValue={profile.displayName} required /></label>
+        <label>Correo<input className="field bg-muted" disabled value={profile.email} /></label>
+        <div className="grid gap-4 sm:grid-cols-2"><label>Rol<div className="field flex items-center"><StatusPill status={profile.role} /></div></label><label>Estado<div className="field flex items-center"><StatusPill status={profile.status} /></div></label></div>
+        <button className="primary-button w-fit">Guardar nombre<ChevronRight size={16} /></button>
+      </form>
+      <form className="border-t p-6" onSubmit={async (event) => {
+        event.preventDefault();
+        const form = new FormData(event.currentTarget);
+        const currentPassword = String(form.get("currentPassword"));
+        const newPassword = String(form.get("password"));
+        try {
+          if (!user.email) throw new Error("No fue posible identificar el correo de tu cuenta.");
+          await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, currentPassword));
+          await updatePassword(user, newPassword);
+          event.currentTarget.reset();
+          toast.success("Contraseña actualizada.");
+        } catch (error) {
+          const code = (error as { code?: string })?.code;
+          toast.error(code === "auth/invalid-credential" ? "La contraseña actual no es correcta." : "No se pudo actualizar la contraseña. Inténtalo nuevamente.");
+        }
+      }}>
+        <p className="font-bold">Cambiar contraseña</p><p className="mt-1 text-sm text-muted-foreground">Confirma tu contraseña actual y escribe una nueva de al menos seis caracteres.</p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2"><input className="field" required type="password" name="currentPassword" placeholder="Contraseña actual" autoComplete="current-password" /><input className="field" required minLength={6} type="password" name="password" placeholder="Nueva contraseña" autoComplete="new-password" /></div>
+        <button className="secondary-button mt-3">Actualizar contraseña</button>
+      </form>
+    </div>
+  </section>;
 
   const overview = <><PageTitle eyebrow="Vista operativa" title="La jornada de hoy" actions={<button onClick={opening} className="primary-button"><Plus size={17} />Nueva reserva</button>} /><section className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Agenda de hoy" value={String(todayReservations.length).padStart(2, "0")} note="Reservas activas" icon={CalendarDays} /><Metric label="Cobrado hoy" value={currency(paidToday)} note="Pagos confirmados" icon={CircleDollarSign} tone="amber" /><Metric label="Clientes" value={String(customers.length).padStart(2, "0")} note="En tu registro" icon={UsersRound} tone="ink" /><Metric label="Pendientes" value={String(reservations.filter((item) => item.status === "pending").length).padStart(2, "0")} note="Por confirmar" icon={ClipboardList} tone="rose" /></section><section className="mt-7 grid gap-6 xl:grid-cols-[1.25fr_.75fr]"><article className="panel-card"><div className="flex items-center justify-between border-b px-5 py-4"><div><p className="font-extrabold">Agenda inmediata</p><p className="mt-0.5 text-xs text-muted-foreground">Reservas activas del día</p></div><button className="text-sm font-bold text-[#08745D] hover:underline dark:text-[#5DDBC0]" onClick={() => navigate("reservations")}>Ver agenda</button></div>{todayReservations.length ? <div className="divide-y">{todayReservations.slice(0, 5).map((reservation) => <div className="agenda-row" key={reservation.id}><span className="time-code">{reservation.time}</span><span className={`status-marker ${reservation.status}`} /><div className="min-w-0 flex-1"><p className="truncate font-bold">{reservation.customerName}</p><p className="truncate text-sm text-muted-foreground">{reservation.service} · {reservation.durationMinutes} min</p></div><StatusPill status={reservation.status} /></div>)}</div> : <Empty title="Agenda despejada" detail="Cuando registres reservas para hoy aparecerán aquí ordenadas por hora." />}</article><article className="panel-card flex flex-col overflow-hidden"><div className="border-b px-5 py-4"><p className="font-extrabold">Señales del sistema</p><p className="mt-0.5 text-xs text-muted-foreground">Información para decidir rápido</p></div><div className="space-y-4 p-5"><div className="signal-card"><CheckCircle2 className="text-[#0F8F73]" size={20} /><p><strong>Datos sincronizados</strong><span>Los cambios se reflejan en tiempo real para empleados activos.</span></p></div>{isAdmin && <div className="signal-card"><ShieldAlert className="text-amber-600" size={20} /><p><strong>Control de empleados</strong><span>Puedes suspender accesos desde el módulo de empleados.</span></p></div>}<img src="/manus-storage/gestionpro-onboarding-agenda_127aa8f5.png" className="mt-auto h-36 w-full rounded-xl object-cover" alt="Organización de una agenda de trabajo" /></div></article></section></>;
 

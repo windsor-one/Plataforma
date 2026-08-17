@@ -30,3 +30,9 @@
 - [x] Incorporar y verificar el envío de recuperación de contraseña desde la pantalla de acceso publicada.
 - [x] Preparar `firebase.json` y `.firebaserc` para desplegar directamente las reglas cuando exista una credencial administrativa autorizada.
 - [x] Añadir el comando `pnpm deploy:firestore` para publicar reglas e índices de Firestore de forma reproducible.
+- [x] Corregir el guardado de pagos omitiendo los campos opcionales vacíos antes de escribir en Firestore.
+- [x] Corregir el registro automático de empleados invitados con una escritura atómica de perfil y aceptación de invitación.
+- [x] Permitir que cada empleado actualice nombre y contraseña mediante sincronización de Firebase Authentication y reautenticación.
+- [x] Permitir al administrador migrar el correo de un empleado mediante una nueva invitación automática y la suspensión del acceso anterior.
+- [x] Confirmar en código que el administrador conserva el acceso a todos los módulos y operaciones de la interfaz y Firestore.
+- [ ] Probar desde GitHub Pages el pago, la activación de una invitación, el perfil y la migración de correo administrativa.

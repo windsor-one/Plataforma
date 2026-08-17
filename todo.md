@@ -28,3 +28,4 @@
 - [ ] Permitir que la primera cuenta autenticada cree únicamente su propio perfil administrativo cuando todavía no exista ningún usuario de la plataforma.
 - [ ] Habilitar una sesión de navegador de propietario para publicar las reglas de Firestore y autorizar el dominio de Firebase Authentication.
 - [x] Incorporar y verificar el envío de recuperación de contraseña desde la pantalla de acceso publicada.
+- [x] Preparar `firebase.json` y `.firebaserc` para desplegar directamente las reglas cuando exista una credencial administrativa autorizada.

@@ -26,3 +26,5 @@
 - [ ] Confirmar que el dominio publicado está autorizado para Firebase Authentication.
 - [ ] Ejecutar una prueba real de inicio de sesión y operaciones administrativas desde GitHub Pages.
 - [ ] Permitir que la primera cuenta autenticada cree únicamente su propio perfil administrativo cuando todavía no exista ningún usuario de la plataforma.
+- [ ] Habilitar una sesión de navegador de propietario para publicar las reglas de Firestore y autorizar el dominio de Firebase Authentication.
+- [ ] Incorporar y verificar el envío de recuperación de contraseña desde la pantalla de acceso publicada.

@@ -6,6 +6,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -45,6 +46,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -83,6 +85,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     event.preventDefault();
     setSubmitting(true);
     setError("");
+    setNotice("");
     try {
       if (mode === "login") {
         await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
@@ -100,6 +103,26 @@ export default function AuthGate({ children }: { children: (user: User, profile:
             ? "La contraseña debe tener al menos 6 caracteres."
             : "No se pudo procesar el acceso. Revisa los datos e inténtalo de nuevo.";
       setError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setError("Escribe tu correo para recibir el enlace de recuperación.");
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    setNotice("");
+    try {
+      await sendPasswordResetEmail(auth, normalizedEmail);
+      setNotice("Si ese correo pertenece a una cuenta, recibirás un enlace para restablecer tu contraseña.");
+    } catch {
+      setNotice("Si ese correo pertenece a una cuenta, recibirás un enlace para restablecer tu contraseña.");
     } finally {
       setSubmitting(false);
     }
@@ -138,9 +161,11 @@ export default function AuthGate({ children }: { children: (user: User, profile:
                   <label className="block text-sm font-bold">Correo<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" className="field mt-1.5" /></label>
                   <label className="block text-sm font-bold">Contraseña<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres" className="field mt-1.5" /></label>
                   <FriendlyError error={error} />
+                  {notice && <p className="rounded-lg bg-[#0F8F73]/10 px-3 py-2 text-sm font-medium text-[#08745D] dark:text-[#8BE3CB]">{notice}</p>}
                   <button disabled={submitting} className="primary-button w-full" type="submit">{submitting ? "Validando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}<ArrowRight size={17} /></button>
                 </form>
-                <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); }} className="mt-5 w-full text-center text-sm font-bold text-[#08745D] hover:underline dark:text-[#5DDBC0]">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
+                {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="mt-4 w-full text-center text-sm font-bold text-muted-foreground transition-colors hover:text-[#08745D] dark:hover:text-[#5DDBC0]">¿Olvidaste tu contraseña?</button>}
+                <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }} className="mt-5 w-full text-center text-sm font-bold text-[#08745D] hover:underline dark:text-[#5DDBC0]">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
                 <div className="mt-8 grid grid-cols-2 gap-3 border-t pt-6 text-xs text-muted-foreground"><div className="flex items-start gap-2"><LockKeyhole className="mt-0.5 text-[#0F8F73]" size={15} />Tus permisos se validan en cada sesión.</div><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 text-[#0F8F73]" size={15} />Datos protegidos por reglas de acceso.</div></div>
             </>
           </div>

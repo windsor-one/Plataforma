@@ -24,7 +24,7 @@ GestionPro es una plataforma web de gestión para **empleados autorizados**, con
 | Identidad | Firebase Authentication | Correo y contraseña, sesión y actualización de contraseña |
 | Datos en tiempo real | Cloud Firestore | Clientes, reservas, pagos, perfiles e invitaciones |
 | Seguridad | Firestore Security Rules | Autoriza por usuario, rol y estado activo |
-| Despliegue | Vercel o GitHub Pages | Servir la aplicación estática |
+| Despliegue | GitHub Pages | Servir la aplicación estática sin coste |
 
 Firebase Authentication permite implementar inicio de sesión y registro mediante correo y contraseña; Cloud Firestore evalúa las reglas de seguridad antes de cada solicitud de sus SDKs web [1] [2].
 
@@ -64,7 +64,7 @@ El prefijo `VITE_` es necesario para que Vite exponga esas variables al código 
 
 ### 1. Crear el proyecto y la aplicación web
 
-En [Firebase Console](https://console.firebase.google.com/), crea un proyecto. Dentro de **Project settings > General**, registra una aplicación web y copia los seis valores de configuración al archivo `.env.local` o a las variables de despliegue. Después, en **Authentication > Sign-in method**, habilita **Email/Password**. Firebase requiere habilitar los proveedores de acceso antes de usar sus flujos de inicio de sesión [1].
+En [Firebase Console](https://console.firebase.google.com/), crea un proyecto. Dentro de **Project settings > General**, registra una aplicación web y copia los seis valores de configuración al archivo `.env.local` para desarrollo. Para este repositorio, la configuración pública de la aplicación web se entrega mediante `.env.production` durante la compilación de GitHub Pages. Después, en **Authentication > Sign-in method**, habilita **Email/Password**. Firebase requiere habilitar los proveedores de acceso antes de usar sus flujos de inicio de sesión [1].
 
 ### 2. Crear Cloud Firestore y publicar reglas
 
@@ -98,29 +98,16 @@ Desde el panel **Empleados**, el administrador registra el correo, el nombre y e
 
 Este repositorio implementa la autorización de invitación. El envío automático de correos no se incluye porque requiere un proveedor de correo y credenciales de servidor. Si lo necesitas, añade una Cloud Function con un proveedor transaccional, manteniendo sus secretos fuera del cliente.
 
-## Despliegue en Vercel — Recomendado
+## Despliegue gratuito en GitHub Pages
 
-Vercel detecta Vite y ejecuta su compilación de activos estáticos. Para una SPA, el archivo `vercel.json` ya incluye la reescritura necesaria para que el navegador no reciba un 404 al abrir una URL interna [3].
+La aplicación ya está publicada en [https://windsor-one.github.io/Plataforma/](https://windsor-one.github.io/Plataforma/). El flujo `.github/workflows/deploy-pages.yml` compila React/Vite y publica automáticamente los archivos estáticos desde cada envío a `main`.
 
-1. Sube este proyecto a un repositorio de GitHub.
-2. En Vercel, pulsa **Add New > Project** e importa el repositorio.
-3. Selecciona el framework **Vite**. Configura `pnpm build` como **Build Command** y `dist/public` como **Output Directory**.
-4. En **Settings > Environment Variables**, crea las seis variables `VITE_FIREBASE_*` de la plantilla anterior para **Production**, **Preview** y **Development**.
-5. Pulsa **Deploy**. Cada envío a la rama configurada producirá un despliegue nuevo.
-6. En Firebase Console, ve a **Authentication > Settings > Authorized domains** y agrega el dominio de Vercel, por ejemplo `tu-proyecto.vercel.app`, junto con tu dominio personalizado si lo usas.
+1. En **GitHub > Settings > Pages**, deja seleccionada la fuente **GitHub Actions**.
+2. El archivo `.env.production` contiene exclusivamente la configuración pública del SDK web de Firebase; no contiene credenciales administrativas ni permite saltarse las reglas de Firestore.
+3. En Firebase Console abre **Authentication > Settings > Authorized domains** y agrega exactamente `windsor-one.github.io`. No agregues la ruta `/Plataforma/`, solo el dominio.
+4. Después de que Firestore esté creado y sus reglas estén publicadas, crea el primer administrador siguiendo la sección anterior e inicia sesión desde el enlace publicado.
 
-Vercel expone variables de compilación de Vite mediante el prefijo `VITE_` [3]. Las claves de configuración de Firebase que empiezan por `VITE_` terminan en el cliente; por eso las reglas de Firestore, y no la ocultación de una clave, son el control de acceso principal.
-
-## Despliegue opcional en GitHub Pages
-
-El flujo `.github/workflows/deploy-pages.yml` ya está incluido. Antes del primer envío a `main`:
-
-1. Ve a **GitHub > Settings > Secrets and variables > Actions** y crea los seis secretos `VITE_FIREBASE_*`.
-2. Ve a **Settings > Pages**, selecciona **GitHub Actions** como fuente.
-3. Haz `git push` a `main`; el flujo construirá `dist/public` y lo publicará automáticamente.
-4. Añade el dominio `tu-usuario.github.io` a **Firebase Authentication > Settings > Authorized domains**.
-
-El flujo inyecta `VITE_BASE_PATH` con el nombre del repositorio, por lo que los recursos se resuelven correctamente en GitHub Pages. Usa **una** plataforma pública principal para producción; Vercel ofrece una experiencia más directa para dominios y vistas previas.
+El flujo inyecta `VITE_BASE_PATH` con el nombre del repositorio, por lo que las rutas y recursos se resuelven correctamente dentro de `/Plataforma/`. Las claves de configuración que empiezan por `VITE_` terminan deliberadamente en el cliente; las **reglas de Firestore**, y no la ocultación de esas claves, son el control de acceso principal.
 
 ## Validación antes de publicar
 
@@ -138,5 +125,3 @@ El flujo inyecta `VITE_BASE_PATH` con el nombre del repositorio, por lo que los 
 [1]: https://firebase.google.com/docs/auth "Firebase Authentication — documentación oficial"
 
 [2]: https://firebase.google.com/docs/firestore/security/get-started "Cloud Firestore Security Rules — documentación oficial"
-
-[3]: https://vercel.com/docs/frameworks/frontend/vite "Vite on Vercel — documentación oficial"

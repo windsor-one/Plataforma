@@ -20,4 +20,6 @@ El registro finalizó correctamente: el panel del proyecto muestra “1 app” y
 
 La configuración general confirma el ID del proyecto `gestionpro-firebase` y que la aplicación web `GestionPro Web` fue creada. Sus valores públicos de SDK se buscarán en la misma página para configurar las variables `VITE_FIREBASE_*`.
 
-La configuración del SDK se incorporó a la compilación de GitHub Pages. La opción Authentication está disponible dentro de “Seguridad”, pero la navegación directa abrió una pantalla de inicio de sesión fuera de la sesión activa, por lo que se requerirá retomar la consola con la cuenta de Google del usuario para habilitar el proveedor Email/Password.
+La configuración del SDK se incorporó a la compilación de GitHub Pages. Firebase Authentication está disponible y el proveedor “Correo electrónico/contraseña” figura como **Habilitada**. No se requieren cambios de plan ni configuraciones adicionales para que GestionPro permita iniciar sesión por correo y contraseña.
+
+La aplicación publicada carga ahora la pantalla de inicio de sesión, lo que confirma que reconoce la configuración Firebase. La consola de Firestore no terminó de cargar de forma fiable en el navegador disponible; una consulta administrativa sin credenciales OAuth confirmó que esta verificación exige permisos de propietario y no realizó cambios.

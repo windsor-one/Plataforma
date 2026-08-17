@@ -19,7 +19,10 @@
 :root { --background: oklch(0.975 0.005 92); --foreground: oklch(0.205 0.027 205); --card: oklch(1 0 0); --card-foreground: oklch(0.205 0.027 205); --muted: oklch(0.946 0.01 92); --muted-foreground: oklch(0.49 0.022 205); --border: oklch(0.89 0.014 180); --destructive: oklch(0.55 0.19 25); --radius: 0.9rem; }
 .dark { --background: oklch(0.16 0.018 205); --foreground: oklch(0.93 0.012 100); --card: oklch(0.205 0.02 205); --card-foreground: oklch(0.93 0.012 100); --muted: oklch(0.25 0.018 205); --muted-foreground: oklch(0.7 0.022 185); --border: oklch(0.34 0.02 205); --destructive: oklch(0.72 0.16 25); }
 
-@layer base { * { @apply border-border; } body { @apply bg-background text-foreground antialiased; } button, input, select, textarea { font: inherit; } button:not(:disabled) { cursor: pointer; } button:disabled { cursor: not-allowed; opacity: .6; } }
+@layer base { * { @apply border-border; } body { @apply bg-background text-foreground antialiased; } button, input, select, textarea { font: inherit; } button:not(:disabled) { cursor: pointer; } button:disabled { cursor: not-allowed; opacity: .6; }
+  /* Los recursos internos se muestran en la vista de desarrollo; GitHub Pages no los expone. */
+  img[src^="/manus-storage/"] { display: none; }
+}
 @layer components {
   .app-shell { @apply min-h-screen lg:grid lg:grid-cols-[17.5rem_minmax(0,1fr)]; }
   .sidebar-panel { @apply flex h-full min-h-screen flex-col border-r bg-card px-4 py-7; }
@@ -44,5 +47,12 @@
   .signal-card { @apply flex gap-3 rounded-xl bg-muted/65 p-3; }.signal-card p { @apply text-sm leading-5; }.signal-card span { @apply mt-0.5 block text-xs text-muted-foreground; }
   .table-toolbar { @apply flex items-center gap-2 border-b px-4 py-3 text-muted-foreground; }.table-toolbar input { @apply w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70; }
   .table-wrap { @apply overflow-x-auto; } table { @apply w-full text-left text-sm; } th { @apply bg-muted/60 px-5 py-3 text-[10px] font-extrabold uppercase tracking-[.12em] text-muted-foreground; } td { @apply border-t px-5 py-3.5 align-middle; } td span { @apply text-xs text-muted-foreground; }
+  .brand-mark { @apply relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#0F8F73] shadow-sm; }
+  .brand-mark::before { content: ""; @apply absolute h-5 w-5 rounded-full border-[5px] border-white; }
+  .brand-mark::after { content: ""; @apply absolute right-1 top-[19px] h-[5px] w-3 rounded-l bg-white; }
+  .brand-mark i:first-child { @apply absolute -right-1 top-0 h-4 w-4 rounded-bl-xl bg-[#102B35]; }
+  .brand-mark i:last-child { @apply absolute -bottom-1 left-0 h-3 w-5 rounded-tr-xl bg-[#0B2027]; }
+  .empty-mark { @apply grid h-24 w-24 place-items-center rounded-[2rem] bg-[#0F8F73]/10; }.empty-mark .brand-mark { @apply h-12 w-12; }
+  .auth-pattern { background-color: #102B35; background-image: linear-gradient(90deg, rgba(93, 219, 192, .12) 1px, transparent 1px), linear-gradient(rgba(93, 219, 192, .12) 1px, transparent 1px), radial-gradient(circle at 80% 20%, rgba(15, 143, 115, .65), transparent 35%); background-size: 28px 28px, 28px 28px, 100% 100%; }
 }
 @media (prefers-reduced-motion: no-preference) { .metric-card, .panel-card { animation: rise .24s cubic-bezier(.23,1,.32,1) both; } @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } } }

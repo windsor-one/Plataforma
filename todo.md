@@ -15,3 +15,10 @@
 - [x] Resolver la fusión pendiente entre el historial local y el repositorio remoto sin perder archivos.
 - [x] Confirmar una compilación de producción limpia y un despliegue exitoso en GitHub Pages.
 - [x] Validar Authentication y documentar el paso restante de Firestore que exige una sesión de propietario.
+- [ ] Reproducir el fallo de inicio de sesión y registrar el error exacto devuelto por Firebase.
+- [ ] Verificar que existe un usuario de Firebase Authentication con perfil `users/{uid}` activo y rol administrador.
+- [ ] Validar el acceso administrativo completo desde la página publicada.
+- [ ] Crear Cloud Firestore en modo producción y publicar las reglas directamente desde Firebase Console.
+- [ ] Crear un usuario administrador, su perfil `users/{uid}` y verificar su estado activo.
+- [ ] Autorizar `windsor-one.github.io` y comprobar el inicio de sesión final en la plataforma publicada.
+- [ ] Confirmar por lectura de consola que las reglas activas dejaron de ser `allow read, write: if false` antes de continuar con cualquier otra configuración.

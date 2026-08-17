@@ -36,3 +36,4 @@
 - [x] Permitir al administrador migrar el correo de un empleado mediante una nueva invitación automática y la suspensión del acceso anterior.
 - [x] Confirmar en código que el administrador conserva el acceso a todos los módulos y operaciones de la interfaz y Firestore.
 - [ ] Probar desde GitHub Pages el pago, la activación de una invitación, el perfil y la migración de correo administrativa.
+- [ ] Reproducir y corregir la ausencia de `users/{uid}` al registrar un correo que tiene una invitación pendiente.

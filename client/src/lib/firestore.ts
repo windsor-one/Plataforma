@@ -14,7 +14,6 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  writeBatch,
   type DocumentData,
 } from "firebase/firestore";
 import { db } from "./firebase";
@@ -116,8 +115,7 @@ export async function completeInvitationOnboarding(user: User): Promise<UserProf
       throw new Error("La invitación no está disponible. Solicita una nueva invitación al administrador.");
     }
 
-    const batch = writeBatch(db);
-    batch.set(profileRef, {
+    await setDoc(profileRef, {
       email,
       displayName: invitation.displayName || user.displayName || email.split("@")[0],
       role: invitation.role,
@@ -125,12 +123,19 @@ export async function completeInvitationOnboarding(user: User): Promise<UserProf
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    batch.update(invitationRef, {
-      status: "accepted",
-      acceptedBy: user.uid,
-      acceptedAt: serverTimestamp(),
-    });
-    await batch.commit();
+
+    // El perfil es la condición de acceso. Si las reglas antiguas aún no admiten
+    // marcar la invitación como aceptada, el empleado ya puede entrar y el
+    // siguiente inicio de sesión no volverá a ejecutar este flujo.
+    try {
+      await updateDoc(invitationRef, {
+        status: "accepted",
+        acceptedBy: user.uid,
+        acceptedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.warn("El perfil del invitado fue creado, pero no se pudo cerrar la invitación.", error);
+    }
   }
 
   const completed = await getDoc(profileRef);

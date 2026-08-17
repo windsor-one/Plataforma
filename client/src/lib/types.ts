@@ -7,6 +7,8 @@ export type EmployeeStatus = "active" | "suspended";
 export type ReservationStatus = "pending" | "confirmed" | "completed" | "cancelled";
 export type PaymentStatus = "paid" | "pending" | "refunded";
 export type PaymentMethod = "cash" | "card" | "transfer" | "other";
+export type ActivityAction = "created" | "updated" | "deleted" | "invited" | "profile_updated";
+export type ActivityEntity = "customer" | "reservation" | "payment" | "employee" | "profile";
 
 export interface UserProfile {
   id: string;
@@ -18,18 +20,25 @@ export interface UserProfile {
   updatedAt?: unknown;
 }
 
-export interface Customer {
+interface OperationalAuditFields {
+  createdAt?: unknown;
+  updatedAt?: unknown;
+  createdBy: string;
+  createdByName?: string;
+  createdByEmail?: string;
+  updatedBy?: string;
+  updatedByName?: string;
+}
+
+export interface Customer extends OperationalAuditFields {
   id: string;
   fullName: string;
   email?: string;
   phone?: string;
   notes?: string;
-  createdAt?: unknown;
-  updatedAt?: unknown;
-  createdBy: string;
 }
 
-export interface Reservation {
+export interface Reservation extends OperationalAuditFields {
   id: string;
   customerId: string;
   customerName: string;
@@ -39,12 +48,9 @@ export interface Reservation {
   durationMinutes: number;
   status: ReservationStatus;
   notes?: string;
-  createdAt?: unknown;
-  updatedAt?: unknown;
-  createdBy: string;
 }
 
-export interface Payment {
+export interface Payment extends OperationalAuditFields {
   id: string;
   customerId: string;
   customerName: string;
@@ -55,9 +61,6 @@ export interface Payment {
   status: PaymentStatus;
   paidAt: string;
   notes?: string;
-  createdAt?: unknown;
-  updatedAt?: unknown;
-  createdBy: string;
 }
 
 export interface Invitation {
@@ -72,3 +75,14 @@ export interface Invitation {
   invitedBy: string;
 }
 
+export interface ActivityLog {
+  id: string;
+  action: ActivityAction;
+  entity: ActivityEntity;
+  entityId: string;
+  summary: string;
+  actorId: string;
+  actorName: string;
+  actorEmail: string;
+  occurredAt?: unknown;
+}

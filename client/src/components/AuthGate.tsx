@@ -120,9 +120,16 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     setNotice("");
     try {
       await sendPasswordResetEmail(auth, normalizedEmail);
-      setNotice("Si ese correo pertenece a una cuenta, recibirás un enlace para restablecer tu contraseña.");
-    } catch {
-      setNotice("Si ese correo pertenece a una cuenta, recibirás un enlace para restablecer tu contraseña.");
+      setNotice("Si ese correo pertenece a una cuenta, recibirás un enlace seguro para restablecer la contraseña. Revisa también Spam.");
+    } catch (caught) {
+      const code = (caught as { code?: string })?.code;
+      setError(code === "auth/invalid-email"
+        ? "Escribe un correo válido para solicitar el enlace."
+        : code === "auth/too-many-requests"
+          ? "Se solicitaron demasiados enlaces. Espera unos minutos e inténtalo de nuevo."
+          : code === "auth/operation-not-allowed"
+            ? "La recuperación por correo no está habilitada en Firebase Authentication."
+            : "No se pudo enviar el enlace. Comprueba el correo e inténtalo de nuevo.");
     } finally {
       setSubmitting(false);
     }
@@ -165,7 +172,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
                   {notice && <p className="rounded-lg bg-[#0F8F73]/10 px-3 py-2 text-sm font-medium text-[#08745D] dark:text-[#8BE3CB]">{notice}</p>}
                   <button disabled={submitting} className="primary-button w-full" type="submit">{submitting ? "Validando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}<ArrowRight size={17} /></button>
                 </form>
-                {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="mt-4 w-full rounded-xl border border-[#0F8F73]/20 bg-[#0F8F73]/5 px-4 py-3 text-left text-sm transition-colors hover:bg-[#0F8F73]/10"><span className="block font-bold text-[#08745D] dark:text-[#5DDBC0]">Restablecer contraseña por correo</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">Escribe tu correo arriba y te enviaremos un enlace seguro para crear una nueva contraseña.</span></button>}
+                {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="mt-5 w-full text-center text-sm font-bold text-[#0C58C7] hover:underline dark:text-[#87A9FF]">¿Olvidaste tu contraseña? Restablécela por correo</button>}
                 <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }} className="mt-5 w-full text-center text-sm font-bold text-[#08745D] hover:underline dark:text-[#5DDBC0]">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
                 <div className="mt-8 grid grid-cols-2 gap-3 border-t pt-6 text-xs text-muted-foreground"><div className="flex items-start gap-2"><LockKeyhole className="mt-0.5 text-[#0F8F73]" size={15} />Tus permisos se validan en cada sesión.</div><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 text-[#0F8F73]" size={15} />Datos protegidos por reglas de acceso.</div></div><p className="mt-5 text-center text-[11px] font-semibold tracking-wide text-muted-foreground">Heliot Media · Con tecnología de Windsor</p>
             </>

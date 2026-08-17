@@ -86,6 +86,14 @@ service cloud.firestore {
       allow read, create, update, delete: if activeEmployee();
     }
 
+    match /activityLogs/{activityId} {
+      // Toda escritura de un movimiento debe identificar al empleado autenticado.
+      allow create: if activeEmployee()
+        && request.resource.data.actorId == request.auth.uid;
+      allow get, list: if admin();
+      allow update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

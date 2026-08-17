@@ -42,3 +42,10 @@
 - [ ] Verificar en la publicación el envío del enlace de recuperación con una cuenta real de Heliot Media.
 - [x] Añadir accesos directos contextuales para crear clientes y reservas sin abandonar formularios de pagos y reservas.
 - [ ] Probar en la publicación los accesos rápidos de «Añadir cliente» y «Añadir reserva» dentro de los formularios.
+- [x] Registrar automáticamente cada creación, edición y eliminación con usuario, fecha, hora y detalle del movimiento.
+- [x] Añadir un menú Historial exclusivo de administradores con todos los movimientos y cambios registrados.
+- [x] Mostrar en cada registro operativo quién lo realizó y cuándo, sin otorgar el panel global al personal.
+- [x] Reducir el acceso de recuperación de contraseña a un enlace discreto y mostrar errores accionables de Firebase.
+- [x] Añadir una barra lateral colapsable y mostrar el nombre del usuario activo en el encabezado.
+- [x] Renovar toda la interfaz con la paleta azul, verde, amarillo y violeta de la referencia proporcionada.
+- [ ] Publicar las reglas de Firestore actualizadas para habilitar `activityLogs` y validar los flujos con una sesión real.

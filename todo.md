@@ -10,3 +10,6 @@
 - [ ] Activar Firebase Authentication y Cloud Firestore dentro del proyecto Spark creado.
 - [x] Incorporar los valores públicos `VITE_FIREBASE_*` en la compilación de GitHub Pages.
 - [ ] Comprobar la aplicación publicada desde GitHub Pages y autorizar su dominio en Firebase Authentication.
+- [ ] Resolver la fusión pendiente entre el historial local y el repositorio remoto sin perder archivos.
+- [ ] Confirmar una compilación de producción limpia y un despliegue exitoso en GitHub Pages.
+- [ ] Validar el estado de Firebase Authentication y Firestore, o documentar exactamente el único paso que requiera la sesión del propietario.

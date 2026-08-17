@@ -40,3 +40,5 @@
 - [x] Hacer explícita la recuperación de contraseña por correo desde acceso y perfil, con mensajes de confirmación claros.
 - [x] Actualizar la identidad visible de la plataforma a Heliot Media e incluir el crédito «Con tecnología de Windsor».
 - [ ] Verificar en la publicación el envío del enlace de recuperación con una cuenta real de Heliot Media.
+- [x] Añadir accesos directos contextuales para crear clientes y reservas sin abandonar formularios de pagos y reservas.
+- [ ] Probar en la publicación los accesos rápidos de «Añadir cliente» y «Añadir reserva» dentro de los formularios.

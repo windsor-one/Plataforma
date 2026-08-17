@@ -54,6 +54,7 @@ export async function createRecord(
 ) {
   const record = doc(collection(db, name));
   await setDoc(record, { ...withoutUndefined(payload), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  return record.id;
 }
 
 export async function updateRecord(

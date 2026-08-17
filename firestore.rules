@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function activeEmployee() {
+      return signedIn() && profile().data.status == 'active';
+    }
+
+    function admin() {
+      return activeEmployee() && profile().data.role == 'admin';
+    }
+
+    function immutableFieldsUnchanged(keys) {
+      return request.resource.diff(resource).unchangedKeys().hasAll(keys);
+    }
+
+    match /users/{userId} {
+      // Todo empleado activo puede leer su propio perfil; solo el administrador puede listar o gestionar perfiles.
+      allow get: if (signedIn() && request.auth.uid == userId) || admin();
+      allow list: if admin();
+
+      // El perfil inicial se crea únicamente a partir de una invitación pendiente y vinculada al correo autenticado.
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && exists(/databases/$(database)/documents/invitations/$(request.auth.token.email))
+        && get(/databases/$(database)/documents/invitations/$(request.auth.token.email)).data.status == 'pending'
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == get(/databases/$(database)/documents/invitations/$(request.auth.token.email)).data.role
+        && request.resource.data.status == 'active';
+
+      // Un empleado solo puede cambiar su nombre. Rol, estado y correo se mantienen fuera de su alcance.
+      allow update: if admin() || (
+        signedIn()
+        && request.auth.uid == userId
+        && immutableFieldsUnchanged(['email', 'role', 'status', 'createdAt'])
+        && request.resource.data.diff(resource).affectedKeys().hasOnly(['displayName', 'updatedAt'])
+      );
+      allow delete: if admin();
+    }
+
+    match /invitations/{email} {
+      allow get: if admin() || (signedIn() && request.auth.token.email == email && resource.data.email == email);
+      allow list: if admin();
+      allow create, delete: if admin();
+      allow update: if admin() || (
+        signedIn()
+        && request.auth.token.email == email
+        && resource.data.status == 'pending'
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.displayName == resource.data.displayName
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.invitedBy == resource.data.invitedBy
+        && request.resource.data.status == 'accepted'
+        && request.resource.data.acceptedBy == request.auth.uid
+        && request.resource.data.diff(resource).affectedKeys().hasOnly(['status', 'acceptedBy', 'acceptedAt'])
+      );
+    }
+
+    // Los módulos operativos son accesibles solo a empleados activos. Las reglas se evalúan
+    // para cada lectura/escritura, incluso si alguien intenta saltarse la interfaz.
+    match /customers/{customerId} {
+      allow read, create, update, delete: if activeEmployee();
+    }
+
+    match /reservations/{reservationId} {
+      allow read, create, update, delete: if activeEmployee();
+    }
+
+    match /payments/{paymentId} {
+      allow read, create, update, delete: if activeEmployee();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

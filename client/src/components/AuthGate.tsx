@@ -141,19 +141,20 @@ export default function AuthGate({ children }: { children: (user: User, profile:
         <div className="relative hidden overflow-hidden bg-[#102B35] p-10 text-white lg:flex lg:flex-col">
           <div className="absolute inset-0 auth-pattern opacity-80" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0B2027]/55 via-[#0B2027]/35 to-[#0B2027]/80" />
-          <div className="relative flex items-center gap-3"><BrandMark /><span className="text-xl font-extrabold tracking-tight">Gestion<span className="text-[#5DDBC0]">Pro</span></span></div>
+          <div className="relative flex items-center gap-3"><BrandMark /><span className="text-xl font-extrabold tracking-tight">Heliot <span className="text-[#5DDBC0]">Media</span></span></div>
           <div className="relative mt-auto max-w-md">
             <div className="mb-6 flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold tracking-[.12em] text-[#B5EFE0] uppercase"><Sparkles size={14} /> Centro de operaciones</div>
             <h1 className="text-5xl font-extrabold leading-[.96] tracking-[-.055em]">La jornada bajo control.</h1>
             <p className="mt-6 max-w-sm text-base leading-7 text-white/75">Gestiona clientes, agenda, pagos y tu equipo desde una fuente de datos compartida en tiempo real.</p>
+            <p className="mt-6 text-xs font-semibold tracking-wide text-white/55">Con tecnología de Windsor</p>
           </div>
         </div>
 
         <div className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-14">
-          <div className="mb-10 flex items-center justify-between lg:hidden"><div className="flex items-center gap-2"><BrandMark /><span className="text-lg font-extrabold">GestionPro</span></div><span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acceso seguro</span></div>
+          <div className="mb-10 flex items-center justify-between lg:hidden"><div className="flex items-center gap-2"><BrandMark /><span className="text-lg font-extrabold">Heliot Media</span></div><span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acceso seguro</span></div>
           <div className="max-w-sm">
             <>
-                <span className="inline-flex rounded-full bg-[#0F8F73]/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[.12em] text-[#08745D] dark:text-[#5DDBC0]">Acceso del equipo</span>
+                <span className="inline-flex rounded-full bg-[#0F8F73]/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[.12em] text-[#08745D] dark:text-[#5DDBC0]">Heliot Media · Acceso del equipo</span>
                 <h2 className="mt-4 text-3xl font-extrabold tracking-tight">{mode === "login" ? "Vuelve a tu operación." : "Activa tu invitación."}</h2>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">{mode === "login" ? "Inicia sesión con tus credenciales de empleado." : "Solo puedes registrarte si un administrador autorizó previamente tu correo."}</p>
                 <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
@@ -164,9 +165,9 @@ export default function AuthGate({ children }: { children: (user: User, profile:
                   {notice && <p className="rounded-lg bg-[#0F8F73]/10 px-3 py-2 text-sm font-medium text-[#08745D] dark:text-[#8BE3CB]">{notice}</p>}
                   <button disabled={submitting} className="primary-button w-full" type="submit">{submitting ? "Validando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}<ArrowRight size={17} /></button>
                 </form>
-                {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="mt-4 w-full text-center text-sm font-bold text-muted-foreground transition-colors hover:text-[#08745D] dark:hover:text-[#5DDBC0]">¿Olvidaste tu contraseña?</button>}
+                {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="mt-4 w-full rounded-xl border border-[#0F8F73]/20 bg-[#0F8F73]/5 px-4 py-3 text-left text-sm transition-colors hover:bg-[#0F8F73]/10"><span className="block font-bold text-[#08745D] dark:text-[#5DDBC0]">Restablecer contraseña por correo</span><span className="mt-1 block text-xs leading-5 text-muted-foreground">Escribe tu correo arriba y te enviaremos un enlace seguro para crear una nueva contraseña.</span></button>}
                 <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }} className="mt-5 w-full text-center text-sm font-bold text-[#08745D] hover:underline dark:text-[#5DDBC0]">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
-                <div className="mt-8 grid grid-cols-2 gap-3 border-t pt-6 text-xs text-muted-foreground"><div className="flex items-start gap-2"><LockKeyhole className="mt-0.5 text-[#0F8F73]" size={15} />Tus permisos se validan en cada sesión.</div><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 text-[#0F8F73]" size={15} />Datos protegidos por reglas de acceso.</div></div>
+                <div className="mt-8 grid grid-cols-2 gap-3 border-t pt-6 text-xs text-muted-foreground"><div className="flex items-start gap-2"><LockKeyhole className="mt-0.5 text-[#0F8F73]" size={15} />Tus permisos se validan en cada sesión.</div><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 text-[#0F8F73]" size={15} />Datos protegidos por reglas de acceso.</div></div><p className="mt-5 text-center text-[11px] font-semibold tracking-wide text-muted-foreground">Heliot Media · Con tecnología de Windsor</p>
             </>
           </div>
         </div>

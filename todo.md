@@ -37,3 +37,6 @@
 - [x] Confirmar en código que el administrador conserva el acceso a todos los módulos y operaciones de la interfaz y Firestore.
 - [ ] Probar desde GitHub Pages el pago, la activación de una invitación, el perfil y la migración de correo administrativa.
 - [ ] Reproducir y corregir la ausencia de `users/{uid}` al registrar un correo que tiene una invitación pendiente.
+- [x] Hacer explícita la recuperación de contraseña por correo desde acceso y perfil, con mensajes de confirmación claros.
+- [x] Actualizar la identidad visible de la plataforma a Heliot Media e incluir el crédito «Con tecnología de Windsor».
+- [ ] Verificar en la publicación el envío del enlace de recuperación con una cuenta real de Heliot Media.

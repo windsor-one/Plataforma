@@ -131,3 +131,8 @@
 - [x] Implementar asistencia, horarios, ausencias, onboarding y offboarding.
 - [x] Implementar objetivos, desempeño, capacitación, reconocimiento, alertas y analítica de Recursos Humanos.
 - [x] Publicar reglas de Firestore que protejan todos los registros sensibles de personal.
+- [x] Permitir a Administración/IT corregir y gestionar con auditoría las marcaciones, ausencias y registros de RR. HH. del Personal.
+- [x] Añadir un módulo de reportes de Recursos Humanos con filtros y exportación operativa.
+- [x] Añadir un dashboard de resumen de rendimiento basado en asistencia, tareas, formación y objetivos registrados.
+- [x] Publicar las reglas de Firestore que permiten marcaciones administrativas de terceros y sus correcciones auditables.
+- [x] Mover Perfil y Cerrar sesión desde la barra lateral al menú contextual del usuario en el encabezado.

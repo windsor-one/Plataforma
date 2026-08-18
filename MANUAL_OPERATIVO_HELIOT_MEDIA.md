@@ -247,6 +247,12 @@ Primero cree **Departamentos, Áreas, Equipos, Cargos, Sedes y Horarios** en **R
 
 En **Recursos Humanos → Control**, Administración/IT puede definir para entrada, salida e inicio/fin de descanso la hora inicial, la hora final y el máximo de registros por día. El valor inicial es de 07:00 a 12:00 y una vez diaria por tipo. Los límites se validan antes de crear la marcación.
 
+### 4.11 Corregir registros, emitir reportes y revisar rendimiento
+
+Administración/IT tiene control operativo sobre los registros de Recursos Humanos. Desde **Recursos Humanos → Control** puede crear, editar o eliminar marcaciones y ausencias cuando una persona registre tarde, no tenga conexión o cometa un error. Una corrección debe llevar un motivo: el sistema conserva quién realizó el ajuste, cuándo y qué registro cambió en Historial.
+
+El módulo **Reportes RR. HH.** permite filtrar por rango de fechas, persona y departamento; incluye marcaciones, correcciones y ausencias, con exportación CSV de cada vista. El módulo **Rendimiento** combina solo información ya registrada: avance de tareas, objetivos, capacitaciones, evaluaciones y marcaciones. El indicador resultante es una lectura de seguimiento, no una decisión automática ni una evaluación disciplinaria.
+
 ---
 
 ## 5. Módulos operativos
@@ -305,6 +311,15 @@ El centro **Recursos Humanos** cubre una primera capa del ciclo laboral: expedie
 | Políticas | Lee versiones activas y confirma recepción | Publica y controla versiones |
 
 Los contratos, salarios y documentos se restringen a Administración/IT. Esta decisión es deliberada: el actual rol `personal` no equivale a RR. HH. ni a supervisor. Antes de habilitar accesos jerárquicos, se debe crear y probar un rol adicional con reglas específicas.
+
+### 5.9 Reportes y rendimiento
+
+| Módulo | Acceso | Finalidad | Límite de interpretación |
+| --- | --- | --- | --- |
+| **Reportes RR. HH.** | Administración/IT | Consulta y exportación de marcaciones, correcciones y ausencias filtradas. | Las marcaciones son eventos capturados, no una prueba completa de horas trabajadas. |
+| **Rendimiento** | Administración/IT | Resume tareas, objetivos, formación, evaluaciones y actividad disponible. | La ausencia de datos no equivale a desempeño bajo; requiere revisión humana y contexto. |
+
+> La herramienta no realiza puntuaciones disciplinarias, decisiones de contratación, despido, compensación ni promociones de forma automática. Administración/IT debe revisar ausencias aprobadas, cargas de trabajo, contexto operativo y comentarios antes de interpretar cualquier indicador.
 
 ---
 

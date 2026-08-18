@@ -198,6 +198,58 @@ export async function reviewLeaveRequest(id: string, status: LeaveRequest["statu
   await batch.commit();
 }
 
+/** Administración/IT puede registrar o corregir marcaciones sin perder al responsable ni la trazabilidad. */
+export async function saveHrAttendanceRecord(record: Partial<AttendanceRecord> & Pick<AttendanceRecord, "employeeId" | "employeeName" | "type">, actorId: string) {
+  const actor = await activityActor(actorId);
+  const reference = record.id ? doc(db, "attendanceRecords", record.id) : doc(collection(db, "attendanceRecords"));
+  const isNew = !record.id;
+  const occurredAt = record.occurredAt instanceof Date ? record.occurredAt : new Date();
+  const dayKey = dayKeyFor(occurredAt);
+  const payload = {
+    ...withoutUndefined(record as DocumentData), id: reference.id, dayKey, occurredAt,
+    source: record.source || "manual", createdBy: record.createdBy || actorId, createdByName: record.createdByName || actor.actorName, createdByEmail: record.createdByEmail || actor.actorEmail,
+    createdAt: record.createdAt || serverTimestamp(), updatedAt: serverTimestamp(),
+    adjustedAt: isNew ? undefined : serverTimestamp(), adjustedBy: isNew ? undefined : actorId, adjustedByName: isNew ? undefined : actor.actorName,
+  };
+  const batch = writeBatch(db);
+  batch.set(reference, payload, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry(isNew ? "created" : "updated", "attendance", reference.id, `${isNew ? "Registró" : "Corrigió"} una marcación administrativa de ${record.employeeName}`, actor));
+  await batch.commit();
+  return reference.id;
+}
+
+export async function deleteHrAttendanceRecord(id: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "attendanceRecords", id));
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "attendance", id, "Eliminó una marcación desde Control de RR. HH.", actor));
+  await batch.commit();
+}
+
+/** Administración/IT puede ajustar íntegramente una ausencia cuando el Personal cometió un error de captura. */
+export async function saveHrLeaveRequest(record: Partial<LeaveRequest> & Pick<LeaveRequest, "employeeId" | "employeeName" | "type" | "startDate" | "endDate" | "days" | "status">, actorId: string) {
+  const actor = await activityActor(actorId);
+  const reference = record.id ? doc(db, "leaveRequests", record.id) : doc(collection(db, "leaveRequests"));
+  const isNew = !record.id;
+  const payload = {
+    ...withoutUndefined(record as DocumentData), id: reference.id, createdBy: record.createdBy || actorId, createdByName: record.createdByName || actor.actorName, createdByEmail: record.createdByEmail || actor.actorEmail,
+    createdAt: record.createdAt || serverTimestamp(), updatedAt: serverTimestamp(), updatedBy: actorId, updatedByName: actor.actorName,
+  };
+  const batch = writeBatch(db);
+  batch.set(reference, payload, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry(isNew ? "created" : "updated", "leave", reference.id, `${isNew ? "Registró" : "Corrigió"} una ausencia de ${record.employeeName}`, actor));
+  await batch.commit();
+  return reference.id;
+}
+
+export async function deleteHrLeaveRequest(id: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "leaveRequests", id));
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "leave", id, "Eliminó una ausencia desde Control de RR. HH.", actor));
+  await batch.commit();
+}
+
 export async function acknowledgeHrPolicy(policy: HrPolicy, employeeId: string, employeeName: string) {
   const actor = await activityActor(employeeId);
   const reference = doc(db, "policyAcknowledgments", `${policy.id}_${employeeId}`);

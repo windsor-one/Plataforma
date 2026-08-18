@@ -147,7 +147,8 @@ service cloud.firestore {
     }
 
     match /attendanceRecords/{recordId} {
-      allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid;
+      // Personal crea sus propias marcaciones; Administración/IT puede registrar o corregir cualquier caso excepcional.
+      allow create: if admin() || (activeEmployee() && request.resource.data.employeeId == request.auth.uid);
       allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
       allow update, delete: if admin();
     }

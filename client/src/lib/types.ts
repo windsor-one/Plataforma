@@ -133,6 +133,10 @@ export interface AttendanceRecord extends OperationalAuditFields {
   occurredAt?: unknown;
   note?: string;
   source: "manual" | "self_service";
+  correctionReason?: string;
+  adjustedAt?: unknown;
+  adjustedBy?: string;
+  adjustedByName?: string;
 }
 
 export interface AttendanceWindow {

@@ -74,3 +74,7 @@
 - [x] Confirmar que Correo electrónico/contraseña está habilitado y que `windsor-one.github.io` está autorizado.
 - [x] Mostrar códigos de diagnóstico concretos para credenciales, cuenta deshabilitada, red y reglas de Firestore en la pantalla de acceso.
 - [ ] Restablecer o confirmar la contraseña del administrador y probar un inicio de sesión real desde GitHub Pages.
+- [x] Renombrar el módulo de Empleados a Personal según la nomenclatura de RR. HH.
+- [x] Hacer que el logotipo de Heliot Media navegue al panel Resumen.
+- [x] Convertir General Reminders en un centro de comunicaciones internas con fecha, emisor, prioridad y permisos de lectura para Personal y gestión para Administración/IT.
+- [x] Mostrar en Personal todos los perfiles registrados y las invitaciones pendientes, con su estado y rol correspondiente.

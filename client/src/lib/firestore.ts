@@ -7,7 +7,7 @@ import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query
 import { db } from "./firebase";
 import type { ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Reservation, UserProfile, UserRole } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "users" | "activityLogs" | "generalReminders";
+type ManagedCollection = "customers" | "reservations" | "payments" | "users" | "invitations" | "activityLogs" | "generalReminders";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type OperationalPayload = Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">;
 
@@ -43,7 +43,7 @@ function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId:
 }
 
 export function subscribeCollection<T extends { id: string }>(name: ManagedCollection, onData: (data: T[]) => void, onError: (error: Error) => void) {
-  const sortField = name === "users" ? "createdAt" : name === "activityLogs" ? "occurredAt" : name === "generalReminders" ? "createdAt" : "updatedAt";
+  const sortField = name === "users" || name === "invitations" ? "createdAt" : name === "activityLogs" ? "occurredAt" : name === "generalReminders" ? "createdAt" : "updatedAt";
   return onSnapshot(query(collection(db, name), orderBy(sortField, "desc")), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
 }
 
@@ -153,6 +153,15 @@ export async function createGeneralReminder(payload: Pick<GeneralReminder, "titl
   batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "reminder", reminderRef.id, `Publicó el aviso «${payload.title.trim()}»`, actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await setDoc(reminderRef, reminderPayload); }
   return reminderRef.id;
+}
+
+export async function updateGeneralReminder(id: string, payload: Pick<GeneralReminder, "title" | "message" | "priority">, actorId: string) {
+  const actor = await activityActor(actorId);
+  const reminderPayload = { ...payload, updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.update(doc(db, "generalReminders", id), reminderPayload);
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "reminder", id, `Actualizó la comunicación «${payload.title.trim()}»`, actor));
+  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await updateDoc(doc(db, "generalReminders", id), reminderPayload); }
 }
 
 export async function deleteGeneralReminder(id: string, actorId: string) {

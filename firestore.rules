@@ -94,6 +94,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /generalReminders/{reminderId} {
+      allow read: if activeEmployee();
+      allow create, update, delete: if admin();
+    }
+
+    match /sequences/{category} {
+      allow read: if activeEmployee();
+      allow create: if activeEmployee()
+        && request.resource.data.current == 1;
+      allow update: if activeEmployee()
+        && request.resource.data.current == resource.data.current + 1;
+      allow delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

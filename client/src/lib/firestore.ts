@@ -3,11 +3,11 @@
  * El registro principal nunca se bloquea por una regla de historial aún no publicada.
  */
 import type { User } from "firebase/auth";
-import { collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query, serverTimestamp, setDoc, updateDoc, writeBatch, type DocumentData } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { ActivityAction, ActivityEntity, ActivityLog, Customer, Invitation, Payment, Reservation, UserProfile, UserRole } from "./types";
+import type { ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Reservation, UserProfile, UserRole } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "users" | "activityLogs";
+type ManagedCollection = "customers" | "reservations" | "payments" | "users" | "activityLogs" | "generalReminders";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type OperationalPayload = Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">;
 
@@ -18,7 +18,19 @@ const auditWriteBlocked = (error: unknown) => ["permission-denied", "firestore/p
 const entityFromCollection = (name: OperationalCollection): ActivityEntity => name === "customers" ? "customer" : name === "reservations" ? "reservation" : "payment";
 const pluralLabel = (name: OperationalCollection) => name === "customers" ? "clientes" : name === "reservations" ? "reservas" : "pagos";
 const recordLabel = (name: OperationalCollection, payload: DocumentData) => name === "customers" ? `${payload.firstName || ""} ${payload.lastName || ""}`.trim() || payload.fullName || "Cliente" : name === "reservations" ? `Reserva de ${payload.customerName || "cliente"}` : `Pago de ${payload.customerName || "cliente"}`;
-const operationCode = (name: OperationalCollection, id: string) => name === "reservations" ? `RES-${id.slice(0, 8).toUpperCase()}` : name === "payments" ? `PAG-${id.slice(0, 8).toUpperCase()}` : undefined;
+const codePrefix = (name: OperationalCollection) => name === "customers" ? "CLI" : name === "reservations" ? "RES" : "PAG";
+const sequentialCode = (name: OperationalCollection, number: number) => `${codePrefix(name)}-${String(number).padStart(5, "0")}`;
+
+async function fallbackSequence(name: OperationalCollection) {
+  const snapshot = await getDocs(collection(db, name));
+  const prefix = codePrefix(name);
+  const max = snapshot.docs.reduce((highest, item) => {
+    const code = String(item.data().code || "");
+    const match = code.match(new RegExp(`^${prefix}-(\\d+)$`));
+    return Math.max(highest, match ? Number(match[1]) : 0);
+  }, 0);
+  return max + 1;
+}
 
 async function activityActor(actorId: string) {
   const snapshot = await getDoc(doc(db, "users", actorId));
@@ -31,18 +43,28 @@ function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId:
 }
 
 export function subscribeCollection<T extends { id: string }>(name: ManagedCollection, onData: (data: T[]) => void, onError: (error: Error) => void) {
-  const sortField = name === "users" ? "createdAt" : name === "activityLogs" ? "occurredAt" : "updatedAt";
+  const sortField = name === "users" ? "createdAt" : name === "activityLogs" ? "occurredAt" : name === "generalReminders" ? "createdAt" : "updatedAt";
   return onSnapshot(query(collection(db, name), orderBy(sortField, "desc")), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
 }
 
 export async function createRecord(name: OperationalCollection, payload: OperationalPayload) {
   const record = doc(collection(db, name));
   const actor = await activityActor(payload.createdBy);
-  const recordPayload = { ...withoutUndefined(payload), ...(operationCode(name, record.id) ? { code: operationCode(name, record.id) } : {}), createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-  const batch = writeBatch(db);
-  batch.set(record, recordPayload);
-  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", entityFromCollection(name), record.id, `Creó ${recordLabel(name, payload)}`, actor));
-  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await setDoc(record, recordPayload); }
+  const counterRef = doc(db, "sequences", name);
+  try {
+    await runTransaction(db, async (transaction) => {
+      const counter = await transaction.get(counterRef);
+      const next = (counter.exists() ? Number(counter.data().current || 0) : 0) + 1;
+      const recordPayload = { ...withoutUndefined(payload), code: sequentialCode(name, next), createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+      transaction.set(record, recordPayload);
+      transaction.set(counterRef, { current: next, category: name, updatedAt: serverTimestamp() });
+      transaction.set(doc(collection(db, "activityLogs")), activityEntry("created", entityFromCollection(name), record.id, `Creó ${recordLabel(name, payload)} · ${sequentialCode(name, next)}`, actor));
+    });
+  } catch (error) {
+    if (!auditWriteBlocked(error)) throw error;
+    const next = await fallbackSequence(name);
+    await setDoc(record, { ...withoutUndefined(payload), code: sequentialCode(name, next), createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  }
   return record.id;
 }
 
@@ -120,4 +142,23 @@ export async function updateOwnProfile(userId: string, displayName: string) {
   batch.update(doc(db, "users", userId), profilePayload);
   batch.set(doc(collection(db, "activityLogs")), activityEntry("profile_updated", "profile", userId, "Actualizó su nombre de perfil", actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await updateDoc(doc(db, "users", userId), profilePayload); }
+}
+
+export async function createGeneralReminder(payload: Pick<GeneralReminder, "title" | "message" | "priority">, actorId: string) {
+  const actor = await activityActor(actorId);
+  const reminderRef = doc(collection(db, "generalReminders"));
+  const reminderPayload = { ...payload, active: true, createdBy: actorId, createdByName: actor.actorName, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.set(reminderRef, reminderPayload);
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "reminder", reminderRef.id, `Publicó el aviso «${payload.title.trim()}»`, actor));
+  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await setDoc(reminderRef, reminderPayload); }
+  return reminderRef.id;
+}
+
+export async function deleteGeneralReminder(id: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "generalReminders", id));
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "reminder", id, "Eliminó un aviso general", actor));
+  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await deleteDoc(doc(db, "generalReminders", id)); }
 }

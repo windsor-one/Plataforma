@@ -62,3 +62,8 @@
 - [x] Unificar transiciones y animaciones suaves para menús, paneles, tablas, botones y flujos contextuales.
 - [ ] Publicar las reglas de Firestore actualizadas y probar con una sesión real la bitácora completa de creaciones, cambios y eliminaciones.
 - [x] Restaurar los fondos neutros anteriores y usar azul, verde, amarillo y violeta solo como acentos e iconografía.
+- [x] Sustituir los códigos aleatorios por secuencias independientes y legibles para clientes, reservas y pagos.
+- [ ] Publicar las reglas de Firestore actualizadas para activar los contadores transaccionales y probar la secuencia con registros reales.
+- [x] Sustituir el bloque de señales del inicio por gráficas, recordatorios y notificaciones operativas.
+- [x] Añadir General reminders para que los administradores publiquen avisos visibles a los empleados.
+- [ ] Publicar reglas y validar con una sesión real la creación, lectura y eliminación de avisos generales.

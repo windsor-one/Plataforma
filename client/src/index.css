@@ -60,7 +60,26 @@
 @media (min-width: 1024px) {
   .app-shell { min-height: 100vh; }
   .app-shell > .hidden.lg\:block { position: sticky; top: 0; height: 100vh; align-self: start; }
-  .sidebar-panel { height: 100vh; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .sidebar-panel { height: 100vh; min-height: 0; overflow: hidden; overscroll-behavior: none; }
+  .sidebar-panel nav { margin-top: 1.75rem; }
+  .sidebar-panel .side-link { padding-top: .55rem; padding-bottom: .55rem; }
+  .sidebar-panel > .mt-auto { padding-top: 1rem; }
+}
+@media (min-width: 1024px) and (max-height: 760px) {
+  .sidebar-panel { padding-top: 1rem; padding-bottom: 1rem; }
+  .sidebar-panel nav { margin-top: 1rem; }
+  .sidebar-panel .side-link { padding-top: .42rem; padding-bottom: .42rem; font-size: .78rem; }
+  .sidebar-panel > .mt-auto { padding-top: .6rem; }
+}
+@media (max-width: 1023px) {
+  .sidebar-panel { min-height: 0; height: auto; padding: .75rem; }
+  .sidebar-panel nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; margin-top: 1rem; }
+  .sidebar-panel .side-link { min-height: 2.65rem; padding: .55rem .65rem; font-size: .76rem; }
+  .sidebar-panel > .mt-auto { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; margin-top: .8rem; padding-top: .8rem; }
+  .sidebar-panel > .mt-auto > p { grid-column: 1 / -1; padding: .25rem .35rem 0; }
+  .workflow-dialog { max-height: calc(100dvh - 2rem); }
+  .workflow-main-panel, .workflow-related-panel { max-height: none; }
+  .table-wrap { -webkit-overflow-scrolling: touch; }
 }
 
 /* Equivalencias para componentes existentes: ningún acento heredado queda fuera de la paleta Heliot. */

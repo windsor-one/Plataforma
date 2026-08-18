@@ -97,3 +97,5 @@
 - [x] Permitir a Administración/IT iniciar de forma segura el restablecimiento de contraseña de Personal desde el directorio.
 - [x] Registrar la creación de cuentas nuevas en Historial y en la cronología de Accesos.
 - [x] Mostrar en Accesos la línea de tiempo de movimientos operativos de cada integrante desde su alta hasta su última actividad.
+- [x] Mantener la barra lateral izquierda fija, sin desplazamiento vertical y con sus accesos siempre visibles.
+- [x] Ajustar y validar toda la interfaz para laptop y celular, incluyendo tablas, formularios, paneles y modales.

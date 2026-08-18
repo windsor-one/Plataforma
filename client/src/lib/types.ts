@@ -100,6 +100,17 @@ export interface AccessLog {
   occurredAt?: unknown;
 }
 
+export interface SecuritySettings {
+  id: string;
+  /** Campo heredado para instalaciones que ya guardaban minutos. */
+  inactivityMinutes?: number;
+  inactivityValue?: number;
+  inactivityUnit?: "seconds" | "minutes" | "hours";
+  updatedBy?: string;
+  updatedByName?: string;
+  updatedAt?: unknown;
+}
+
 export interface Invitation {
   id: string;
   email: string;

@@ -5,7 +5,7 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Product, Reservation, UserProfile, UserRole } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Product, Reservation, SecuritySettings, UserProfile, UserRole } from "./types";
 
 type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs";
 type OperationalCollection = "customers" | "reservations" | "payments";
@@ -160,6 +160,23 @@ export async function recordAccountCreated(userId: string, profile: UserProfile)
   batch.set(doc(collection(db, "accessLogs")), { userId, displayName: profile.displayName, email: profile.email, role: profile.role, event: "account_created", summary: "Cuenta creada y perfil activado", occurredAt: serverTimestamp() } satisfies Omit<AccessLog, "id">);
   batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "employee", userId, `Creó su cuenta y activó el perfil de ${profile.displayName}`, actor));
   try { await batch.commit(); } catch (error) { console.warn("La cuenta fue creada, pero no se pudo registrar su auditoría inicial.", error); }
+}
+
+export function subscribeSecuritySettings(onData: (settings: SecuritySettings) => void, onError: (error: Error) => void) {
+  return onSnapshot(doc(db, "securitySettings", "global"), (snapshot) => {
+    const defaults: SecuritySettings = { id: "global", inactivityMinutes: 15 };
+    onData(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } as SecuritySettings : defaults);
+  }, onError);
+}
+
+export async function updateSecuritySettings(inactivityValue: number, inactivityUnit: NonNullable<SecuritySettings["inactivityUnit"]>, actorId: string) {
+  const limits = inactivityUnit === "seconds" ? [10, 3600] : inactivityUnit === "minutes" ? [1, 1440] : [1, 24];
+  const safeValue = Math.min(limits[1], Math.max(limits[0], Math.round(inactivityValue)));
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.set(doc(db, "securitySettings", "global"), { inactivityValue: safeValue, inactivityUnit, updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "access", "global", `Actualizó el cierre automático por inactividad a ${safeValue} ${inactivityUnit === "seconds" ? "segundos" : inactivityUnit === "minutes" ? "minutos" : "horas"}`, actor));
+  await batch.commit();
 }
 
 export async function createGeneralReminder(payload: Pick<GeneralReminder, "title" | "message" | "priority">, actorId: string) {

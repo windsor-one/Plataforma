@@ -102,3 +102,6 @@
 - [x] Redactar un manual integral y autónomo de operación, configuración, mantenimiento, seguridad y recuperación de Heliot Media.
 - [x] Generar y entregar el manual integral en formato PDF descargable.
 - [x] Cerrar sesión automáticamente tras un periodo de inactividad, con aviso preventivo y reinicio de sesión seguro.
+- [x] Crear una configuración global del tiempo de inactividad visible y editable solo por Administración/IT.
+- [x] Permitir configurar la inactividad global en segundos, minutos u horas.
+- [x] Publicar las reglas de Firestore para proteger la configuración global de inactividad.

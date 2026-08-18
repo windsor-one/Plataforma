@@ -14,12 +14,14 @@ import {
 } from "firebase/auth";
 import { ArrowRight, CalendarDays, CircleDollarSign, Database, Eye, EyeOff, LockKeyhole, Settings2, ShieldCheck, Sparkles, UsersRound, Wifi } from "lucide-react";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
-import { completeInvitationOnboarding, recordAccess } from "@/lib/firestore";
+import { completeInvitationOnboarding, recordAccess, subscribeSecuritySettings } from "@/lib/firestore";
 import type { UserProfile } from "@/lib/types";
 
 type Mode = "login" | "register";
-const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+const DEFAULT_INACTIVITY_MINUTES = 15;
 const INACTIVITY_WARNING_MS = 60 * 1000;
+const inactivityMilliseconds = (value: number, unit: "seconds" | "minutes" | "hours") => value * (unit === "seconds" ? 1000 : unit === "minutes" ? 60 * 1000 : 60 * 60 * 1000);
+const inactivityLabel = (value: number, unit: "seconds" | "minutes" | "hours") => `${value} ${unit === "seconds" ? "segundos" : unit === "minutes" ? "minutos" : "horas"}`;
 
 function FriendlyError({ error }: { error: string }) {
   return error ? <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null;
@@ -67,6 +69,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
   const [submitting, setSubmitting] = useState(false);
   const [idleWarning, setIdleWarning] = useState(false);
   const [activityCycle, setActivityCycle] = useState(0);
+  const [inactivityPolicy, setInactivityPolicy] = useState<{ value: number; unit: "seconds" | "minutes" | "hours" }>({ value: DEFAULT_INACTIVITY_MINUTES, unit: "minutes" });
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -103,16 +106,22 @@ export default function AuthGate({ children }: { children: (user: User, profile:
 
   useEffect(() => {
     if (!user || !profile) return;
+    return subscribeSecuritySettings((settings) => setInactivityPolicy({ value: settings.inactivityValue || settings.inactivityMinutes || DEFAULT_INACTIVITY_MINUTES, unit: settings.inactivityUnit || "minutes" }), () => setInactivityPolicy({ value: DEFAULT_INACTIVITY_MINUTES, unit: "minutes" }));
+  }, [user, profile]);
+
+  useEffect(() => {
+    if (!user || !profile) return;
     let warningTimer: number | undefined;
     let timeoutTimer: number | undefined;
     let lastInteraction = Date.now();
     let endingSession = false;
+    const inactivityTimeout = inactivityMilliseconds(inactivityPolicy.value, inactivityPolicy.unit);
 
     const endForInactivity = async () => {
       if (endingSession) return;
       endingSession = true;
       setIdleWarning(false);
-      setNotice("Tu sesión se cerró por 15 minutos de inactividad. Inicia sesión nuevamente para continuar.");
+      setNotice(`Tu sesión se cerró por ${inactivityLabel(inactivityPolicy.value, inactivityPolicy.unit)} de inactividad. Inicia sesión nuevamente para continuar.`);
       await recordAccess(user.uid, profile, "logout");
       await signOut(auth);
     };
@@ -121,7 +130,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
       window.clearTimeout(warningTimer);
       window.clearTimeout(timeoutTimer);
       const elapsed = Date.now() - lastInteraction;
-      const remaining = Math.max(0, INACTIVITY_TIMEOUT_MS - elapsed);
+      const remaining = Math.max(0, inactivityTimeout - elapsed);
       warningTimer = window.setTimeout(() => setIdleWarning(true), Math.max(0, remaining - INACTIVITY_WARNING_MS));
       timeoutTimer = window.setTimeout(() => { void endForInactivity(); }, remaining);
     };
@@ -133,7 +142,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     };
 
     const checkAfterPause = () => {
-      if (Date.now() - lastInteraction >= INACTIVITY_TIMEOUT_MS) void endForInactivity();
+      if (Date.now() - lastInteraction >= inactivityTimeout) void endForInactivity();
       else schedule();
     };
 
@@ -148,7 +157,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
       events.forEach((event) => window.removeEventListener(event, registerActivity));
       document.removeEventListener("visibilitychange", checkAfterPause);
     };
-  }, [user, profile, activityCycle]);
+  }, [user, profile, activityCycle, inactivityPolicy]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();

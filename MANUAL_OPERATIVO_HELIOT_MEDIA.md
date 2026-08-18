@@ -259,9 +259,9 @@ Los avisos se ordenan primero por prioridad y luego por fecha. Un anuncio debe t
 
 ### Cierre automático por inactividad
 
-La plataforma protege sesiones abiertas sin supervisión. Después de **15 minutos sin interacción** —por ejemplo, sin tocar, hacer clic, escribir, desplazarse o volver a enfocar la pestaña— Heliot Media muestra un aviso durante el último minuto. Si la persona no pulsa **Continuar sesión** ni realiza una acción, la plataforma registra el cierre e inicia la salida de Firebase Authentication. Para volver a operar debe iniciar sesión otra vez.
+La plataforma protege sesiones abiertas sin supervisión. Cuando transcurre el intervalo global sin interacción —por ejemplo, sin tocar, hacer clic, escribir, desplazarse o volver a enfocar la pestaña— Heliot Media muestra un aviso durante el último minuto. Si la persona no pulsa **Continuar sesión** ni realiza una acción, la plataforma registra el cierre e inicia la salida de Firebase Authentication. Para volver a operar debe iniciar sesión otra vez.
 
-Esta medida se aplica en el navegador y no sustituye las reglas de Firestore: al cerrar la sesión, las reglas también dejan de permitir lecturas o escrituras protegidas. No reduzca este intervalo sin comunicarlo al equipo; si necesita modificarlo, ajuste `INACTIVITY_TIMEOUT_MS` y `INACTIVITY_WARNING_MS` en `client/src/components/AuthGate.tsx`.
+Administración/IT configura este intervalo desde **Accesos y actividad → Cierre automático por inactividad**. Puede seleccionar un valor y usar **segundos, minutos u horas**; los rangos admitidos son 10–3,600 segundos, 1–1,440 minutos o 1–24 horas. La política se guarda en `securitySettings/global` y se sincroniza con las sesiones activas. Personal puede recibir la política, pero no cambiarla. Esta medida se aplica en el navegador y no sustituye las reglas de Firestore: al cerrar la sesión, las reglas también dejan de permitir lecturas o escrituras protegidas.
 
 ### Qué queda registrado
 

@@ -100,6 +100,13 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /securitySettings/{settingId} {
+      // Toda persona activa puede leer la política vigente; solo Administración/IT la modifica.
+      allow read: if activeEmployee();
+      allow create, update: if admin();
+      allow delete: if false;
+    }
+
     match /activityLogs/{activityId} {
       // Toda escritura de un movimiento debe identificar al empleado autenticado.
       allow create: if activeEmployee()

@@ -99,3 +99,4 @@
 - [x] Mostrar en Accesos la línea de tiempo de movimientos operativos de cada integrante desde su alta hasta su última actividad.
 - [x] Mantener la barra lateral izquierda fija, sin desplazamiento vertical y con sus accesos siempre visibles.
 - [x] Ajustar y validar toda la interfaz para laptop y celular, incluyendo tablas, formularios, paneles y modales.
+- [x] Redactar un manual integral y autónomo de operación, configuración, mantenimiento, seguridad y recuperación de Heliot Media.

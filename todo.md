@@ -67,3 +67,5 @@
 - [x] Sustituir el bloque de señales del inicio por gráficas, recordatorios y notificaciones operativas.
 - [x] Añadir General reminders para que los administradores publiquen avisos visibles a los empleados.
 - [ ] Publicar reglas y validar con una sesión real la creación, lectura y eliminación de avisos generales.
+- [x] Añadir vistas de detalle accionables para movimientos de Historial, clientes, reservas y pagos.
+- [ ] Validar desde una sesión real que las fichas de detalle muestran los datos completos y los vínculos correctos.

@@ -5,10 +5,11 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, CarbonUsage, Customer, GeneralReminder, Invitation, Payment, Product, Reservation, SecuritySettings, UserProfile, UserRole } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, CarbonUsage, Customer, Expense, GeneralReminder, Incident, Invitation, Payment, Product, Reservation, SecuritySettings, Task, UserProfile, UserRole } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs";
+type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses";
 type OperationalCollection = "customers" | "reservations" | "payments";
+type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses";
 type OperationalPayload = Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">;
 
 const normalizedEmail = (email: string) => email.trim().toLowerCase();
@@ -18,10 +19,10 @@ const auditWriteBlocked = (error: unknown) => ["permission-denied", "firestore/p
 const entityFromCollection = (name: OperationalCollection): ActivityEntity => name === "customers" ? "customer" : name === "reservations" ? "reservation" : "payment";
 const pluralLabel = (name: OperationalCollection) => name === "customers" ? "clientes" : name === "reservations" ? "reservas" : "pagos";
 const recordLabel = (name: OperationalCollection, payload: DocumentData) => name === "customers" ? `${payload.firstName || ""} ${payload.lastName || ""}`.trim() || payload.fullName || "Cliente" : name === "reservations" ? `Reserva de ${payload.customerName || "cliente"}` : `Pago de ${payload.customerName || "cliente"}`;
-const codePrefix = (name: OperationalCollection) => name === "customers" ? "CLI" : name === "reservations" ? "RES" : "PAG";
-const sequentialCode = (name: OperationalCollection, number: number) => `${codePrefix(name)}-${String(number).padStart(5, "0")}`;
+const codePrefix = (name: SequencedCollection) => name === "customers" ? "CLI" : name === "reservations" ? "RES" : name === "payments" ? "PAG" : name === "tasks" ? "TAR" : name === "incidents" ? "INC" : "GAS";
+const sequentialCode = (name: SequencedCollection, number: number) => `${codePrefix(name)}-${String(number).padStart(5, "0")}`;
 
-async function fallbackSequence(name: OperationalCollection) {
+async function fallbackSequence(name: SequencedCollection) {
   const snapshot = await getDocs(collection(db, name));
   const prefix = codePrefix(name);
   const max = snapshot.docs.reduce((highest, item) => {
@@ -83,6 +84,80 @@ export async function removeRecord(name: OperationalCollection, id: string, acto
   batch.delete(doc(db, name, id));
   batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", entityFromCollection(name), id, `Eliminó un registro de ${pluralLabel(name)}`, actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await deleteDoc(doc(db, name, id)); }
+}
+
+async function createSequencedWorkRecord(name: "tasks" | "incidents" | "expenses", entity: ActivityEntity, summary: string, payload: DocumentData, actorId: string) {
+  const record = doc(collection(db, name));
+  const actor = await activityActor(actorId);
+  const counterRef = doc(db, "sequences", name);
+  try {
+    await runTransaction(db, async (transaction) => {
+      const counter = await transaction.get(counterRef);
+      const next = (counter.exists() ? Number(counter.data().current || 0) : 0) + 1;
+      const code = sequentialCode(name, next);
+      transaction.set(record, { ...withoutUndefined(payload), code, createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+      transaction.set(counterRef, { current: next, category: name, updatedAt: serverTimestamp() });
+      transaction.set(doc(collection(db, "activityLogs")), activityEntry("created", entity, record.id, `${summary} · ${code}`, actor));
+    });
+  } catch (error) {
+    if (!auditWriteBlocked(error)) throw error;
+    const next = await fallbackSequence(name);
+    await setDoc(record, { ...withoutUndefined(payload), code: sequentialCode(name, next), createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  }
+  return record.id;
+}
+
+async function updateWorkRecord(name: "tasks" | "incidents" | "expenses", entity: ActivityEntity, id: string, payload: DocumentData, actorId: string, summary: string) {
+  const actor = await activityActor(actorId);
+  const recordPayload = { ...withoutUndefined(payload), updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.update(doc(db, name, id), recordPayload);
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", entity, id, summary, actor));
+  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await updateDoc(doc(db, name, id), recordPayload); }
+}
+
+async function removeWorkRecord(name: "tasks" | "incidents" | "expenses", entity: ActivityEntity, id: string, payload: DocumentData, actorId: string, summary: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.set(doc(db, name, id), { ...withoutUndefined(payload), archived: true, updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", entity, id, summary, actor));
+  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await setDoc(doc(db, name, id), { ...withoutUndefined(payload), archived: true, updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp() }, { merge: true }); }
+}
+
+export async function createTask(payload: Omit<Task, "id" | "code" | "createdAt" | "updatedAt" | "createdByName" | "createdByEmail" | "updatedBy" | "updatedByName">) {
+  return createSequencedWorkRecord("tasks", "task", `Creó la tarea «${payload.title.trim()}»`, payload, payload.createdBy);
+}
+
+export async function updateTask(id: string, payload: Partial<Pick<Task, "title" | "description" | "priority" | "status" | "dueDate" | "assignedToId" | "assignedToName" | "reservationId" | "reservationCode" | "customerId" | "customerName">>, actorId: string) {
+  return updateWorkRecord("tasks", "task", id, payload, actorId, `Actualizó una tarea operativa${payload.status ? ` a «${payload.status}»` : ""}`);
+}
+
+export async function deleteTask(id: string, actorId: string) {
+  return removeWorkRecord("tasks", "task", id, {}, actorId, "Archivó una tarea operativa");
+}
+
+export async function createIncident(payload: Omit<Incident, "id" | "code" | "createdAt" | "updatedAt" | "createdByName" | "createdByEmail" | "updatedBy" | "updatedByName">) {
+  return createSequencedWorkRecord("incidents", "incident", `Reportó la incidencia «${payload.title.trim()}»`, payload, payload.createdBy);
+}
+
+export async function updateIncident(id: string, payload: Partial<Pick<Incident, "title" | "description" | "priority" | "status" | "assignedToId" | "assignedToName" | "reservationId" | "reservationCode" | "customerId" | "customerName" | "resolvedAt">>, actorId: string) {
+  return updateWorkRecord("incidents", "incident", id, payload, actorId, `Actualizó una incidencia${payload.status ? ` a «${payload.status}»` : ""}`);
+}
+
+export async function deleteIncident(id: string, actorId: string) {
+  return removeWorkRecord("incidents", "incident", id, {}, actorId, "Archivó una incidencia operativa");
+}
+
+export async function createExpense(payload: Omit<Expense, "id" | "code" | "createdAt" | "updatedAt" | "createdByName" | "createdByEmail" | "updatedBy" | "updatedByName">) {
+  return createSequencedWorkRecord("expenses", "expense", `Registró el gasto «${payload.concept.trim()}»`, payload, payload.createdBy);
+}
+
+export async function updateExpense(id: string, payload: Partial<Pick<Expense, "concept" | "category" | "amount" | "currency" | "method" | "status" | "spentAt" | "supplier" | "department" | "project" | "reservationId" | "reservationCode" | "notes" | "archived">>, actorId: string) {
+  return updateWorkRecord("expenses", "expense", id, payload, actorId, `Actualizó un gasto operativo${payload.status ? ` a «${payload.status}»` : ""}`);
+}
+
+export async function archiveExpense(id: string, actorId: string) {
+  return removeWorkRecord("expenses", "expense", id, {}, actorId, "Archivó un gasto operativo");
 }
 
 export async function inviteEmployee(email: string, displayName: string, role: UserRole, invitedBy: string) {

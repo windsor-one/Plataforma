@@ -1,10 +1,10 @@
 # Manual integral de Heliot Media
 
-> **Propósito.** Este documento permite operar, mantener y recuperar Heliot Media sin depender de una persona específica. Guárdelo junto con el repositorio y actualícelo cuando cambie una regla, una colección, un rol o un proceso de trabajo.
+> **Propósito.** Este documento permite operar, mantener y recuperar Sistema Heliot sin depender de una persona específica. Guárdelo junto con el repositorio y actualícelo cuando cambie una regla, una colección, un rol o un proceso de trabajo.
 
 | Dato | Valor actual |
 | --- | --- |
-| Nombre de la plataforma | **Heliot Media** |
+| Nombre de la plataforma | **Sistema Heliot** |
 | Desarrollado por | Windsor |
 | Publicación | GitHub Pages |
 | URL pública | `https://windsor-one.github.io/Plataforma/` |
@@ -39,7 +39,7 @@
 
 ## 1. Qué hace la plataforma
 
-Heliot Media centraliza la gestión de clientes, reservas, paquetes, pagos, personal, comunicaciones internas y trazabilidad operativa. La información se sincroniza con Firestore en tiempo real y cada operación principal conserva el usuario y la hora de registro.
+Sistema Heliot centraliza la gestión de clientes, reservas, paquetes, pagos, personal, comunicaciones internas y trazabilidad operativa. La información se sincroniza con Firestore en tiempo real y cada operación principal conserva el usuario y la hora de registro.
 
 | Área | Función principal |
 | --- | --- |
@@ -51,6 +51,9 @@ Heliot Media centraliza la gestión de clientes, reservas, paquetes, pagos, pers
 | Notificaciones | Comunicaciones internas ordenadas por urgencia y fecha. |
 | Personal | Directorio de perfiles activos, suspendidos e invitaciones pendientes. |
 | Operación | Asignación de responsables y control de reservas grupales. |
+| Tareas | Plan de trabajo e incidencias vinculables a reservas, con responsables, prioridades y seguimiento. |
+| Finanzas | Lectura administrativa de ingresos, gastos, flujo y exportación CSV. |
+| Búsqueda global | Acceso directo por nombre, código, servicio, pago, tarea, incidencia o gasto. |
 | Historial | Movimientos auditables de la plataforma. |
 | Accesos | Línea de tiempo de creación de cuenta, accesos y actividad operativa. |
 
@@ -76,6 +79,11 @@ Actualmente existen dos roles técnicos. En la interfaz, el valor `admin` se pre
 | Ver Personal, invitaciones y perfiles | No | Sí |
 | Invitar, suspender o cambiar rol de Personal | No | Sí |
 | Enviar enlace de recuperación de contraseña | No | Sí |
+| Ver tareas propias y reportar incidencias | Sí | Sí |
+| Crear, asignar, editar o archivar tareas | No | Sí |
+| Gestionar incidencias reportadas | No | Sí |
+| Consultar o gestionar Finanzas y gastos | No | Sí |
+| Usar búsqueda global | Sí, en sus módulos autorizados | Sí, incluido Finanzas |
 | Ver Operación, Historial y Accesos | No | Sí |
 | Eliminar un movimiento del Historial | No | Sí |
 
@@ -127,6 +135,10 @@ Las reservas grupales con **cinco o más participantes** registran automáticame
 7. Guarde el pago.
 
 Para descargar el comprobante, ubique el pago en la tabla y presione el icono de documento. El PDF se genera directamente en el navegador y usa el código de pago como referencia.
+
+### 3.5 Consultar tareas y reportar incidencias
+
+Abra **Tareas** para ver el trabajo que Administración/IT le haya asignado. Actualice únicamente el estado cuando avance, requiera revisión o complete una tarea. Para documentar un bloqueo, seleccione **Reportar incidencia**, describa lo ocurrido, elija la prioridad y vincule una reserva cuando aplique. El reporte queda disponible para seguimiento administrativo; no sustituye los canales de emergencia de la organización.
 
 ---
 
@@ -180,6 +192,23 @@ No comparta contraseñas por chat ni cree una colección de contraseñas en Fire
 
 **Accesos** combina creación de cuentas, inicios de sesión y movimientos operativos. Es el punto de consulta para saber qué actividad ha habido, quién la registró y cuándo ocurrió.
 
+### 4.7 Coordinar tareas e incidencias
+
+1. Abra **Tareas** y use **Nueva tarea** para definir resultado, prioridad, responsable y fecha límite.
+2. Vincule una reserva cuando la entrega dependa de un servicio concreto.
+3. Revise las incidencias reportadas por el Personal, asigne un responsable y cambie el estado hasta resolver o cerrar el caso.
+4. Archive tareas o incidencias solo cuando ya no deban estar en el tablero activo; el movimiento se conserva en Historial.
+
+### 4.8 Registrar y revisar finanzas
+
+1. Abra **Finanzas** y seleccione el período.
+2. Use **Registrar gasto** para guardar concepto, categoría, importe, estado, fecha, método y referencia operativa.
+3. Marque como **Pendiente** lo aún no pagado y como **Pagado** cuando salga de caja.
+4. Revise el flujo de caja, los compromisos y el resultado proyectado.
+5. Use **Exportar CSV** para conciliación interna o para compartir con el responsable contable.
+
+> El panel financiero es una lectura administrativa. No reemplaza libros contables, obligaciones fiscales ni asesoría profesional.
+
 ---
 
 ## 5. Módulos operativos
@@ -199,6 +228,30 @@ Una reserva vincula cliente, servicio, fecha, hora, estado y paquete. Una reserv
 ### 5.4 Operación
 
 El panel Operación no crea permisos nuevos: concentra las reservas para que Administración/IT distribuya responsables y supervise grupos. Personal realiza el trabajo asignado desde sus módulos operativos habituales.
+
+### 5.5 Tareas e incidencias
+
+Cada tarea usa el código secuencial `TAR-xxxxx` y conserva prioridad, estado, responsable, fecha límite y vínculo opcional a una reserva. Administración/IT puede crear, asignar, editar y archivar; Personal solo puede consultar sus tareas asignadas y actualizar el estado.
+
+Las incidencias usan el código `INC-xxxxx`. Todo integrante activo puede reportar una incidencia propia. Administración/IT asigna, investiga, resuelve o cierra el registro. Utilice descripciones concretas y evite escribir contraseñas, datos bancarios completos o información personal innecesaria.
+
+### 5.6 Búsqueda global
+
+El botón **Buscar** del encabezado y el atajo `Ctrl + K` (o `Cmd + K`) permiten encontrar clientes, reservas, pagos, tareas e incidencias por código o texto. Administración/IT también puede encontrar gastos. La búsqueda no concede acceso adicional: cada resultado respeta los permisos del perfil activo.
+
+### 5.7 Finanzas
+
+**Finanzas** reúne los pagos confirmados y los gastos activos por período. Los indicadores se interpretan así:
+
+| Indicador | Cálculo operativo |
+| --- | --- |
+| Ingresos cobrados | Pagos con estado `paid` en el período. |
+| Egresos pagados | Gastos con estado `paid` en el período. |
+| Flujo de caja | Ingresos cobrados menos egresos pagados. |
+| Resultado proyectado | Ingresos cobrados menos gastos pagados y aprobados. |
+| Por comprometer | Gastos con estado `pending`. |
+
+Archivar un gasto lo retira de la lectura activa, sin borrar el documento ni el movimiento de auditoría. Los CSV incluyen pagos y gastos del período elegido; deben revisarse antes de usarse como soporte contable.
 
 ---
 
@@ -265,12 +318,13 @@ Administración/IT configura este intervalo desde **Accesos y actividad → Cier
 
 ### Huella digital estimada
 
-Heliot Media muestra una **estimación informativa de emisiones asociadas al uso digital**. El navegador registra una vez por sesión los bytes transferidos al cargar y utilizar la aplicación, y los convierte a CO₂e con un factor visible de **148.2 g CO₂e/GB**. Ese factor proviene de sumar las intensidades operativas y embebidas de centros de datos, redes y dispositivos del Sustainable Web Design Model v4 (0.300 kWh/GB) y multiplicarlas por la intensidad eléctrica global de 494 g CO₂e/kWh publicada por su metodología [1].
+Sistema Heliot muestra una **estimación informativa de emisiones asociadas al uso digital**. El navegador registra una vez por sesión los bytes transferidos al cargar y utilizar la aplicación, y los convierte a CO₂e con un factor visible de **148.2 g CO₂e/GB**. Ese factor proviene de sumar las intensidades operativas y embebidas de centros de datos, redes y dispositivos del Sustainable Web Design Model v4 (0.300 kWh/GB) y multiplicarlas por la intensidad eléctrica global de 494 g CO₂e/kWh publicada por su metodología [1].
 
 | Vista | Acceso | Información disponible |
 | --- | --- | --- |
-| **Mi perfil** | Cada integrante activo | Su acumulado estimado, transferencia observada y número de sesiones registradas. |
-| **Accesos y actividad → Huella digital estimada** | Solo Administración/IT | Consolidado y desglose cronológico acumulado por integrante. |
+| **Impacto digital** | Cada integrante activo | Sus propias sesiones, transferencia observada y acumulado estimado. |
+| **Impacto digital** | Solo Administración/IT | Consolidado y desglose cronológico acumulado por integrante. |
+| **Mi perfil** | Cada integrante activo | Resumen breve de su acumulado estimado. |
 
 > **Límite esencial:** esta función no mide electricidad real, fabricación de hardware ni emisiones verificadas. Es una estimación de transferencia observada por el navegador; los recursos en caché, extensiones, actividad fuera de la aplicación o limitaciones del dispositivo pueden no quedar reflejados. La plataforma no debe usarla para afirmaciones de neutralidad, compensación o reportes corporativos auditados [1] [2].
 
@@ -278,7 +332,7 @@ Heliot Media muestra una **estimación informativa de emisiones asociadas al uso
 
 | Fuente | Eventos principales |
 | --- | --- |
-| `activityLogs` | Creación, edición y eliminación de clientes, reservas, pagos, productos y avisos; invitaciones; cambios de perfil; alta de cuenta. |
+| `activityLogs` | Creación, edición y archivo de clientes, reservas, pagos, productos, tareas, incidencias, gastos y avisos; invitaciones; cambios de perfil; alta de cuenta. |
 | `accessLogs` | Creación de cuenta, inicio de sesión y futuros eventos de acceso compatibles. |
 | Registros operativos | Usuario creador, correo, fecha de creación y última actualización. |
 
@@ -301,10 +355,13 @@ Los registros históricos ya existentes, creados antes de habilitar una nueva fu
 | `payments` | Cobros | `code`, cliente, reserva, importe, tipo, método, estado y fecha. |
 | `products` | Paquetes editables | categoría, precio, unidad, inclusiones y estado activo. |
 | `generalReminders` | Notificaciones internas | título, mensaje, prioridad, creador y fechas. |
+| `tasks` | Trabajo operativo asignado | `code`, título, prioridad, estado, responsable, fecha límite y reserva. |
+| `incidents` | Bloqueos y seguimiento | `code`, descripción, prioridad, estado, responsable y reserva. |
+| `expenses` | Libro de gastos administrativo | `code`, concepto, categoría, importe, estado, fecha y referencias. |
 | `activityLogs` | Historial administrativo | acción, entidad, resumen, actor y hora. |
 | `accessLogs` | Accesos y alta de cuenta | usuario, correo, rol, evento y hora. |
 | `carbonUsage` | Estimaciones de uso digital | usuario, bytes observados, sesiones, CO₂e estimado, factor y fecha. |
-| `sequences` | Contadores de código | contador por categoría: clientes, reservas y pagos. |
+| `sequences` | Contadores de código | contador por categoría: clientes, reservas, pagos, tareas, incidencias y gastos. |
 
 ### Códigos secuenciales
 
@@ -313,6 +370,9 @@ Los registros históricos ya existentes, creados antes de habilitar una nueva fu
 | Cliente | `CLI-00001` |
 | Reserva | `RES-00001` |
 | Pago | `PAG-00001` |
+| Tarea | `TAR-00001` |
+| Incidencia | `INC-00001` |
+| Gasto | `GAS-00001` |
 
 No elimine ni reduzca manualmente los documentos de `sequences` porque podría generar códigos repetidos. Para corregir un código, mantenga el contador por encima del número más alto ya utilizado.
 
@@ -344,6 +404,15 @@ VITE_BOOTSTRAP_ADMIN_EMAIL=
 Los valores `VITE_` se incorporan al cliente en la compilación. No coloque claves de cuentas de servicio, tokens administrativos, contraseñas ni secretos privados en este archivo ni en el repositorio.
 
 ### 11.3 Publicar reglas desde Firebase Console
+
+La versión vigente está en el archivo **`firestore.rules`** del repositorio. Para publicar manualmente los permisos de clientes, reservas, pagos, tareas, incidencias, gastos, impacto digital y seguridad de sesión:
+
+1. Abra Firebase Console y entre a **Firestore Database → Reglas**.
+2. Reemplace el contenido completo del editor por el contenido de `firestore.rules` incluido con esta versión.
+3. Presione **Publicar** y espere la confirmación de Firebase.
+4. Abra **Firestore Database → Índices** y compruebe que el índice de `carbonUsage` por `userId` ascendente y `recordedAt` descendente esté habilitado.
+
+> No combine fragmentos de reglas anteriores: publique el archivo completo para preservar el principio de denegación por defecto y las reglas coordinadas de todas las colecciones.
 
 1. Abra Firebase Console y seleccione `gestionpro-firebase`.
 2. Vaya a **Firestore Database → Reglas**.

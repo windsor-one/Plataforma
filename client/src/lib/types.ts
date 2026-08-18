@@ -8,8 +8,13 @@ export type ReservationStatus = "pending" | "confirmed" | "completed" | "cancell
 export type PaymentStatus = "paid" | "pending" | "refunded";
 export type PaymentMethod = "cash" | "card" | "transfer" | "other";
 export type PaymentKind = "deposit" | "partial" | "balance" | "full";
+export type TaskStatus = "pending" | "in_progress" | "review" | "completed" | "cancelled";
+export type IncidentStatus = "reported" | "investigating" | "resolved" | "closed";
+export type WorkPriority = "low" | "medium" | "high" | "urgent";
+export type ExpenseStatus = "pending" | "approved" | "paid" | "cancelled";
+export type ExpenseCategory = "materials" | "equipment" | "transport" | "marketing" | "services" | "payroll" | "other";
 export type ActivityAction = "created" | "updated" | "deleted" | "invited" | "profile_updated";
-export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access";
+export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access" | "task" | "incident" | "expense";
 
 export interface UserProfile {
   id: string;
@@ -87,6 +92,59 @@ export interface Payment extends OperationalAuditFields {
   status: PaymentStatus;
   paidAt: string;
   notes?: string;
+}
+
+export interface Task extends OperationalAuditFields {
+  id: string;
+  code?: string;
+  title: string;
+  description?: string;
+  priority: WorkPriority;
+  status: TaskStatus;
+  dueDate?: string;
+  assignedToId?: string;
+  assignedToName?: string;
+  reservationId?: string;
+  reservationCode?: string;
+  customerId?: string;
+  customerName?: string;
+  archived?: boolean;
+}
+
+export interface Incident extends OperationalAuditFields {
+  id: string;
+  code?: string;
+  title: string;
+  description: string;
+  priority: WorkPriority;
+  status: IncidentStatus;
+  assignedToId?: string;
+  assignedToName?: string;
+  reservationId?: string;
+  reservationCode?: string;
+  customerId?: string;
+  customerName?: string;
+  resolvedAt?: unknown;
+  archived?: boolean;
+}
+
+export interface Expense extends OperationalAuditFields {
+  id: string;
+  code?: string;
+  concept: string;
+  category: ExpenseCategory;
+  amount: number;
+  currency: string;
+  method: PaymentMethod;
+  status: ExpenseStatus;
+  spentAt: string;
+  supplier?: string;
+  department?: string;
+  project?: string;
+  reservationId?: string;
+  reservationCode?: string;
+  notes?: string;
+  archived?: boolean;
 }
 
 export interface AccessLog {

@@ -107,3 +107,11 @@
 - [x] Publicar las reglas de Firestore para proteger la configuración global de inactividad.
 - [x] Alinear el valor de inactividad y su selector de unidad a la misma altura en el panel de seguridad.
 - [x] Diseñar e implementar un indicador de emisiones de carbono estimadas por usuario según el uso de la plataforma, con metodología visible.
+- [x] Evaluar, priorizar e implementar las mejoras funcionales viables propuestas para Heliot Media.
+- [x] Añadir tareas e incidencias vinculables a la operación, con responsables, prioridades, fechas y estados.
+- [x] Añadir el registro de gastos y una lectura financiera de ingresos, egresos, utilidad y pendientes.
+- [x] Añadir búsqueda global, filtros avanzados y exportación CSV para la consulta operativa.
+- [x] Proteger los nuevos módulos con reglas de Firestore, auditoría y permisos por rol.
+- [x] Renombrar la identidad visible de la plataforma a Sistema Heliot.
+- [x] Mover la huella digital estimada a un panel propio del menú con sus permisos correspondientes.
+- [x] Preparar las reglas de Firebase actualizadas para entrega manual y copia directa.

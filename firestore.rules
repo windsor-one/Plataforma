@@ -86,6 +86,29 @@ service cloud.firestore {
       allow read, create, update, delete: if activeEmployee();
     }
 
+    match /tasks/{taskId} {
+      // Administración/IT coordina el trabajo. El Personal solo puede actualizar el estado de tareas propias.
+      allow read: if activeEmployee();
+      allow create: if admin() && request.resource.data.createdBy == request.auth.uid;
+      allow update: if admin() || (activeEmployee()
+        && resource.data.assignedToId == request.auth.uid
+        && request.resource.data.diff(resource).affectedKeys().hasOnly(['status', 'updatedAt', 'updatedBy', 'updatedByName']));
+      allow delete: if admin();
+    }
+
+    match /incidents/{incidentId} {
+      // Cualquier integrante activo puede reportar una incidencia propia; la gestión y cierre son administrativos.
+      allow read: if activeEmployee();
+      allow create: if activeEmployee() && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if admin();
+    }
+
+    match /expenses/{expenseId} {
+      // Los gastos alteran la lectura financiera: únicamente Administración/IT puede consultarlos y gestionarlos.
+      allow read, create, update: if admin();
+      allow delete: if false;
+    }
+
     match /products/{productId} {
       // El catálogo es visible para todo el Personal; solo Administración/IT lo administra.
       allow read: if activeEmployee();

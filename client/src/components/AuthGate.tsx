@@ -14,7 +14,7 @@ import {
 } from "firebase/auth";
 import { ArrowRight, CalendarDays, CircleDollarSign, Database, LockKeyhole, Settings2, ShieldCheck, Sparkles, UsersRound, Wifi } from "lucide-react";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
-import { completeInvitationOnboarding } from "@/lib/firestore";
+import { completeInvitationOnboarding, recordAccess } from "@/lib/firestore";
 import type { UserProfile } from "@/lib/types";
 
 type Mode = "login" | "register";
@@ -82,6 +82,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
           await signOut(auth);
           throw new Error("Tu cuenta se encuentra suspendida. Contacta al administrador.");
         }
+        await recordAccess(currentUser.uid, completed, "login");
         setUser(currentUser);
         setProfile(completed);
       } catch (caught) {

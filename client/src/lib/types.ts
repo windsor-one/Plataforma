@@ -7,8 +7,9 @@ export type EmployeeStatus = "active" | "suspended";
 export type ReservationStatus = "pending" | "confirmed" | "completed" | "cancelled";
 export type PaymentStatus = "paid" | "pending" | "refunded";
 export type PaymentMethod = "cash" | "card" | "transfer" | "other";
+export type PaymentKind = "deposit" | "partial" | "balance" | "full";
 export type ActivityAction = "created" | "updated" | "deleted" | "invited" | "profile_updated";
-export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder";
+export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access";
 
 export interface UserProfile {
   id: string;
@@ -57,6 +58,14 @@ export interface Reservation extends OperationalAuditFields {
   service: string;
   durationMinutes: number;
   status: ReservationStatus;
+  totalDue?: number;
+  groupName?: string;
+  groupSize?: number;
+  participantNames?: string[];
+  groupBonusEligible?: boolean;
+  assignedToId?: string;
+  assignedToName?: string;
+  assignmentNote?: string;
   notes?: string;
 }
 
@@ -72,11 +81,22 @@ export interface Payment extends OperationalAuditFields {
   customerName: string;
   reservationId?: string;
   amount: number;
+  kind?: PaymentKind;
   currency: string;
   method: PaymentMethod;
   status: PaymentStatus;
   paidAt: string;
   notes?: string;
+}
+
+export interface AccessLog {
+  id: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  role: UserRole;
+  event: "login" | "logout";
+  occurredAt?: unknown;
 }
 
 export interface Invitation {

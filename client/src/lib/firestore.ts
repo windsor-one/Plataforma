@@ -5,9 +5,9 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Product, Reservation, UserProfile, UserRole } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Product, Reservation, UserProfile, UserRole } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders";
+type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type OperationalPayload = Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">;
 
@@ -43,7 +43,7 @@ function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId:
 }
 
 export function subscribeCollection<T extends { id: string }>(name: ManagedCollection, onData: (data: T[]) => void, onError: (error: Error) => void) {
-  const sortField = name === "users" || name === "invitations" ? "createdAt" : name === "activityLogs" ? "occurredAt" : name === "generalReminders" || name === "products" ? "createdAt" : "updatedAt";
+  const sortField = name === "users" || name === "invitations" || name === "generalReminders" || name === "products" ? "createdAt" : name === "activityLogs" || name === "accessLogs" ? "occurredAt" : "updatedAt";
   return onSnapshot(query(collection(db, name), orderBy(sortField, "desc")), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
 }
 
@@ -144,6 +144,11 @@ export async function updateOwnProfile(userId: string, displayName: string) {
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await updateDoc(doc(db, "users", userId), profilePayload); }
 }
 
+export async function recordAccess(userId: string, profile: UserProfile, event: AccessLog["event"] = "login") {
+  const payload = { userId, displayName: profile.displayName, email: profile.email, role: profile.role, event, occurredAt: serverTimestamp() } satisfies Omit<AccessLog, "id">;
+  try { await setDoc(doc(collection(db, "accessLogs")), payload); } catch (error) { console.warn("No se pudo registrar el acceso.", error); }
+}
+
 export async function createGeneralReminder(payload: Pick<GeneralReminder, "title" | "message" | "priority">, actorId: string) {
   const actor = await activityActor(actorId);
   const reminderRef = doc(collection(db, "generalReminders"));
@@ -187,4 +192,8 @@ export async function deleteGeneralReminder(id: string, actorId: string) {
   batch.delete(doc(db, "generalReminders", id));
   batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "reminder", id, "Eliminó un aviso general", actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await deleteDoc(doc(db, "generalReminders", id)); }
+}
+
+export async function deleteActivityLog(id: string) {
+  await deleteDoc(doc(db, "activityLogs", id));
 }

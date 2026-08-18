@@ -83,3 +83,13 @@
 - [x] Ordenar General Reminders por relevancia y presentar el acceso administrativo como «Nuevo anuncio» en la cabecera del panel.
 - [x] Permitir que todo el Personal vea Productos y reservar la edición del catálogo para Administración/IT.
 - [x] Publicar las reglas de Firestore para lectura de Productos por Personal y gestión exclusiva de Administración/IT.
+- [x] Generar facturas o comprobantes de pago descargables en PDF.
+- [x] Registrar anticipos, pagos parciales y saldo pendiente por reserva o grupo.
+- [x] Permitir asignar responsables operativos a reservas y entregas.
+- [x] Crear reservas grupales con integrantes, paquetes y beneficios por cantidad.
+- [x] Registrar accesos de usuarios y mostrar su auditoría exclusivamente a Administración/IT.
+- [x] Aplicar en la interfaz los accesos de cada panel según el rol Administración/IT o Personal.
+- [x] Renombrar General Reminders como Notificaciones en toda la interfaz.
+- [x] Permitir a Administración/IT eliminar movimientos del Historial de actividad con control exclusivo por rol.
+- [x] Publicar las nuevas reglas de Firestore para registro de accesos y eliminación administrativa del Historial.
+- [ ] Validar con una sesión real la generación de PDF, los saldos y los paneles exclusivos de Administración/IT.

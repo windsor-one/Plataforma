@@ -13,8 +13,17 @@ export type IncidentStatus = "reported" | "investigating" | "resolved" | "closed
 export type WorkPriority = "low" | "medium" | "high" | "urgent";
 export type ExpenseStatus = "pending" | "approved" | "paid" | "cancelled";
 export type ExpenseCategory = "materials" | "equipment" | "transport" | "marketing" | "services" | "payroll" | "other";
+export type EmploymentStatus = "active" | "suspended" | "vacation" | "leave" | "terminated";
+export type WorkMode = "onsite" | "remote" | "hybrid";
+export type ContractType = "indefinite" | "fixed_term" | "temporary" | "internship" | "service";
+export type OrganizationUnitKind = "department" | "area" | "team" | "position" | "site";
+export type DocumentStatus = "valid" | "expiring" | "expired" | "pending";
+export type LeaveType = "vacation" | "personal" | "medical" | "academic" | "unpaid" | "other";
+export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
+export type AttendanceType = "clock_in" | "clock_out" | "break_start" | "break_end";
+export type ReviewStatus = "draft" | "shared" | "acknowledged";
 export type ActivityAction = "created" | "updated" | "deleted" | "invited" | "profile_updated";
-export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access" | "task" | "incident" | "expense";
+export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access" | "task" | "incident" | "expense" | "hr_profile" | "contract" | "document" | "attendance" | "leave" | "goal" | "review" | "training" | "recognition" | "policy";
 
 export interface UserProfile {
   id: string;
@@ -24,6 +33,188 @@ export interface UserProfile {
   status: EmployeeStatus;
   createdAt?: unknown;
   updatedAt?: unknown;
+}
+
+/** Expediente privado: titular y Administración/IT. No se mezcla con el perfil de acceso. */
+export interface HrProfile extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeCode?: string;
+  personalEmail?: string;
+  personalPhone?: string;
+  address?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  birthDate?: string;
+  nationality?: string;
+  maritalStatus?: string;
+  department?: string;
+  area?: string;
+  team?: string;
+  position?: string;
+  supervisorId?: string;
+  supervisorName?: string;
+  startDate?: string;
+  contractType?: ContractType;
+  workDay?: string;
+  workMode?: WorkMode;
+  site?: string;
+  employmentStatus?: EmploymentStatus;
+  vacationAllowanceDays?: number;
+  vacationUsedDays?: number;
+  notes?: string;
+}
+
+export interface OrganizationUnit extends OperationalAuditFields {
+  id: string;
+  name: string;
+  kind: OrganizationUnitKind;
+  parentId?: string;
+  parentName?: string;
+  leaderId?: string;
+  leaderName?: string;
+  active: boolean;
+}
+
+export interface EmploymentContract extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  contractType: ContractType;
+  status: "draft" | "active" | "expiring" | "ended";
+  startDate: string;
+  endDate?: string;
+  position?: string;
+  workDay?: string;
+  workMode?: WorkMode;
+  salaryAmount?: number;
+  currency?: string;
+  notes?: string;
+}
+
+/** El documento físico se guarda fuera de Firestore; aquí queda su expediente y vigencia. */
+export interface HrDocument extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  name: string;
+  type: "identity" | "contract" | "cv" | "certificate" | "training" | "evaluation" | "other";
+  status: DocumentStatus;
+  issuedAt?: string;
+  expiresAt?: string;
+  private: boolean;
+  referenceUrl?: string;
+  notes?: string;
+}
+
+export interface WorkSchedule extends OperationalAuditFields {
+  id: string;
+  name: string;
+  days: string[];
+  startTime: string;
+  endTime: string;
+  breakMinutes?: number;
+  active: boolean;
+}
+
+export interface AttendanceRecord extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  type: AttendanceType;
+  occurredAt?: unknown;
+  note?: string;
+  source: "manual" | "self_service";
+}
+
+export interface LeaveRequest extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  type: LeaveType;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason?: string;
+  status: LeaveStatus;
+  reviewerId?: string;
+  reviewerName?: string;
+  reviewerComment?: string;
+}
+
+export interface LifecycleChecklist extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  stage: "onboarding" | "offboarding";
+  title: string;
+  ownerId?: string;
+  ownerName?: string;
+  status: "pending" | "in_progress" | "completed";
+  dueDate?: string;
+  notes?: string;
+}
+
+export interface HrGoal extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  title: string;
+  target?: string;
+  progress: number;
+  dueDate?: string;
+  status: "active" | "completed" | "paused";
+}
+
+export interface PerformanceReview extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  period: string;
+  score?: number;
+  strengths?: string;
+  improvements?: string;
+  comments?: string;
+  status: ReviewStatus;
+}
+
+export interface TrainingRecord extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  title: string;
+  provider?: string;
+  completedAt?: string;
+  expiresAt?: string;
+  cost?: number;
+  status: "assigned" | "in_progress" | "completed" | "expired";
+}
+
+export interface Recognition extends OperationalAuditFields {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  title: string;
+  message: string;
+  visibility: "company" | "private";
+}
+
+export interface HrPolicy extends OperationalAuditFields {
+  id: string;
+  title: string;
+  version: string;
+  content: string;
+  active: boolean;
+  publishedAt?: unknown;
+}
+
+export interface PolicyAcknowledgment extends OperationalAuditFields {
+  id: string;
+  policyId: string;
+  employeeId: string;
+  employeeName: string;
+  version: string;
+  acknowledgedAt?: unknown;
 }
 
 interface OperationalAuditFields {

@@ -50,6 +50,7 @@ Sistema Heliot centraliza la gestión de clientes, reservas, paquetes, pagos, pe
 | Productos | Catálogo de aranceles y promociones disponible para todo el Personal. |
 | Notificaciones | Comunicaciones internas ordenadas por urgencia y fecha. |
 | Personal | Directorio de perfiles activos, suspendidos e invitaciones pendientes. |
+| Recursos Humanos | Expedientes, organización, asistencia, ausencias, contratos, formación y políticas con privacidad por titular. |
 | Operación | Asignación de responsables y control de reservas grupales. |
 | Tareas | Plan de trabajo e incidencias vinculables a reservas, con responsables, prioridades y seguimiento. |
 | Finanzas | Lectura administrativa de ingresos, gastos, flujo y exportación CSV. |
@@ -83,11 +84,19 @@ Actualmente existen dos roles técnicos. En la interfaz, el valor `admin` se pre
 | Crear, asignar, editar o archivar tareas | No | Sí |
 | Gestionar incidencias reportadas | No | Sí |
 | Consultar o gestionar Finanzas y gastos | No | Sí |
+| Ver y actualizar sus datos de contacto de RR. HH. | Sí, solo los propios | Sí |
+| Ver asistencia, ausencias, objetivos, formación y evaluaciones | Sí, solo los propios | Sí, de todo el Personal |
+| Marcar entrada, salida y descansos | Sí, solo propios | Sí |
+| Solicitar vacaciones o permisos | Sí, solo propios | Sí |
+| Aprobar ausencias, administrar expedientes, contratos, documentos y salarios | No | Sí |
+| Crear estructura, políticas, onboarding, desarrollo y reconocimientos | No | Sí |
 | Usar búsqueda global | Sí, en sus módulos autorizados | Sí, incluido Finanzas |
 | Ver Operación, Historial y Accesos | No | Sí |
 | Eliminar un movimiento del Historial | No | Sí |
 
 Un perfil suspendido no puede operar aunque conozca su correo y contraseña. El cambio de rol, correo o estado se realiza desde **Personal** y nunca desde el perfil individual del empleado.
+
+> **Matriz de privacidad de RR. HH.** En esta versión, el rol técnico `admin` se presenta como **Administración/IT** y concentra las funciones de RR. HH. por seguridad. Personal nunca ve contratos, salarios, documentos privados, expedientes de terceros ni evaluaciones ajenas. Cuando la organización necesite responsables de equipo, se recomienda crear un rol técnico adicional de Supervisor antes de concederles acceso a datos de otras personas.
 
 ---
 
@@ -139,6 +148,12 @@ Para descargar el comprobante, ubique el pago en la tabla y presione el icono de
 ### 3.5 Consultar tareas y reportar incidencias
 
 Abra **Tareas** para ver el trabajo que Administración/IT le haya asignado. Actualice únicamente el estado cuando avance, requiera revisión o complete una tarea. Para documentar un bloqueo, seleccione **Reportar incidencia**, describa lo ocurrido, elija la prioridad y vincule una reserva cuando aplique. El reporte queda disponible para seguimiento administrativo; no sustituye los canales de emergencia de la organización.
+
+### 3.6 Usar Recursos Humanos
+
+Abra **Recursos Humanos → Mi espacio** para consultar su estado laboral, código, cargo, área y días de vacaciones registrados. Desde allí puede actualizar sus datos personales de contacto, marcar entrada, salida o descansos y solicitar vacaciones o permisos. También puede revisar los objetivos, capacitaciones, evaluaciones y políticas que Administración/IT haya compartido con usted.
+
+No incorpore en el campo de motivos de ausencia diagnósticos médicos, números de identidad, claves ni información confidencial. Para evidencias o documentación clínica, siga el proceso privado definido por Administración/IT fuera de los campos generales de la plataforma.
 
 ---
 
@@ -209,6 +224,15 @@ No comparta contraseñas por chat ni cree una colección de contraseñas en Fire
 
 > El panel financiero es una lectura administrativa. No reemplaza libros contables, obligaciones fiscales ni asesoría profesional.
 
+### 4.9 Administrar Recursos Humanos
+
+1. Abra **Recursos Humanos → Expedientes** y complete primero el código, cargo, departamento, fecha de ingreso, modalidad, jornada y vacaciones de cada integrante.
+2. Defina departamentos, áreas, equipos, cargos, sedes y horarios desde **Organización**.
+3. Registre contratos, vigencias y referencias documentales en **Vida laboral**. El importe salarial se conserva exclusivamente para Administración/IT.
+4. Revise solicitudes de vacaciones y permisos desde **Control**. La aprobación o rechazo queda registrada en Historial.
+5. Utilice **Desarrollo** para crear objetivos, evaluaciones, capacitaciones, reconocimientos y políticas con versión.
+6. Mantenga los documentos físicos o sus enlaces en un repositorio autorizado; la plataforma guarda el expediente, estado y vigencia, no sustituye el almacenamiento documental seguro.
+
 ---
 
 ## 5. Módulos operativos
@@ -252,6 +276,21 @@ El botón **Buscar** del encabezado y el atajo `Ctrl + K` (o `Cmd + K`) permiten
 | Por comprometer | Gastos con estado `pending`. |
 
 Archivar un gasto lo retira de la lectura activa, sin borrar el documento ni el movimiento de auditoría. Los CSV incluyen pagos y gastos del período elegido; deben revisarse antes de usarse como soporte contable.
+
+### 5.8 Recursos Humanos
+
+El centro **Recursos Humanos** cubre una primera capa del ciclo laboral: expediente, estructura, asistencia manual, ausencias, horarios, contratos, documentos de referencia, onboarding/offboarding, objetivos, desempeño, capacitación, reconocimiento y políticas. La interfaz personal muestra únicamente los datos de la cuenta activa; Administración/IT puede gestionar la vista institucional.
+
+| Submódulo | Personal activo | Administración/IT |
+| --- | --- | --- |
+| Mi expediente | Consulta y actualización de contacto propio | Expediente completo de todas las personas |
+| Asistencia | Crea y consulta sus marcaciones | Consulta el conjunto y realiza ajustes administrativos |
+| Ausencias | Crea y consulta solicitudes propias | Aprueba, rechaza y revisa todas las solicitudes |
+| Contratos y documentos | Sin acceso a información sensible | Crea, consulta y mantiene registros |
+| Desarrollo | Ve sus propios objetivos, evaluación y formación | Asigna y administra para todo el Personal |
+| Políticas | Lee versiones activas y confirma recepción | Publica y controla versiones |
+
+Los contratos, salarios y documentos se restringen a Administración/IT. Esta decisión es deliberada: el actual rol `personal` no equivale a RR. HH. ni a supervisor. Antes de habilitar accesos jerárquicos, se debe crear y probar un rol adicional con reglas específicas.
 
 ---
 
@@ -355,6 +394,17 @@ Los registros históricos ya existentes, creados antes de habilitar una nueva fu
 | `payments` | Cobros | `code`, cliente, reserva, importe, tipo, método, estado y fecha. |
 | `products` | Paquetes editables | categoría, precio, unidad, inclusiones y estado activo. |
 | `generalReminders` | Notificaciones internas | título, mensaje, prioridad, creador y fechas. |
+| `hrProfiles` | Expediente privado | código, cargo, organización, modalidad, vacaciones y datos de contacto. |
+| `organizationUnits` | Estructura organizacional | departamentos, áreas, equipos, cargos y sedes. |
+| `workSchedules` | Horarios y turnos | días, inicio, fin y descanso. |
+| `employmentContracts` | Contratos laborales | vigencia, cargo, modalidad, jornada y salario administrativo. |
+| `hrDocuments` | Expediente documental | tipo, estado, emisión, vencimiento y referencia segura. |
+| `attendanceRecords` | Marcaciones personales | titular, tipo, origen y hora. |
+| `leaveRequests` | Vacaciones y permisos | tipo, fechas, días, estado y revisor. |
+| `lifecycleChecklists` | Onboarding/offboarding | etapa, paso, responsable y vencimiento. |
+| `hrGoals` / `performanceReviews` | Desarrollo y desempeño | titular, objetivo, progreso, período y evaluación. |
+| `trainingRecords` / `recognitions` | Formación y reconocimiento | titular, estado, proveedor, logro y visibilidad. |
+| `hrPolicies` / `policyAcknowledgments` | Políticas y aceptación | versión activa, contenido, titular y confirmación. |
 | `tasks` | Trabajo operativo asignado | `code`, título, prioridad, estado, responsable, fecha límite y reserva. |
 | `incidents` | Bloqueos y seguimiento | `code`, descripción, prioridad, estado, responsable y reserva. |
 | `expenses` | Libro de gastos administrativo | `code`, concepto, categoría, importe, estado, fecha y referencias. |

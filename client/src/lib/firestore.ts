@@ -5,11 +5,13 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, CarbonUsage, Customer, Expense, GeneralReminder, Incident, Invitation, Payment, Product, Reservation, SecuritySettings, Task, UserProfile, UserRole } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceRecord, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UserProfile, UserRole, WorkSchedule } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses";
+type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses";
+type HrAdminCollection = "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies";
+type HrEmployeeCollection = "attendanceRecords" | "leaveRequests" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "policyAcknowledgments";
 type OperationalPayload = Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">;
 
 const normalizedEmail = (email: string) => email.trim().toLowerCase();
@@ -44,8 +46,88 @@ function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId:
 }
 
 export function subscribeCollection<T extends { id: string }>(name: ManagedCollection, onData: (data: T[]) => void, onError: (error: Error) => void) {
-  const sortField = name === "users" || name === "invitations" || name === "generalReminders" || name === "products" ? "createdAt" : name === "activityLogs" || name === "accessLogs" ? "occurredAt" : "updatedAt";
+  const sortField = name === "users" || name === "invitations" || name === "generalReminders" || name === "products" ? "createdAt" : name === "activityLogs" || name === "accessLogs" || name === "attendanceRecords" || name === "policyAcknowledgments" ? "occurredAt" : name === "hrPolicies" ? "publishedAt" : "updatedAt";
   return onSnapshot(query(collection(db, name), orderBy(sortField, "desc")), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
+}
+
+const hrEntityForCollection: Record<HrAdminCollection, ActivityEntity> = {
+  hrProfiles: "hr_profile", organizationUnits: "employee", employmentContracts: "contract", hrDocuments: "document", workSchedules: "employee", lifecycleChecklists: "employee", hrGoals: "goal", performanceReviews: "review", trainingRecords: "training", recognitions: "recognition", hrPolicies: "policy",
+};
+
+export function subscribeOwnHrProfile(userId: string, onData: (profile: HrProfile | null) => void, onError: (error: Error) => void) {
+  return onSnapshot(doc(db, "hrProfiles", userId), (snapshot) => onData(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } as HrProfile : null), onError);
+}
+
+export function subscribeEmployeeHrRecords<T extends { id: string }>(name: HrEmployeeCollection, employeeId: string, isAdmin: boolean, onData: (data: T[]) => void, onError: (error: Error) => void) {
+  const source = collection(db, name);
+  const request = isAdmin ? query(source, orderBy(name === "attendanceRecords" || name === "policyAcknowledgments" ? "occurredAt" : "updatedAt", "desc")) : query(source, where("employeeId", "==", employeeId));
+  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
+}
+
+export function subscribeHrPolicies(isAdmin: boolean, onData: (data: HrPolicy[]) => void, onError: (error: Error) => void) {
+  const source = collection(db, "hrPolicies");
+  const request = isAdmin ? query(source, orderBy("publishedAt", "desc")) : query(source, where("active", "==", true));
+  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as HrPolicy)), onError);
+}
+
+export async function saveHrAdminRecord<T extends { id: string }>(name: HrAdminCollection, record: T, actorId: string, summary: string) {
+  const actor = await activityActor(actorId);
+  const isNew = !record.id;
+  const reference = record.id ? doc(db, name, record.id) : doc(collection(db, name));
+  const payload = { ...withoutUndefined(record as unknown as DocumentData), id: reference.id, createdBy: (record as { createdBy?: string }).createdBy || actorId, createdByName: (record as { createdByName?: string }).createdByName || actor.actorName, createdByEmail: (record as { createdByEmail?: string }).createdByEmail || actor.actorEmail, createdAt: (record as { createdAt?: unknown }).createdAt || serverTimestamp(), updatedAt: serverTimestamp(), ...(name === "hrPolicies" ? { publishedAt: serverTimestamp() } : {}) };
+  const batch = writeBatch(db);
+  batch.set(reference, payload, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry(isNew ? "created" : "updated", hrEntityForCollection[name], reference.id, summary, actor));
+  await batch.commit();
+  return reference.id;
+}
+
+export async function updateOwnHrProfile(userId: string, payload: Pick<HrProfile, "personalEmail" | "personalPhone" | "address" | "emergencyContactName" | "emergencyContactPhone">) {
+  const actor = await activityActor(userId);
+  const reference = doc(db, "hrProfiles", userId);
+  const existing = await getDoc(reference);
+  const contactPayload = { ...withoutUndefined(payload), updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  if (existing.exists()) batch.update(reference, contactPayload);
+  else batch.set(reference, { ...contactPayload, employeeId: userId, createdAt: serverTimestamp(), createdBy: userId, createdByName: actor.actorName, createdByEmail: actor.actorEmail });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "hr_profile", userId, "Actualizó sus datos de contacto de RR. HH.", actor));
+  await batch.commit();
+}
+
+export async function recordOwnAttendance(employeeId: string, employeeName: string, type: AttendanceRecord["type"], note = "") {
+  const actor = await activityActor(employeeId);
+  const reference = doc(collection(db, "attendanceRecords"));
+  const payload = { employeeId, employeeName, type, note: note.trim() || undefined, source: "self_service" as const, createdBy: employeeId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, occurredAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.set(reference, withoutUndefined(payload));
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "attendance", reference.id, `Registró ${type === "clock_in" ? "entrada" : type === "clock_out" ? "salida" : type === "break_start" ? "inicio de descanso" : "fin de descanso"}`, actor));
+  await batch.commit();
+}
+
+export async function createLeaveRequest(payload: Omit<LeaveRequest, "id" | "createdAt" | "updatedAt" | "createdBy" | "createdByName" | "createdByEmail">, actorId: string) {
+  const actor = await activityActor(actorId);
+  const reference = doc(collection(db, "leaveRequests"));
+  const record = { ...withoutUndefined(payload), createdBy: actorId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.set(reference, record);
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "leave", reference.id, `Solicitó ${payload.type === "vacation" ? "vacaciones" : "una ausencia"} del ${payload.startDate}`, actor));
+  await batch.commit();
+  return reference.id;
+}
+
+export async function reviewLeaveRequest(id: string, status: LeaveRequest["status"], reviewerId: string, reviewerComment = "") {
+  const actor = await activityActor(reviewerId);
+  const payload = { status, reviewerId, reviewerName: actor.actorName, reviewerComment: reviewerComment.trim() || undefined, updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.update(doc(db, "leaveRequests", id), withoutUndefined(payload));
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "leave", id, `${status === "approved" ? "Aprobó" : status === "rejected" ? "Rechazó" : "Actualizó"} una solicitud de ausencia`, actor));
+  await batch.commit();
+}
+
+export async function acknowledgeHrPolicy(policy: HrPolicy, employeeId: string, employeeName: string) {
+  const actor = await activityActor(employeeId);
+  const reference = doc(db, "policyAcknowledgments", `${policy.id}_${employeeId}`);
+  await setDoc(reference, { policyId: policy.id, employeeId, employeeName, version: policy.version, acknowledgedAt: serverTimestamp(), createdBy: employeeId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() } satisfies Omit<PolicyAcknowledgment, "id">, { merge: true });
 }
 
 export async function createRecord(name: OperationalCollection, payload: OperationalPayload) {

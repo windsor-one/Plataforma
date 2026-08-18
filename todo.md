@@ -116,3 +116,10 @@
 - [x] Mover la huella digital estimada a un panel propio del menú con sus permisos correspondientes.
 - [x] Preparar las reglas de Firebase actualizadas para entrega manual y copia directa.
 - [x] Identificar las suscripciones de Firebase que fallan al iniciar sesión y corregir el aviso repetido de sincronización.
+- [x] Publicar manualmente las reglas actuales de Firestore para activar Tareas, Incidencias y Finanzas en producción.
+- [x] Evaluar y priorizar una primera fase segura del módulo de Gestión de Personal y Recursos Humanos.
+- [x] Definir matriz de acceso para empleado, supervisor y Administración/IT en los módulos de Recursos Humanos.
+- [x] Implementar expedientes laborales, organización, contratos y documentos con acceso restringido.
+- [x] Implementar asistencia, horarios, ausencias, onboarding y offboarding.
+- [x] Implementar objetivos, desempeño, capacitación, reconocimiento, alertas y analítica de Recursos Humanos.
+- [x] Publicar reglas de Firestore que protejan todos los registros sensibles de personal.

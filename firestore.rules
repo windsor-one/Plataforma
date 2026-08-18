@@ -109,6 +109,87 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ---- Recursos Humanos: expediente y datos laborales con privacidad por titular. ----
+    match /hrProfiles/{employeeId} {
+      allow get: if admin() || (activeEmployee() && employeeId == request.auth.uid);
+      allow list: if admin();
+      allow create: if admin() || (activeEmployee()
+        && employeeId == request.auth.uid
+        && request.resource.data.employeeId == request.auth.uid
+        && request.resource.data.keys().hasOnly(['employeeId', 'personalEmail', 'personalPhone', 'address', 'emergencyContactName', 'emergencyContactPhone', 'createdAt', 'updatedAt', 'createdBy', 'createdByName', 'createdByEmail']));
+      allow update: if admin() || (activeEmployee()
+        && employeeId == request.auth.uid
+        && request.resource.data.diff(resource).affectedKeys().hasOnly(['personalEmail', 'personalPhone', 'address', 'emergencyContactName', 'emergencyContactPhone', 'updatedAt']));
+      allow delete: if admin();
+    }
+
+    match /organizationUnits/{unitId} {
+      allow read: if activeEmployee();
+      allow create, update, delete: if admin();
+    }
+
+    match /workSchedules/{scheduleId} {
+      allow read: if activeEmployee();
+      allow create, update, delete: if admin();
+    }
+
+    // Contratos y referencias documentales contienen información laboral sensible: solo Administración/IT.
+    match /employmentContracts/{contractId} {
+      allow read, create, update, delete: if admin();
+    }
+
+    match /hrDocuments/{documentId} {
+      allow read, create, update, delete: if admin();
+    }
+
+    match /lifecycleChecklists/{checklistId} {
+      allow read, create, update, delete: if admin();
+    }
+
+    match /attendanceRecords/{recordId} {
+      allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid;
+      allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
+      allow update, delete: if admin();
+    }
+
+    match /leaveRequests/{requestId} {
+      allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid;
+      allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
+      allow update, delete: if admin();
+    }
+
+    // Desarrollo: cada persona consulta únicamente sus resultados y formación; Administración/IT los gestiona.
+    match /hrGoals/{goalId} {
+      allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
+      allow create, update, delete: if admin();
+    }
+
+    match /performanceReviews/{reviewId} {
+      allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
+      allow create, update, delete: if admin();
+    }
+
+    match /trainingRecords/{trainingId} {
+      allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
+      allow create, update, delete: if admin();
+    }
+
+    match /recognitions/{recognitionId} {
+      allow get, list: if admin() || (activeEmployee() && (resource.data.visibility == 'company' || resource.data.employeeId == request.auth.uid));
+      allow create, update, delete: if admin();
+    }
+
+    match /hrPolicies/{policyId} {
+      allow get, list: if admin() || (activeEmployee() && resource.data.active == true);
+      allow create, update, delete: if admin();
+    }
+
+    match /policyAcknowledgments/{acknowledgmentId} {
+      allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid;
+      allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
+      allow update, delete: if false;
+    }
+
     match /products/{productId} {
       // El catálogo es visible para todo el Personal; solo Administración/IT lo administra.
       allow read: if activeEmployee();

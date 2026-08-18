@@ -100,6 +100,24 @@ export interface AccessLog {
   occurredAt?: unknown;
 }
 
+/**
+ * Estimación informativa basada en los bytes transferidos por el navegador.
+ * No representa una medición física ni un inventario corporativo de GEI.
+ */
+export interface CarbonUsage {
+  id: string;
+  userId: string;
+  displayName: string;
+  email: string;
+  transferredBytes: number;
+  resourceCount: number;
+  estimatedGramsCO2e: number;
+  factorGramsCO2ePerGB: number;
+  methodology: "SWDM-v4";
+  source: "browser-resource-timing";
+  recordedAt?: unknown;
+}
+
 export interface SecuritySettings {
   id: string;
   /** Campo heredado para instalaciones que ya guardaban minutos. */

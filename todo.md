@@ -105,3 +105,5 @@
 - [x] Crear una configuración global del tiempo de inactividad visible y editable solo por Administración/IT.
 - [x] Permitir configurar la inactividad global en segundos, minutos u horas.
 - [x] Publicar las reglas de Firestore para proteger la configuración global de inactividad.
+- [x] Alinear el valor de inactividad y su selector de unidad a la misma altura en el panel de seguridad.
+- [x] Diseñar e implementar un indicador de emisiones de carbono estimadas por usuario según el uso de la plataforma, con metodología visible.

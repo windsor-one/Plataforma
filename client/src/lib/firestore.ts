@@ -3,9 +3,9 @@
  * El registro principal nunca se bloquea por una regla de historial aún no publicada.
  */
 import type { User } from "firebase/auth";
-import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch, type DocumentData } from "firebase/firestore";
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Product, Reservation, SecuritySettings, UserProfile, UserRole } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, CarbonUsage, Customer, GeneralReminder, Invitation, Payment, Product, Reservation, SecuritySettings, UserProfile, UserRole } from "./types";
 
 type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs";
 type OperationalCollection = "customers" | "reservations" | "payments";
@@ -152,6 +152,35 @@ export async function updateOwnProfile(userId: string, displayName: string) {
 export async function recordAccess(userId: string, profile: UserProfile, event: AccessLog["event"] = "login") {
   const payload = { userId, displayName: profile.displayName, email: profile.email, role: profile.role, event, occurredAt: serverTimestamp() } satisfies Omit<AccessLog, "id">;
   try { await setDoc(doc(collection(db, "accessLogs")), payload); } catch (error) { console.warn("No se pudo registrar el acceso.", error); }
+}
+
+/** Factor transparente: 0.300 kWh/GB × 494 gCO2e/kWh = 148.2 gCO2e/GB (SWDM v4). */
+const CARBON_FACTOR_GRAMS_PER_GB = 148.2;
+
+export async function recordCarbonUsage(userId: string, profile: UserProfile, transferredBytes: number, resourceCount: number) {
+  const safeBytes = Math.max(0, Math.round(transferredBytes));
+  if (!safeBytes) return;
+  const payload = {
+    userId,
+    displayName: profile.displayName,
+    email: profile.email,
+    transferredBytes: safeBytes,
+    resourceCount: Math.max(0, Math.round(resourceCount)),
+    estimatedGramsCO2e: Number(((safeBytes / 1_000_000_000) * CARBON_FACTOR_GRAMS_PER_GB).toFixed(6)),
+    factorGramsCO2ePerGB: CARBON_FACTOR_GRAMS_PER_GB,
+    methodology: "SWDM-v4" as const,
+    source: "browser-resource-timing" as const,
+    recordedAt: serverTimestamp(),
+  } satisfies Omit<CarbonUsage, "id">;
+  await setDoc(doc(collection(db, "carbonUsage")), payload);
+}
+
+export function subscribeCarbonUsage(userId: string, isAdmin: boolean, onData: (data: CarbonUsage[]) => void, onError: (error: Error) => void) {
+  const source = collection(db, "carbonUsage");
+  const request = isAdmin
+    ? query(source, orderBy("recordedAt", "desc"))
+    : query(source, where("userId", "==", userId), orderBy("recordedAt", "desc"));
+  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as CarbonUsage)), onError);
 }
 
 export async function recordAccountCreated(userId: string, profile: UserProfile) {

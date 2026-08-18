@@ -263,6 +263,17 @@ La plataforma protege sesiones abiertas sin supervisión. Cuando transcurre el i
 
 Administración/IT configura este intervalo desde **Accesos y actividad → Cierre automático por inactividad**. Puede seleccionar un valor y usar **segundos, minutos u horas**; los rangos admitidos son 10–3,600 segundos, 1–1,440 minutos o 1–24 horas. La política se guarda en `securitySettings/global` y se sincroniza con las sesiones activas. Personal puede recibir la política, pero no cambiarla. Esta medida se aplica en el navegador y no sustituye las reglas de Firestore: al cerrar la sesión, las reglas también dejan de permitir lecturas o escrituras protegidas.
 
+### Huella digital estimada
+
+Heliot Media muestra una **estimación informativa de emisiones asociadas al uso digital**. El navegador registra una vez por sesión los bytes transferidos al cargar y utilizar la aplicación, y los convierte a CO₂e con un factor visible de **148.2 g CO₂e/GB**. Ese factor proviene de sumar las intensidades operativas y embebidas de centros de datos, redes y dispositivos del Sustainable Web Design Model v4 (0.300 kWh/GB) y multiplicarlas por la intensidad eléctrica global de 494 g CO₂e/kWh publicada por su metodología [1].
+
+| Vista | Acceso | Información disponible |
+| --- | --- | --- |
+| **Mi perfil** | Cada integrante activo | Su acumulado estimado, transferencia observada y número de sesiones registradas. |
+| **Accesos y actividad → Huella digital estimada** | Solo Administración/IT | Consolidado y desglose cronológico acumulado por integrante. |
+
+> **Límite esencial:** esta función no mide electricidad real, fabricación de hardware ni emisiones verificadas. Es una estimación de transferencia observada por el navegador; los recursos en caché, extensiones, actividad fuera de la aplicación o limitaciones del dispositivo pueden no quedar reflejados. La plataforma no debe usarla para afirmaciones de neutralidad, compensación o reportes corporativos auditados [1] [2].
+
 ### Qué queda registrado
 
 | Fuente | Eventos principales |
@@ -292,6 +303,7 @@ Los registros históricos ya existentes, creados antes de habilitar una nueva fu
 | `generalReminders` | Notificaciones internas | título, mensaje, prioridad, creador y fechas. |
 | `activityLogs` | Historial administrativo | acción, entidad, resumen, actor y hora. |
 | `accessLogs` | Accesos y alta de cuenta | usuario, correo, rol, evento y hora. |
+| `carbonUsage` | Estimaciones de uso digital | usuario, bytes observados, sesiones, CO₂e estimado, factor y fecha. |
 | `sequences` | Contadores de código | contador por categoría: clientes, reservas y pagos. |
 
 ### Códigos secuenciales
@@ -524,3 +536,11 @@ Mantenga actualizada esta tabla dentro de la organización, fuera del código fu
 | Responsable de copias y cambios |  |  |  |
 
 > **Última recomendación:** antes de cambiar roles, reglas o credenciales, haga un checkpoint/commit y describa el motivo. La trazabilidad humana complementa la trazabilidad técnica de la plataforma.
+
+---
+
+## Referencias
+
+[1] [Sustainable Web Design Model v4: Estimating Digital Emissions](https://sustainablewebdesign.org/estimating-digital-emissions/)
+
+[2] [Green Web Foundation: CO2.js Overview](https://developers.thegreenwebfoundation.org/co2js/overview/)

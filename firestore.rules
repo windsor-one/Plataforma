@@ -100,6 +100,15 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /carbonUsage/{usageId} {
+      // Son estimaciones informativas del navegador. Cada integrante solo puede crear y consultar las suyas;
+      // Administración/IT puede revisar el consolidado, sin alterar el historial ambiental.
+      allow create: if activeEmployee()
+        && request.resource.data.userId == request.auth.uid;
+      allow get, list: if admin() || (activeEmployee() && resource.data.userId == request.auth.uid);
+      allow update, delete: if false;
+    }
+
     match /securitySettings/{settingId} {
       // Toda persona activa puede leer la política vigente; solo Administración/IT la modifica.
       allow read: if activeEmployee();

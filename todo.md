@@ -8,25 +8,25 @@
 - [x] Ajustar el enrutamiento del cliente para reconocer la ruta base `/Plataforma/` de GitHub Pages.
 - [x] Sustituir los recursos visuales alojados fuera del repositorio por motivos CSS compatibles con GitHub Pages.
 - [x] Confirmar Firebase Authentication con Correo electrónico/contraseña habilitada en el proyecto Spark.
-- [ ] Crear Cloud Firestore en modo de producción y publicar el archivo `firestore.rules`.
+- [x] Crear Cloud Firestore en modo de producción y publicar el archivo `firestore.rules`.
 - [x] Incorporar los valores públicos `VITE_FIREBASE_*` en la compilación de GitHub Pages.
 - [x] Comprobar que la aplicación publicada desde GitHub Pages carga el inicio de sesión de Firebase.
-- [ ] Autorizar el dominio `windsor-one.github.io` en Firebase Authentication.
+- [x] Autorizar el dominio `windsor-one.github.io` en Firebase Authentication.
 - [x] Resolver la fusión pendiente entre el historial local y el repositorio remoto sin perder archivos.
 - [x] Confirmar una compilación de producción limpia y un despliegue exitoso en GitHub Pages.
 - [x] Validar Authentication y documentar el paso restante de Firestore que exige una sesión de propietario.
 - [ ] Reproducir el fallo de inicio de sesión y registrar el error exacto devuelto por Firebase.
 - [ ] Verificar que existe un usuario de Firebase Authentication con perfil `users/{uid}` activo y rol administrador.
 - [ ] Validar el acceso administrativo completo desde la página publicada.
-- [ ] Crear Cloud Firestore en modo producción y publicar las reglas directamente desde Firebase Console.
+- [x] Crear Cloud Firestore en modo producción y publicar las reglas directamente desde Firebase Console.
 - [ ] Crear un usuario administrador, su perfil `users/{uid}` y verificar su estado activo.
-- [ ] Autorizar `windsor-one.github.io` y comprobar el inicio de sesión final en la plataforma publicada.
-- [ ] Confirmar por lectura de consola que las reglas activas dejaron de ser `allow read, write: if false` antes de continuar con cualquier otra configuración.
+- [x] Autorizar `windsor-one.github.io`; queda pendiente comprobar el inicio de sesión final con una credencial real.
+- [x] Confirmar por lectura de consola que las reglas activas incluyen los módulos protegidos y solo conservan el cierre global final `allow read, write: if false`.
 - [ ] Verificar que las variables de Firebase estén incluidas en la compilación de producción publicada.
-- [ ] Confirmar que el dominio publicado está autorizado para Firebase Authentication.
+- [x] Confirmar que el dominio publicado está autorizado para Firebase Authentication.
 - [ ] Ejecutar una prueba real de inicio de sesión y operaciones administrativas desde GitHub Pages.
 - [ ] Permitir que la primera cuenta autenticada cree únicamente su propio perfil administrativo cuando todavía no exista ningún usuario de la plataforma.
-- [ ] Habilitar una sesión de navegador de propietario para publicar las reglas de Firestore y autorizar el dominio de Firebase Authentication.
+- [x] Habilitar una sesión de navegador de propietario para publicar las reglas de Firestore y autorizar el dominio de Firebase Authentication.
 - [x] Incorporar y verificar el envío de recuperación de contraseña desde la pantalla de acceso publicada.
 - [x] Preparar `firebase.json` y `.firebaserc` para desplegar directamente las reglas cuando exista una credencial administrativa autorizada.
 - [x] Añadir el comando `pnpm deploy:firestore` para publicar reglas e índices de Firestore de forma reproducible.
@@ -48,7 +48,7 @@
 - [x] Reducir el acceso de recuperación de contraseña a un enlace discreto y mostrar errores accionables de Firebase.
 - [x] Añadir una barra lateral colapsable y mostrar el nombre del usuario activo en el encabezado.
 - [x] Renovar toda la interfaz con la paleta azul, verde, amarillo y violeta de la referencia proporcionada.
-- [ ] Publicar las reglas de Firestore actualizadas para habilitar `activityLogs` y validar los flujos con una sesión real.
+- [x] Publicar las reglas de Firestore actualizadas para habilitar `activityLogs`; queda pendiente validar los flujos con una sesión real.
 - [x] Reemplazar las altas rápidas fallidas por paneles relacionados que conservan el formulario principal y seleccionan el registro creado sin recarga.
 - [x] Aplicar animación fluida a la apertura, desplazamiento y cierre de paneles relacionados en pagos y reservas.
 - [ ] Validar los nuevos paneles coordinados con una sesión real y las reglas de Firestore publicadas.
@@ -60,12 +60,17 @@
 - [x] Mostrar registros operativos existentes como respaldo del Historial hasta que la bitácora completa esté autorizada por reglas.
 - [x] Unificar toda la plataforma con los tonos azul, verde, amarillo y violeta de la referencia visual.
 - [x] Unificar transiciones y animaciones suaves para menús, paneles, tablas, botones y flujos contextuales.
-- [ ] Publicar las reglas de Firestore actualizadas y probar con una sesión real la bitácora completa de creaciones, cambios y eliminaciones.
+- [x] Publicar las reglas de Firestore actualizadas; queda pendiente probar con una sesión real la bitácora completa de creaciones, cambios y eliminaciones.
 - [x] Restaurar los fondos neutros anteriores y usar azul, verde, amarillo y violeta solo como acentos e iconografía.
 - [x] Sustituir los códigos aleatorios por secuencias independientes y legibles para clientes, reservas y pagos.
-- [ ] Publicar las reglas de Firestore actualizadas para activar los contadores transaccionales y probar la secuencia con registros reales.
+- [x] Publicar las reglas de Firestore actualizadas para activar los contadores transaccionales; queda pendiente probar la secuencia con registros reales.
 - [x] Sustituir el bloque de señales del inicio por gráficas, recordatorios y notificaciones operativas.
 - [x] Añadir General reminders para que los administradores publiquen avisos visibles a los empleados.
-- [ ] Publicar reglas y validar con una sesión real la creación, lectura y eliminación de avisos generales.
+- [x] Publicar reglas para avisos generales; queda pendiente validar con una sesión real la creación, lectura y eliminación.
 - [x] Añadir vistas de detalle accionables para movimientos de Historial, clientes, reservas y pagos.
 - [ ] Validar desde una sesión real que las fichas de detalle muestran los datos completos y los vínculos correctos.
+- [ ] Diagnosticar el bloqueo de inicio de sesión reportado en la versión publicada y verificar el perfil administrador en `users/{uid}`.
+- [x] Confirmar que la cuenta administradora existe en Firebase Authentication y coincide con el perfil activo administrador de Firestore.
+- [x] Confirmar que Correo electrónico/contraseña está habilitado y que `windsor-one.github.io` está autorizado.
+- [x] Mostrar códigos de diagnóstico concretos para credenciales, cuenta deshabilitada, red y reglas de Firestore en la pantalla de acceso.
+- [ ] Restablecer o confirmar la contraseña del administrador y probar un inicio de sesión real desde GitHub Pages.

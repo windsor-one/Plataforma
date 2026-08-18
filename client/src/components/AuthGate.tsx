@@ -23,6 +23,20 @@ function FriendlyError({ error }: { error: string }) {
   return error ? <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null;
 }
 
+function readableAccessError(caught: unknown, fallback: string) {
+  const code = (caught as { code?: string })?.code || "";
+  const message = caught instanceof Error ? caught.message : "";
+  const known: Record<string, string> = {
+    "auth/invalid-credential": "El correo o la contraseña no son correctos.",
+    "auth/user-disabled": "Esta cuenta está deshabilitada en Firebase Authentication.",
+    "auth/too-many-requests": "Se bloquearon temporalmente los intentos. Espera unos minutos o restablece la contraseña.",
+    "auth/network-request-failed": "No fue posible conectar con Firebase. Comprueba tu conexión e inténtalo otra vez.",
+    "permission-denied": "Firebase rechazó la lectura de tu perfil. El administrador debe revisar las reglas de Firestore.",
+    "firestore/permission-denied": "Firebase rechazó la lectura de tu perfil. El administrador debe revisar las reglas de Firestore.",
+  };
+  return `${known[code] || message || fallback}${code ? ` [${code}]` : ""}`;
+}
+
 function BrandMark() {
   return <span className="brand-mark" aria-hidden="true"><i /><i /></span>;
 }
@@ -73,7 +87,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
       } catch (caught) {
         setUser(null);
         setProfile(null);
-        setError(caught instanceof Error ? caught.message : "No fue posible validar tu acceso.");
+        setError(readableAccessError(caught, "No fue posible validar tu acceso."));
         if (currentUser) await signOut(auth);
       } finally {
         setLoading(false);
@@ -95,13 +109,11 @@ export default function AuthGate({ children }: { children: (user: User, profile:
       }
     } catch (caught) {
       const code = (caught as { code?: string })?.code;
-      const message = code === "auth/invalid-credential"
-        ? "El correo o la contraseña no son correctos."
-        : code === "auth/email-already-in-use"
-          ? "Ya existe una cuenta con este correo. Inicia sesión."
-          : code === "auth/weak-password"
-            ? "La contraseña debe tener al menos 6 caracteres."
-            : "No se pudo procesar el acceso. Revisa los datos e inténtalo de nuevo.";
+      const message = code === "auth/email-already-in-use"
+        ? "Ya existe una cuenta con este correo. Inicia sesión."
+        : code === "auth/weak-password"
+          ? "La contraseña debe tener al menos 6 caracteres."
+          : readableAccessError(caught, "No se pudo procesar el acceso. Revisa los datos e inténtalo de nuevo.");
       setError(message);
     } finally {
       setSubmitting(false);

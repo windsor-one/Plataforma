@@ -61,3 +61,4 @@
 - [x] Unificar toda la plataforma con los tonos azul, verde, amarillo y violeta de la referencia visual.
 - [x] Unificar transiciones y animaciones suaves para menús, paneles, tablas, botones y flujos contextuales.
 - [ ] Publicar las reglas de Firestore actualizadas y probar con una sesión real la bitácora completa de creaciones, cambios y eliminaciones.
+- [x] Restaurar los fondos neutros anteriores y usar azul, verde, amarillo y violeta solo como acentos e iconografía.

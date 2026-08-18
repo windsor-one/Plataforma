@@ -16,8 +16,8 @@
   --color-border: var(--border); --color-destructive: var(--destructive);
 }
 
-:root { --background: #FFC72C; --foreground: #111111; --card: #FFFFFF; --card-foreground: #111111; --muted: #855CF5; --muted-foreground: #111111; --border: #1676F3; --destructive: #855CF5; --radius: 0.85rem; --ease-heliot: cubic-bezier(.23, 1, .32, 1); }
-.dark { --background: #1676F3; --foreground: #FFFFFF; --card: #855CF5; --card-foreground: #FFFFFF; --muted: #38D98B; --muted-foreground: #111111; --border: #FFC72C; --destructive: #FFC72C; }
+:root { --background: oklch(0.974 0.006 95); --foreground: oklch(0.215 0.032 263); --card: oklch(1 0 0); --card-foreground: oklch(0.215 0.032 263); --muted: oklch(0.946 0.013 260); --muted-foreground: oklch(0.47 0.03 263); --border: oklch(0.87 0.022 260); --destructive: #855CF5; --radius: 0.85rem; --ease-heliot: cubic-bezier(.23, 1, .32, 1); }
+.dark { --background: oklch(0.165 0.026 263); --foreground: oklch(0.95 0.012 95); --card: oklch(0.22 0.03 263); --card-foreground: oklch(0.95 0.012 95); --muted: oklch(0.28 0.03 263); --muted-foreground: oklch(0.72 0.025 263); --border: oklch(0.37 0.034 263); --destructive: #FFC72C; }
 
 @layer base {
   * { @apply border-border; }
@@ -53,7 +53,7 @@
   .table-toolbar { @apply flex items-center gap-2 border-b px-4 py-3 text-muted-foreground; }.table-toolbar input { @apply w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/70; }.table-wrap { @apply overflow-x-auto; } table { @apply w-full text-left text-sm; } th { @apply bg-muted/60 px-5 py-3 text-[10px] font-extrabold uppercase tracking-[.12em] text-muted-foreground; } td { @apply border-t px-5 py-3.5 align-middle; } td span { @apply text-xs text-muted-foreground; }
   .brand-mark { @apply relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#1676F3] shadow-sm; }.brand-mark::before { content: ""; @apply absolute h-5 w-5 rounded-full border-[5px] border-white; }.brand-mark::after { content: ""; @apply absolute right-1 top-[19px] h-[5px] w-3 rounded-l bg-white; }.brand-mark i:first-child { @apply absolute -right-1 top-0 h-4 w-4 rounded-bl-xl bg-[#38D98B]; }.brand-mark i:last-child { @apply absolute -bottom-1 left-0 h-3 w-5 rounded-tr-xl bg-[#855CF5]; }
   .empty-mark { @apply grid h-24 w-24 place-items-center rounded-[2rem] bg-[#1676F3]/10; }.empty-mark .brand-mark { @apply h-12 w-12; }
-  .auth-pattern { background-color: #1676F3; background-image: linear-gradient(90deg, rgba(255,255,255,.16) 1px, transparent 1px), linear-gradient(rgba(255,255,255,.16) 1px, transparent 1px), radial-gradient(circle at 82% 18%, rgba(56,217,139,.82), transparent 32%), radial-gradient(circle at 12% 85%, rgba(133,92,245,.58), transparent 30%); background-size: 28px 28px, 28px 28px, 100% 100%, 100% 100%; }
+  .auth-pattern { background-color: #10243B; background-image: linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px), linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px), radial-gradient(circle at 82% 18%, rgba(56,217,139,.58), transparent 32%), radial-gradient(circle at 12% 85%, rgba(22,118,243,.26), transparent 30%); background-size: 28px 28px, 28px 28px, 100% 100%, 100% 100%; }
 }
 @media (prefers-reduced-motion: no-preference) { .metric-card, .panel-card, .table-wrap tbody tr { animation: rise .28s var(--ease-heliot) both; } .table-wrap tbody tr { transition: background-color .18s var(--ease-heliot), transform .18s var(--ease-heliot); } .table-wrap tbody tr:hover { background: color-mix(in srgb, #38D98B 18%, transparent); } @keyframes rise { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } } }
 @media (min-width: 1024px) {
@@ -65,6 +65,3 @@
 /* Equivalencias para componentes existentes: ningún acento heredado queda fuera de la paleta Heliot. */
 .text-\[\#0F8F73\], .text-\[\#08745D\], .text-\[\#5DDBC0\], .text-\[\#9FE9D6\], .text-\[\#B5EFE0\] { color: #38D98B !important; }
 .text-\[\#0C58C7\], .text-\[\#87A9FF\] { color: #1676F3 !important; }
-.bg-\[\#102B35\], .bg-\[\#10243B\] { background-color: #1676F3 !important; }
-.bg-\[\#132A32\], .bg-\[\#07151A\] { background-color: #855CF5 !important; }
-.from-\[\#0B2027\], .via-\[\#0B2027\], .to-\[\#0B2027\] { --tw-gradient-from: #1676F3 !important; --tw-gradient-via: #38D98B !important; --tw-gradient-to: #855CF5 !important; }

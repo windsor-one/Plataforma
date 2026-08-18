@@ -93,3 +93,7 @@
 - [x] Permitir a Administración/IT eliminar movimientos del Historial de actividad con control exclusivo por rol.
 - [x] Publicar las nuevas reglas de Firestore para registro de accesos y eliminación administrativa del Historial.
 - [ ] Validar con una sesión real la generación de PDF, los saldos y los paneles exclusivos de Administración/IT.
+- [x] Añadir controles para mostrar u ocultar la contraseña en Inicio de sesión y Registro.
+- [x] Permitir a Administración/IT iniciar de forma segura el restablecimiento de contraseña de Personal desde el directorio.
+- [x] Registrar la creación de cuentas nuevas en Historial y en la cronología de Accesos.
+- [x] Mostrar en Accesos la línea de tiempo de movimientos operativos de cada integrante desde su alta hasta su última actividad.

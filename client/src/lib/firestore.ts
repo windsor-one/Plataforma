@@ -103,19 +103,24 @@ export async function completeInvitationOnboarding(user: User): Promise<UserProf
   const invitationRef = doc(db, "invitations", email);
   const profileSnapshot = await getDoc(profileRef);
   if (profileSnapshot.exists()) return { id: profileSnapshot.id, ...profileSnapshot.data() } as UserProfile;
+  let accountCreated = false;
   const invitationSnapshot = await getDoc(invitationRef);
   if (!invitationSnapshot.exists()) {
     if (!bootstrapAdminEmail || email !== bootstrapAdminEmail) throw new Error("No existe una invitación activa para este correo. Pide al administrador que te invite.");
     await setDoc(profileRef, { email, displayName: user.displayName || email.split("@")[0], role: "admin", status: "active", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    accountCreated = true;
   } else {
     const invitation = invitationSnapshot.data() as Omit<Invitation, "id">;
     if (invitation.status !== "pending" || normalizedEmail(invitation.email) !== email) throw new Error("La invitación no está disponible. Solicita una nueva invitación al administrador.");
     await setDoc(profileRef, { email, displayName: invitation.displayName || user.displayName || email.split("@")[0], role: invitation.role, status: "active", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    accountCreated = true;
     try { await updateDoc(invitationRef, { status: "accepted", acceptedBy: user.uid, acceptedAt: serverTimestamp() }); } catch (error) { console.warn("El perfil del invitado fue creado, pero no se pudo cerrar la invitación.", error); }
   }
   const completed = await getDoc(profileRef);
   if (!completed.exists()) throw new Error("No se pudo finalizar el acceso a la plataforma.");
-  return { id: completed.id, ...completed.data() } as UserProfile;
+  const profile = { id: completed.id, ...completed.data() } as UserProfile;
+  if (accountCreated) await recordAccountCreated(user.uid, profile);
+  return profile;
 }
 
 export async function updateEmployee(employeeId: string, payload: Pick<UserProfile, "displayName" | "role" | "status">, actorId: string) {
@@ -147,6 +152,14 @@ export async function updateOwnProfile(userId: string, displayName: string) {
 export async function recordAccess(userId: string, profile: UserProfile, event: AccessLog["event"] = "login") {
   const payload = { userId, displayName: profile.displayName, email: profile.email, role: profile.role, event, occurredAt: serverTimestamp() } satisfies Omit<AccessLog, "id">;
   try { await setDoc(doc(collection(db, "accessLogs")), payload); } catch (error) { console.warn("No se pudo registrar el acceso.", error); }
+}
+
+export async function recordAccountCreated(userId: string, profile: UserProfile) {
+  const actor = await activityActor(userId);
+  const batch = writeBatch(db);
+  batch.set(doc(collection(db, "accessLogs")), { userId, displayName: profile.displayName, email: profile.email, role: profile.role, event: "account_created", summary: "Cuenta creada y perfil activado", occurredAt: serverTimestamp() } satisfies Omit<AccessLog, "id">);
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "employee", userId, `Creó su cuenta y activó el perfil de ${profile.displayName}`, actor));
+  try { await batch.commit(); } catch (error) { console.warn("La cuenta fue creada, pero no se pudo registrar su auditoría inicial.", error); }
 }
 
 export async function createGeneralReminder(payload: Pick<GeneralReminder, "title" | "message" | "priority">, actorId: string) {

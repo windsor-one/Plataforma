@@ -12,7 +12,7 @@ import {
   updateProfile,
   type User,
 } from "firebase/auth";
-import { ArrowRight, CalendarDays, CircleDollarSign, Database, LockKeyhole, Settings2, ShieldCheck, Sparkles, UsersRound, Wifi } from "lucide-react";
+import { ArrowRight, CalendarDays, CircleDollarSign, Database, Eye, EyeOff, LockKeyhole, Settings2, ShieldCheck, Sparkles, UsersRound, Wifi } from "lucide-react";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
 import { completeInvitationOnboarding, recordAccess } from "@/lib/firestore";
 import type { UserProfile } from "@/lib/types";
@@ -59,6 +59,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -180,7 +181,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
                 <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
                   {mode === "register" && <label className="block text-sm font-bold">Nombre completo<input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" className="field mt-1.5" /></label>}
                   <label className="block text-sm font-bold">Correo<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" className="field mt-1.5" /></label>
-                  <label className="block text-sm font-bold">Contraseña<input required minLength={6} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres" className="field mt-1.5" /></label>
+                  <label className="block text-sm font-bold">Contraseña<div className="relative mt-1.5"><input required minLength={6} type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres" className="field pr-12" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
                   <FriendlyError error={error} />
                   {notice && <p className="rounded-lg bg-[#0F8F73]/10 px-3 py-2 text-sm font-medium text-[#08745D] dark:text-[#8BE3CB]">{notice}</p>}
                   <button disabled={submitting} className="primary-button w-full" type="submit">{submitting ? "Validando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}<ArrowRight size={17} /></button>

@@ -95,7 +95,8 @@ export interface AccessLog {
   displayName: string;
   email: string;
   role: UserRole;
-  event: "login" | "logout";
+  event: "login" | "logout" | "account_created";
+  summary?: string;
   occurredAt?: unknown;
 }
 

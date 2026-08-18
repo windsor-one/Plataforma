@@ -52,3 +52,12 @@
 - [x] Reemplazar las altas rápidas fallidas por paneles relacionados que conservan el formulario principal y seleccionan el registro creado sin recarga.
 - [x] Aplicar animación fluida a la apertura, desplazamiento y cierre de paneles relacionados en pagos y reservas.
 - [ ] Validar los nuevos paneles coordinados con una sesión real y las reglas de Firestore publicadas.
+- [x] Corregir el bloqueo de guardado aislando el historial de auditoría de las operaciones principales cuando sus reglas aún no estén publicadas.
+- [x] Fijar la barra lateral al alto de la ventana, con navegación visible y desplazamiento interno cuando sea necesario.
+- [x] Reemplazar el nombre completo de clientes por Nombres y Apellidos, preservando compatibilidad con registros existentes.
+- [x] Añadir orden alfabético ascendente y descendente por nombres y apellidos en el módulo Clientes.
+- [x] Generar y mostrar códigos únicos y permanentes para cada reserva y pago.
+- [x] Mostrar registros operativos existentes como respaldo del Historial hasta que la bitácora completa esté autorizada por reglas.
+- [x] Unificar toda la plataforma con los tonos azul, verde, amarillo y violeta de la referencia visual.
+- [x] Unificar transiciones y animaciones suaves para menús, paneles, tablas, botones y flujos contextuales.
+- [ ] Publicar las reglas de Firestore actualizadas y probar con una sesión real la bitácora completa de creaciones, cambios y eliminaciones.

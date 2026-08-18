@@ -32,7 +32,10 @@ interface OperationalAuditFields {
 
 export interface Customer extends OperationalAuditFields {
   id: string;
-  fullName: string;
+  firstName?: string;
+  lastName?: string;
+  /** Compatibilidad con clientes creados antes de separar nombres y apellidos. */
+  fullName?: string;
   email?: string;
   phone?: string;
   notes?: string;
@@ -40,6 +43,7 @@ export interface Customer extends OperationalAuditFields {
 
 export interface Reservation extends OperationalAuditFields {
   id: string;
+  code?: string;
   customerId: string;
   customerName: string;
   date: string;
@@ -52,6 +56,7 @@ export interface Reservation extends OperationalAuditFields {
 
 export interface Payment extends OperationalAuditFields {
   id: string;
+  code?: string;
   customerId: string;
   customerName: string;
   reservationId?: string;

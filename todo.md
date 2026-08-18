@@ -115,3 +115,4 @@
 - [x] Renombrar la identidad visible de la plataforma a Sistema Heliot.
 - [x] Mover la huella digital estimada a un panel propio del menú con sus permisos correspondientes.
 - [x] Preparar las reglas de Firebase actualizadas para entrega manual y copia directa.
+- [x] Identificar las suscripciones de Firebase que fallan al iniciar sesión y corregir el aviso repetido de sincronización.

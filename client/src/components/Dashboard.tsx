@@ -2,7 +2,7 @@
  * Sala de Operaciones Editorial: panel asimétrico, cifras de registro, marcadores de estado
  * e indicadores ambientales informativos. La UI refleja permisos, pero Firestore sigue siendo la capa obligatoria.
  */
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail, signOut, updatePassword, updateProfile as updateAuthProfile, type User } from "firebase/auth";
 import {
   Bell, BarChart3, CalendarDays, CheckCircle2, ChevronRight, CircleDollarSign, ClipboardList, CreditCard, FileDown,
@@ -334,6 +334,8 @@ export default function Dashboard({ user, profile }: { user: User; profile: User
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [queryText, setQueryText] = useState("");
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+  const failedSyncModules = useRef(new Set<string>());
+  const syncToastTimer = useRef<number | null>(null);
   const [modal, setModal] = useState<{ type: RecordType; data?: RecordData; detail?: { eyebrow: string; title: string; data: Record<string, unknown>; related?: Record<string, unknown> | null } } | null>(null);
   const [relatedPanel, setRelatedPanel] = useState<RelatedPanel>(null);
   const [workflowCustomer, setWorkflowCustomer] = useState<Customer | null>(null);
@@ -344,10 +346,24 @@ export default function Dashboard({ user, profile }: { user: User; profile: User
   const isAdmin = profile.role === "admin";
 
   useEffect(() => {
-    const report = () => toast.error("No se pudo sincronizar un módulo. Comprueba las reglas de Firebase.");
-    const stops = [subscribeCollection<Customer>("customers", setCustomers, report), subscribeCollection<Reservation>("reservations", setReservations, report), subscribeCollection<Payment>("payments", setPayments, report), subscribeCollection<Product>("products", setProductOverrides, report), subscribeCollection<GeneralReminder>("generalReminders", setReminders, report), subscribeCollection<Task>("tasks", setTasks, report), subscribeCollection<Incident>("incidents", setIncidents, report), subscribeCarbonUsage(user.uid, isAdmin, setCarbonUsage, report)];
-    if (isAdmin) stops.push(subscribeCollection<UserProfile>("users", setEmployees, report), subscribeCollection<Invitation>("invitations", setInvitations, report), subscribeCollection<ActivityLog>("activityLogs", setActivityLogs, report), subscribeCollection<AccessLog>("accessLogs", setAccessLogs, report), subscribeCollection<Expense>("expenses", setExpenses, report));
-    return () => stops.forEach((stop) => stop());
+    failedSyncModules.current.clear();
+    const report = (module: string, error: Error) => {
+      failedSyncModules.current.add(module);
+      const code = (error as { code?: string }).code || "";
+      const reason = code === "failed-precondition"
+        ? "Falta un índice de Firestore; revisa el enlace que Firebase muestra en la consola."
+        : code === "permission-denied" || code === "firestore/permission-denied"
+          ? "Publica el archivo firestore.rules completo para activar los permisos nuevos."
+          : "Comprueba la conexión y la configuración de Firebase.";
+      if (syncToastTimer.current) return;
+      syncToastTimer.current = window.setTimeout(() => {
+        syncToastTimer.current = null;
+        toast.error("Hay módulos pendientes de sincronización.", { id: "firebase-sync-status", description: `${Array.from(failedSyncModules.current).join(", ")}. ${reason}` });
+      }, 120);
+    };
+    const stops = [subscribeCollection<Customer>("customers", setCustomers, (error) => report("Clientes", error)), subscribeCollection<Reservation>("reservations", setReservations, (error) => report("Reservas", error)), subscribeCollection<Payment>("payments", setPayments, (error) => report("Pagos", error)), subscribeCollection<Product>("products", setProductOverrides, (error) => report("Productos", error)), subscribeCollection<GeneralReminder>("generalReminders", setReminders, (error) => report("Notificaciones", error)), subscribeCollection<Task>("tasks", setTasks, (error) => report("Tareas", error)), subscribeCollection<Incident>("incidents", setIncidents, (error) => report("Incidencias", error)), subscribeCarbonUsage(user.uid, isAdmin, setCarbonUsage, (error) => report("Impacto digital", error))];
+    if (isAdmin) stops.push(subscribeCollection<UserProfile>("users", setEmployees, (error) => report("Personal", error)), subscribeCollection<Invitation>("invitations", setInvitations, (error) => report("Invitaciones", error)), subscribeCollection<ActivityLog>("activityLogs", setActivityLogs, (error) => report("Historial", error)), subscribeCollection<AccessLog>("accessLogs", setAccessLogs, (error) => report("Accesos", error)), subscribeCollection<Expense>("expenses", setExpenses, (error) => report("Finanzas", error)));
+    return () => { stops.forEach((stop) => stop()); if (syncToastTimer.current) { window.clearTimeout(syncToastTimer.current); syncToastTimer.current = null; } };
   }, [isAdmin, user.uid]);
 
   useEffect(() => {

@@ -8,7 +8,7 @@ export type ReservationStatus = "pending" | "confirmed" | "completed" | "cancell
 export type PaymentStatus = "paid" | "pending" | "refunded";
 export type PaymentMethod = "cash" | "card" | "transfer" | "other";
 export type ActivityAction = "created" | "updated" | "deleted" | "invited" | "profile_updated";
-export type ActivityEntity = "customer" | "reservation" | "payment" | "employee" | "profile" | "reminder";
+export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder";
 
 export interface UserProfile {
   id: string;
@@ -45,6 +45,11 @@ export interface Customer extends OperationalAuditFields {
 export interface Reservation extends OperationalAuditFields {
   id: string;
   code?: string;
+  productId?: string;
+  productName?: string;
+  productCategory?: ProductCategory;
+  productPrice?: number;
+  productUnit?: string;
   customerId: string;
   customerName: string;
   date: string;
@@ -58,6 +63,11 @@ export interface Reservation extends OperationalAuditFields {
 export interface Payment extends OperationalAuditFields {
   id: string;
   code?: string;
+  productId?: string;
+  productName?: string;
+  productCategory?: ProductCategory;
+  productPrice?: number;
+  productUnit?: string;
   customerId: string;
   customerName: string;
   reservationId?: string;
@@ -101,6 +111,22 @@ export interface GeneralReminder {
   active: boolean;
   createdBy: string;
   createdByName?: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
+export type ProductCategory = "tariff" | "promotion";
+
+export interface Product {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  price: number;
+  unit: string;
+  tagline: string;
+  details: Array<{ label: string; value: string }>;
+  active: boolean;
+  createdBy?: string;
   createdAt?: unknown;
   updatedAt?: unknown;
 }

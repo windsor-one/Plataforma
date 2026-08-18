@@ -78,3 +78,8 @@
 - [x] Hacer que el logotipo de Heliot Media navegue al panel Resumen.
 - [x] Convertir General Reminders en un centro de comunicaciones internas con fecha, emisor, prioridad y permisos de lectura para Personal y gestión para Administración/IT.
 - [x] Mostrar en Personal todos los perfiles registrados y las invitaciones pendientes, con su estado y rol correspondiente.
+- [x] Crear el panel Productos con catálogo separado de Aranceles y Promociones de Heliot Media.
+- [x] Permitir seleccionar un paquete en reservas y pagos, conservando precio y condiciones en cada registro.
+- [x] Ordenar General Reminders por relevancia y presentar el acceso administrativo como «Nuevo anuncio» en la cabecera del panel.
+- [x] Permitir que todo el Personal vea Productos y reservar la edición del catálogo para Administración/IT.
+- [x] Publicar las reglas de Firestore para lectura de Productos por Personal y gestión exclusiva de Administración/IT.

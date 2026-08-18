@@ -86,6 +86,12 @@ service cloud.firestore {
       allow read, create, update, delete: if activeEmployee();
     }
 
+    match /products/{productId} {
+      // El catálogo es visible para todo el Personal; solo Administración/IT lo administra.
+      allow read: if activeEmployee();
+      allow create, update, delete: if admin();
+    }
+
     match /activityLogs/{activityId} {
       // Toda escritura de un movimiento debe identificar al empleado autenticado.
       allow create: if activeEmployee()

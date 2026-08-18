@@ -5,9 +5,9 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Reservation, UserProfile, UserRole } from "./types";
+import type { ActivityAction, ActivityEntity, ActivityLog, Customer, GeneralReminder, Invitation, Payment, Product, Reservation, UserProfile, UserRole } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "users" | "invitations" | "activityLogs" | "generalReminders";
+type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type OperationalPayload = Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">;
 
@@ -43,7 +43,7 @@ function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId:
 }
 
 export function subscribeCollection<T extends { id: string }>(name: ManagedCollection, onData: (data: T[]) => void, onError: (error: Error) => void) {
-  const sortField = name === "users" || name === "invitations" ? "createdAt" : name === "activityLogs" ? "occurredAt" : name === "generalReminders" ? "createdAt" : "updatedAt";
+  const sortField = name === "users" || name === "invitations" ? "createdAt" : name === "activityLogs" ? "occurredAt" : name === "generalReminders" || name === "products" ? "createdAt" : "updatedAt";
   return onSnapshot(query(collection(db, name), orderBy(sortField, "desc")), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
 }
 
@@ -162,6 +162,23 @@ export async function updateGeneralReminder(id: string, payload: Pick<GeneralRem
   batch.update(doc(db, "generalReminders", id), reminderPayload);
   batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "reminder", id, `Actualizó la comunicación «${payload.title.trim()}»`, actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await updateDoc(doc(db, "generalReminders", id), reminderPayload); }
+}
+
+export async function saveProduct(product: Product, actorId: string) {
+  const actor = await activityActor(actorId);
+  const payload = { ...product, createdBy: product.createdBy || actorId, updatedAt: serverTimestamp(), createdAt: product.createdAt || serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.set(doc(db, "products", product.id), payload, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry(product.createdAt ? "updated" : "created", "product", product.id, `${product.createdAt ? "Actualizó" : "Publicó"} el paquete «${product.name}»`, actor));
+  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await setDoc(doc(db, "products", product.id), payload, { merge: true }); }
+}
+
+export async function deleteProduct(id: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.set(doc(db, "products", id), { id, active: false, updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "product", id, "Eliminó un paquete del catálogo", actor));
+  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await setDoc(doc(db, "products", id), { id, active: false, updatedAt: serverTimestamp() }, { merge: true }); }
 }
 
 export async function deleteGeneralReminder(id: string, actorId: string) {

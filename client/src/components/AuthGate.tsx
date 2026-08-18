@@ -18,6 +18,8 @@ import { completeInvitationOnboarding, recordAccess } from "@/lib/firestore";
 import type { UserProfile } from "@/lib/types";
 
 type Mode = "login" | "register";
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000;
+const INACTIVITY_WARNING_MS = 60 * 1000;
 
 function FriendlyError({ error }: { error: string }) {
   return error ? <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null;
@@ -63,6 +65,8 @@ export default function AuthGate({ children }: { children: (user: User, profile:
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [idleWarning, setIdleWarning] = useState(false);
+  const [activityCycle, setActivityCycle] = useState(0);
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -96,6 +100,55 @@ export default function AuthGate({ children }: { children: (user: User, profile:
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (!user || !profile) return;
+    let warningTimer: number | undefined;
+    let timeoutTimer: number | undefined;
+    let lastInteraction = Date.now();
+    let endingSession = false;
+
+    const endForInactivity = async () => {
+      if (endingSession) return;
+      endingSession = true;
+      setIdleWarning(false);
+      setNotice("Tu sesión se cerró por 15 minutos de inactividad. Inicia sesión nuevamente para continuar.");
+      await recordAccess(user.uid, profile, "logout");
+      await signOut(auth);
+    };
+
+    const schedule = () => {
+      window.clearTimeout(warningTimer);
+      window.clearTimeout(timeoutTimer);
+      const elapsed = Date.now() - lastInteraction;
+      const remaining = Math.max(0, INACTIVITY_TIMEOUT_MS - elapsed);
+      warningTimer = window.setTimeout(() => setIdleWarning(true), Math.max(0, remaining - INACTIVITY_WARNING_MS));
+      timeoutTimer = window.setTimeout(() => { void endForInactivity(); }, remaining);
+    };
+
+    const registerActivity = () => {
+      lastInteraction = Date.now();
+      setIdleWarning(false);
+      schedule();
+    };
+
+    const checkAfterPause = () => {
+      if (Date.now() - lastInteraction >= INACTIVITY_TIMEOUT_MS) void endForInactivity();
+      else schedule();
+    };
+
+    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "scroll", "touchstart", "focus"];
+    events.forEach((event) => window.addEventListener(event, registerActivity, { passive: true }));
+    document.addEventListener("visibilitychange", checkAfterPause);
+    schedule();
+
+    return () => {
+      window.clearTimeout(warningTimer);
+      window.clearTimeout(timeoutTimer);
+      events.forEach((event) => window.removeEventListener(event, registerActivity));
+      document.removeEventListener("visibilitychange", checkAfterPause);
+    };
+  }, [user, profile, activityCycle]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -153,7 +206,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     return <div className="grid min-h-screen place-items-center bg-background"><div className="flex items-center gap-3 font-semibold"><span className="h-3 w-3 animate-pulse rounded-full bg-[#0F8F73]" />Preparando tu espacio de trabajo…</div></div>;
   }
 
-  if (user && profile) return <>{children(user, profile)}</>;
+  if (user && profile) return <>{children(user, profile)}{idleWarning && <div className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-[#FFC72C]/45 bg-card p-4 shadow-2xl sm:bottom-6"><p className="text-sm font-extrabold">Tu sesión está por cerrarse</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Por seguridad, se cerrará en menos de un minuto si no continúas trabajando.</p><button className="primary-button mt-4 w-full" onClick={() => { setIdleWarning(false); setActivityCycle((cycle) => cycle + 1); }}>Continuar sesión</button></div>}</>;
   if (!isFirebaseConfigured) return <SetupPending />;
 
   return (

@@ -100,3 +100,5 @@
 - [x] Mantener la barra lateral izquierda fija, sin desplazamiento vertical y con sus accesos siempre visibles.
 - [x] Ajustar y validar toda la interfaz para laptop y celular, incluyendo tablas, formularios, paneles y modales.
 - [x] Redactar un manual integral y autónomo de operación, configuración, mantenimiento, seguridad y recuperación de Heliot Media.
+- [x] Generar y entregar el manual integral en formato PDF descargable.
+- [x] Cerrar sesión automáticamente tras un periodo de inactividad, con aviso preventivo y reinicio de sesión seguro.

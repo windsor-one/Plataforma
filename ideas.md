@@ -73,3 +73,7 @@ La marca se identifica con una **G construida por tres segmentos escalonados**, 
 - Los estados bloqueados, vacíos o de configuración conservan la composición de centro operativo: índice lateral, encabezado contextual y módulos que muestran el estado técnico real de la operación.
 - El jade operativo se reserva para confirmaciones, acciones y carriles de actividad. Los tonos ámbar expresan preparación pendiente y los rojos se limitan a suspensión o acciones destructivas.
 - La voz evita pantallas de bienvenida genéricas y comunica el estado actual de forma concreta: “Configuración pendiente: conecta Firebase para activar agenda, pagos y equipo”.
+- La identidad vigente es **Sistema Heliot**; no se sustituye por nombres heredados. Su símbolo de tres segmentos escalonados conserva la función de marca compacta en la navegación y en todos los dispositivos.
+- El grafito azulado estructura navegación y superficies de apoyo; el jade operativo queda reservado para actividad, acciones principales y confirmaciones.
+- Los carriles semánticos se refuerzan como firma del sistema: jade para actividad, ámbar para atención y rojo para riesgo o destrucción. Las etiquetas solo complementan esos carriles.
+- Las superficies adoptan inspiración de macOS mediante esquinas continuas, capas translúcidas sutiles, sombras contenidas y transiciones breves, sin funciones dependientes de Apple para asegurar compatibilidad con Windows, Android e iPhone.

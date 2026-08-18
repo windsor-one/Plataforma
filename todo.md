@@ -117,6 +117,14 @@
 - [x] Preparar las reglas de Firebase actualizadas para entrega manual y copia directa.
 - [x] Identificar las suscripciones de Firebase que fallan al iniciar sesión y corregir el aviso repetido de sincronización.
 - [x] Publicar manualmente las reglas actuales de Firestore para activar Tareas, Incidencias y Finanzas en producción.
+- [x] Auditar y corregir los módulos de Recursos Humanos que no completan flujos de creación, edición o eliminación.
+- [x] Convertir los códigos de empleados y entidades nuevas en identificadores automáticos, globalmente únicos y no repetibles.
+- [x] Conectar Organización con Expedientes mediante departamentos, áreas, equipos, cargos, sedes y horarios creados desde el mismo flujo.
+- [x] Completar permisos de Administración/IT para editar y archivar contratos, documentos y demás registros de RR. HH.
+- [x] Configurar ventanas y límites diarios para marcaciones de entrada, salida y descansos, editables por Administración/IT.
+- [x] Reforzar el cierre de sesión basado en la última interacción real, incluso al abandonar la pestaña, cerrar el navegador o apagar el equipo.
+- [x] Ampliar el panel de impacto digital con sesiones, duración, transferencia, operaciones y consolidados mensuales por persona y organización.
+- [x] Validar una interfaz inspirada en macOS que funcione de forma consistente en Windows, Android e iPhone.
 - [x] Evaluar y priorizar una primera fase segura del módulo de Gestión de Personal y Recursos Humanos.
 - [x] Definir matriz de acceso para empleado, supervisor y Administración/IT en los módulos de Recursos Humanos.
 - [x] Implementar expedientes laborales, organización, contratos y documentos con acceso restringido.

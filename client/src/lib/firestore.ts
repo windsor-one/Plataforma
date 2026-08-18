@@ -5,11 +5,11 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceRecord, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UserProfile, UserRole, WorkSchedule } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceRecord, AttendanceSettings, AttendanceType, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UserProfile, UserRole, WorkSchedule } from "./types";
 
 type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments";
 type OperationalCollection = "customers" | "reservations" | "payments";
-type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses";
+type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses" | "employees";
 type HrAdminCollection = "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies";
 type HrEmployeeCollection = "attendanceRecords" | "leaveRequests" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "policyAcknowledgments";
 type OperationalPayload = Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">;
@@ -21,10 +21,17 @@ const auditWriteBlocked = (error: unknown) => ["permission-denied", "firestore/p
 const entityFromCollection = (name: OperationalCollection): ActivityEntity => name === "customers" ? "customer" : name === "reservations" ? "reservation" : "payment";
 const pluralLabel = (name: OperationalCollection) => name === "customers" ? "clientes" : name === "reservations" ? "reservas" : "pagos";
 const recordLabel = (name: OperationalCollection, payload: DocumentData) => name === "customers" ? `${payload.firstName || ""} ${payload.lastName || ""}`.trim() || payload.fullName || "Cliente" : name === "reservations" ? `Reserva de ${payload.customerName || "cliente"}` : `Pago de ${payload.customerName || "cliente"}`;
-const codePrefix = (name: SequencedCollection) => name === "customers" ? "CLI" : name === "reservations" ? "RES" : name === "payments" ? "PAG" : name === "tasks" ? "TAR" : name === "incidents" ? "INC" : "GAS";
+const codePrefix = (name: SequencedCollection) => name === "customers" ? "CLI" : name === "reservations" ? "RES" : name === "payments" ? "PAG" : name === "tasks" ? "TAR" : name === "incidents" ? "INC" : name === "expenses" ? "GAS" : "EMP";
 const sequentialCode = (name: SequencedCollection, number: number) => `${codePrefix(name)}-${String(number).padStart(5, "0")}`;
 
 async function fallbackSequence(name: SequencedCollection) {
+  if (name === "employees") {
+    const snapshot = await getDocs(collection(db, "hrProfiles"));
+    return snapshot.docs.reduce((highest, item) => {
+      const match = String(item.data().employeeCode || "").match(/^EMP-(\d+)$/);
+      return Math.max(highest, match ? Number(match[1]) : 0);
+    }, 0) + 1;
+  }
   const snapshot = await getDocs(collection(db, name));
   const prefix = codePrefix(name);
   const max = snapshot.docs.reduce((highest, item) => {
@@ -82,6 +89,35 @@ export async function saveHrAdminRecord<T extends { id: string }>(name: HrAdminC
   return reference.id;
 }
 
+/** Los códigos EMP-xxxxx se generan por secuencia y los expedientes existentes preservan su código histórico. */
+export async function saveEmployeeHrProfile(employeeId: string, payload: Omit<HrProfile, "id" | "employeeId" | "employeeCode" | "createdAt" | "updatedAt" | "createdBy" | "createdByName" | "createdByEmail">, actorId: string) {
+  const actor = await activityActor(actorId);
+  const profileRef = doc(db, "hrProfiles", employeeId);
+  const sequenceRef = doc(db, "sequences", "employees");
+  await runTransaction(db, async (transaction) => {
+    const [existing, counter] = await Promise.all([transaction.get(profileRef), transaction.get(sequenceRef)]);
+    const current = existing.exists() ? existing.data() as HrProfile : null;
+    const next = (counter.exists() ? Number(counter.data().current || 0) : 0) + 1;
+    const employeeCode = current?.employeeCode || sequentialCode("employees", next);
+    transaction.set(profileRef, {
+      ...withoutUndefined(payload as unknown as DocumentData), id: employeeId, employeeId, employeeCode,
+      createdBy: current?.createdBy || actorId, createdByName: current?.createdByName || actor.actorName, createdByEmail: current?.createdByEmail || actor.actorEmail,
+      createdAt: current?.createdAt || serverTimestamp(), updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp(),
+    }, { merge: true });
+    if (!current?.employeeCode) transaction.set(sequenceRef, { current: next, category: "employees", updatedAt: serverTimestamp() }, { merge: true });
+    transaction.set(doc(collection(db, "activityLogs")), activityEntry(existing.exists() ? "updated" : "created", "hr_profile", employeeId, `${existing.exists() ? "Actualizó" : "Creó"} el expediente ${employeeCode}`, actor));
+  });
+  return employeeId;
+}
+
+export async function deleteHrAdminRecord(name: HrAdminCollection, id: string, actorId: string, summary: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, name, id));
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", hrEntityForCollection[name], id, summary, actor));
+  await batch.commit();
+}
+
 export async function updateOwnHrProfile(userId: string, payload: Pick<HrProfile, "personalEmail" | "personalPhone" | "address" | "emergencyContactName" | "emergencyContactPhone">) {
   const actor = await activityActor(userId);
   const reference = doc(db, "hrProfiles", userId);
@@ -94,14 +130,52 @@ export async function updateOwnHrProfile(userId: string, payload: Pick<HrProfile
   await batch.commit();
 }
 
+const defaultAttendanceSettings: AttendanceSettings = {
+  id: "global", timezone: "local",
+  clockIn: { startTime: "07:00", endTime: "12:00", maxPerDay: 1 },
+  clockOut: { startTime: "07:00", endTime: "12:00", maxPerDay: 1 },
+  breakStart: { startTime: "07:00", endTime: "12:00", maxPerDay: 1 },
+  breakEnd: { startTime: "07:00", endTime: "12:00", maxPerDay: 1 },
+};
+
+const dayKeyFor = (date: Date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-");
+const timeFor = (date: Date) => `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+const attendanceSettingKey: Record<AttendanceType, keyof Pick<AttendanceSettings, "clockIn" | "clockOut" | "breakStart" | "breakEnd">> = { clock_in: "clockIn", clock_out: "clockOut", break_start: "breakStart", break_end: "breakEnd" };
+
+export function subscribeAttendanceSettings(onData: (settings: AttendanceSettings) => void, onError: (error: Error) => void) {
+  return onSnapshot(doc(db, "attendanceSettings", "global"), (snapshot) => onData(snapshot.exists() ? { ...defaultAttendanceSettings, ...snapshot.data(), id: "global" } as AttendanceSettings : defaultAttendanceSettings), onError);
+}
+
+export async function updateAttendanceSettings(settings: AttendanceSettings, actorId: string) {
+  const actor = await activityActor(actorId);
+  const safe = (window: AttendanceSettings["clockIn"]) => ({ startTime: /^\d\d:\d\d$/.test(window.startTime) ? window.startTime : "07:00", endTime: /^\d\d:\d\d$/.test(window.endTime) ? window.endTime : "12:00", maxPerDay: Math.min(12, Math.max(1, Math.round(window.maxPerDay || 1))) });
+  const payload = { id: "global", timezone: "local", clockIn: safe(settings.clockIn), clockOut: safe(settings.clockOut), breakStart: safe(settings.breakStart), breakEnd: safe(settings.breakEnd), updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.set(doc(db, "attendanceSettings", "global"), payload, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "attendance", "global", "Actualizó la ventana y los límites de marcación", actor));
+  await batch.commit();
+}
+
 export async function recordOwnAttendance(employeeId: string, employeeName: string, type: AttendanceRecord["type"], note = "") {
   const actor = await activityActor(employeeId);
   const reference = doc(collection(db, "attendanceRecords"));
-  const payload = { employeeId, employeeName, type, note: note.trim() || undefined, source: "self_service" as const, createdBy: employeeId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, occurredAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-  const batch = writeBatch(db);
-  batch.set(reference, withoutUndefined(payload));
-  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "attendance", reference.id, `Registró ${type === "clock_in" ? "entrada" : type === "clock_out" ? "salida" : type === "break_start" ? "inicio de descanso" : "fin de descanso"}`, actor));
-  await batch.commit();
+  const now = new Date(); const dayKey = dayKeyFor(now); const currentTime = timeFor(now);
+  const settingsRef = doc(db, "attendanceSettings", "global");
+  const existingEntries = query(collection(db, "attendanceRecords"), where("employeeId", "==", employeeId), where("dayKey", "==", dayKey), where("type", "==", type));
+  const existingSnapshot = await getDocs(existingEntries);
+  const counterRef = doc(db, "attendanceCounters", `${employeeId}_${dayKey}_${type}`);
+  await runTransaction(db, async (transaction) => {
+    const [settingsSnapshot, counterSnapshot] = await Promise.all([transaction.get(settingsRef), transaction.get(counterRef)]);
+    const settings = settingsSnapshot.exists() ? { ...defaultAttendanceSettings, ...settingsSnapshot.data() } as AttendanceSettings : defaultAttendanceSettings;
+    const window = settings[attendanceSettingKey[type]];
+    if (currentTime < window.startTime || currentTime > window.endTime) throw new Error(`La marcación está permitida de ${window.startTime} a ${window.endTime}.`);
+    const count = Math.max(existingSnapshot.size, Number(counterSnapshot.exists() ? counterSnapshot.data().count || 0 : 0));
+    if (count >= window.maxPerDay) throw new Error(`Ya alcanzaste el límite de ${window.maxPerDay} marcación(es) de este tipo hoy.`);
+    const payload = { employeeId, employeeName, type, dayKey, note: note.trim() || undefined, source: "self_service" as const, createdBy: employeeId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, occurredAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    transaction.set(reference, withoutUndefined(payload));
+    transaction.set(counterRef, { employeeId, dayKey, type, count: count + 1, updatedAt: serverTimestamp() }, { merge: true });
+    transaction.set(doc(collection(db, "activityLogs")), activityEntry("created", "attendance", reference.id, `Registró ${type === "clock_in" ? "entrada" : type === "clock_out" ? "salida" : type === "break_start" ? "inicio de descanso" : "fin de descanso"}`, actor));
+  });
 }
 
 export async function createLeaveRequest(payload: Omit<LeaveRequest, "id" | "createdAt" | "updatedAt" | "createdBy" | "createdByName" | "createdByEmail">, actorId: string) {
@@ -314,22 +388,33 @@ export async function recordAccess(userId: string, profile: UserProfile, event: 
 /** Factor transparente: 0.300 kWh/GB × 494 gCO2e/kWh = 148.2 gCO2e/GB (SWDM v4). */
 const CARBON_FACTOR_GRAMS_PER_GB = 148.2;
 
-export async function recordCarbonUsage(userId: string, profile: UserProfile, transferredBytes: number, resourceCount: number) {
+export async function recordCarbonUsage(userId: string, profile: UserProfile, transferredBytes: number, resourceCount: number, context: Pick<CarbonUsage, "departmentId" | "departmentName" | "deviceClass"> = {}) {
   const safeBytes = Math.max(0, Math.round(transferredBytes));
-  if (!safeBytes) return;
+  if (!safeBytes) throw new Error("No se observaron bytes transferidos para registrar la sesión ambiental.");
   const payload = {
     userId,
     displayName: profile.displayName,
     email: profile.email,
+    ...withoutUndefined(context),
     transferredBytes: safeBytes,
     resourceCount: Math.max(0, Math.round(resourceCount)),
+    activeMilliseconds: 0,
+    operationCount: 0,
+    pageViews: 1,
     estimatedGramsCO2e: Number(((safeBytes / 1_000_000_000) * CARBON_FACTOR_GRAMS_PER_GB).toFixed(6)),
     factorGramsCO2ePerGB: CARBON_FACTOR_GRAMS_PER_GB,
     methodology: "SWDM-v4" as const,
     source: "browser-resource-timing" as const,
+    sessionStartedAt: serverTimestamp(),
     recordedAt: serverTimestamp(),
   } satisfies Omit<CarbonUsage, "id">;
-  await setDoc(doc(collection(db, "carbonUsage")), payload);
+  const reference = doc(collection(db, "carbonUsage"));
+  await setDoc(reference, payload);
+  return reference.id;
+}
+
+export async function updateCarbonUsageSession(recordId: string, userId: string, payload: Pick<CarbonUsage, "activeMilliseconds" | "operationCount" | "pageViews" | "departmentId" | "departmentName">) {
+  await updateDoc(doc(db, "carbonUsage", recordId), { ...withoutUndefined(payload), sessionEndedAt: serverTimestamp(), updatedAt: serverTimestamp() });
 }
 
 export function subscribeCarbonUsage(userId: string, isAdmin: boolean, onData: (data: CarbonUsage[]) => void, onError: (error: Error) => void) {

@@ -152,6 +152,23 @@ service cloud.firestore {
       allow update, delete: if admin();
     }
 
+    match /attendanceCounters/{counterId} {
+      allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
+      allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid && request.resource.data.count == 1;
+      allow update: if activeEmployee() && resource.data.employeeId == request.auth.uid
+        && request.resource.data.employeeId == resource.data.employeeId
+        && request.resource.data.dayKey == resource.data.dayKey
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.count == resource.data.count + 1;
+      allow delete: if false;
+    }
+
+    match /attendanceSettings/{settingId} {
+      allow read: if activeEmployee();
+      allow create, update: if admin();
+      allow delete: if false;
+    }
+
     match /leaveRequests/{requestId} {
       allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid;
       allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
@@ -210,7 +227,10 @@ service cloud.firestore {
       allow create: if activeEmployee()
         && request.resource.data.userId == request.auth.uid;
       allow get, list: if admin() || (activeEmployee() && resource.data.userId == request.auth.uid);
-      allow update, delete: if false;
+      allow update: if activeEmployee() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeMilliseconds', 'operationCount', 'pageViews', 'departmentId', 'departmentName', 'sessionEndedAt', 'updatedAt']);
+      allow delete: if false;
     }
 
     match /securitySettings/{settingId} {

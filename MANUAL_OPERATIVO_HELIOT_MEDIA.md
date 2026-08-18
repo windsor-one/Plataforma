@@ -1,4 +1,4 @@
-# Manual integral de Heliot Media
+# Manual integral de Sistema Heliot
 
 > **Propósito.** Este documento permite operar, mantener y recuperar Sistema Heliot sin depender de una persona específica. Guárdelo junto con el repositorio y actualícelo cuando cambie una regla, una colección, un rol o un proceso de trabajo.
 
@@ -155,6 +155,12 @@ Abra **Recursos Humanos → Mi espacio** para consultar su estado laboral, códi
 
 No incorpore en el campo de motivos de ausencia diagnósticos médicos, números de identidad, claves ni información confidencial. Para evidencias o documentación clínica, siga el proceso privado definido por Administración/IT fuera de los campos generales de la plataforma.
 
+### 3.7 Marcar asistencia y conservar la sesión
+
+Las acciones **Registrar entrada**, **Registrar salida**, **Iniciar descanso** y **Finalizar descanso** aplican la ventana configurada por Administración/IT. Cada evento tiene un límite diario por persona y tipo. Si intenta registrar fuera de horario o superar el límite, Sistema Heliot muestra el motivo y no crea el movimiento.
+
+El cierre de sesión se calcula desde la última interacción real con la plataforma. La fecha se conserva localmente por dispositivo y se verifica al regresar a una pestaña, abrir el navegador o reanudar el equipo. Un navegador o equipo apagado no puede ejecutar un cierre activo mientras está apagado; al volver a abrir Sistema Heliot, la sesión se invalida antes de mostrar datos si el plazo configurado ya venció.
+
 ---
 
 ## 4. Guía administrativa e IT
@@ -232,6 +238,14 @@ No comparta contraseñas por chat ni cree una colección de contraseñas en Fire
 4. Revise solicitudes de vacaciones y permisos desde **Control**. La aprobación o rechazo queda registrada en Historial.
 5. Utilice **Desarrollo** para crear objetivos, evaluaciones, capacitaciones, reconocimientos y políticas con versión.
 6. Mantenga los documentos físicos o sus enlaces en un repositorio autorizado; la plataforma guarda el expediente, estado y vigencia, no sustituye el almacenamiento documental seguro.
+
+### 4.10 Configurar asistencia, códigos y expedientes
+
+Los expedientes nuevos reciben automáticamente un código `EMP-xxxxx`. El campo no se escribe a mano y el número se controla en la secuencia global de empleados. Los expedientes existentes conservan su código histórico para no afectar datos ya registrados.
+
+Primero cree **Departamentos, Áreas, Equipos, Cargos, Sedes y Horarios** en **Recursos Humanos → Organización**. Después selecciónelos desde el panel lateral de Expedientes. Evite usar nombres libres: los selectores reutilizan la misma estructura organizacional.
+
+En **Recursos Humanos → Control**, Administración/IT puede definir para entrada, salida e inicio/fin de descanso la hora inicial, la hora final y el máximo de registros por día. El valor inicial es de 07:00 a 12:00 y una vez diaria por tipo. Los límites se validan antes de crear la marcación.
 
 ---
 

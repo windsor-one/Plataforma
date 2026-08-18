@@ -22,6 +22,8 @@ const DEFAULT_INACTIVITY_MINUTES = 15;
 const INACTIVITY_WARNING_MS = 60 * 1000;
 const inactivityMilliseconds = (value: number, unit: "seconds" | "minutes" | "hours") => value * (unit === "seconds" ? 1000 : unit === "minutes" ? 60 * 1000 : 60 * 60 * 1000);
 const inactivityLabel = (value: number, unit: "seconds" | "minutes" | "hours") => `${value} ${unit === "seconds" ? "segundos" : unit === "minutes" ? "minutos" : "horas"}`;
+const activityStorageKey = (userId: string) => `sistema-heliot:last-activity:${userId}`;
+const freshSessionKey = (userId: string) => `sistema-heliot:fresh-session:${userId}`;
 
 function FriendlyError({ error }: { error: string }) {
   return error ? <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300">{error}</p> : null;
@@ -113,15 +115,21 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     if (!user || !profile) return;
     let warningTimer: number | undefined;
     let timeoutTimer: number | undefined;
-    let lastInteraction = Date.now();
-    let endingSession = false;
     const inactivityTimeout = inactivityMilliseconds(inactivityPolicy.value, inactivityPolicy.unit);
+    const freshSession = window.sessionStorage.getItem(freshSessionKey(user.uid)) === "1";
+    const persistedActivity = Number(window.localStorage.getItem(activityStorageKey(user.uid)) || 0);
+    let lastInteraction = freshSession || !persistedActivity ? Date.now() : persistedActivity;
+    let endingSession = false;
+    if (freshSession) window.sessionStorage.removeItem(freshSessionKey(user.uid));
+    window.localStorage.setItem(activityStorageKey(user.uid), String(lastInteraction));
 
     const endForInactivity = async () => {
       if (endingSession) return;
       endingSession = true;
       setIdleWarning(false);
       setNotice(`Tu sesión se cerró por ${inactivityLabel(inactivityPolicy.value, inactivityPolicy.unit)} de inactividad. Inicia sesión nuevamente para continuar.`);
+      window.localStorage.removeItem(activityStorageKey(user.uid));
+      window.sessionStorage.removeItem(freshSessionKey(user.uid));
       await recordAccess(user.uid, profile, "logout");
       await signOut(auth);
     };
@@ -137,6 +145,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
 
     const registerActivity = () => {
       lastInteraction = Date.now();
+      window.localStorage.setItem(activityStorageKey(user.uid), String(lastInteraction));
       setIdleWarning(false);
       schedule();
     };
@@ -145,10 +154,18 @@ export default function AuthGate({ children }: { children: (user: User, profile:
       if (Date.now() - lastInteraction >= inactivityTimeout) void endForInactivity();
       else schedule();
     };
+    const receiveActivity = (event: StorageEvent) => {
+      if (event.key !== activityStorageKey(user.uid) || !event.newValue) return;
+      const externalActivity = Number(event.newValue);
+      if (externalActivity > lastInteraction) { lastInteraction = externalActivity; setIdleWarning(false); schedule(); }
+    };
 
-    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "scroll", "touchstart", "focus"];
+    const events: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "scroll", "touchstart", "input", "focus"];
     events.forEach((event) => window.addEventListener(event, registerActivity, { passive: true }));
     document.addEventListener("visibilitychange", checkAfterPause);
+    window.addEventListener("focus", checkAfterPause);
+    window.addEventListener("pageshow", checkAfterPause);
+    window.addEventListener("storage", receiveActivity);
     schedule();
 
     return () => {
@@ -156,6 +173,9 @@ export default function AuthGate({ children }: { children: (user: User, profile:
       window.clearTimeout(timeoutTimer);
       events.forEach((event) => window.removeEventListener(event, registerActivity));
       document.removeEventListener("visibilitychange", checkAfterPause);
+      window.removeEventListener("focus", checkAfterPause);
+      window.removeEventListener("pageshow", checkAfterPause);
+      window.removeEventListener("storage", receiveActivity);
     };
   }, [user, profile, activityCycle, inactivityPolicy]);
 
@@ -166,9 +186,11 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     setNotice("");
     try {
       if (mode === "login") {
-        await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+        const credential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+        window.sessionStorage.setItem(freshSessionKey(credential.user.uid), "1");
       } else {
         const credential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
+        window.sessionStorage.setItem(freshSessionKey(credential.user.uid), "1");
         if (name.trim()) await updateProfile(credential.user, { displayName: name.trim() });
       }
     } catch (caught) {

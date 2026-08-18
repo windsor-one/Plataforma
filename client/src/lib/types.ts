@@ -48,15 +48,22 @@ export interface HrProfile extends OperationalAuditFields {
   birthDate?: string;
   nationality?: string;
   maritalStatus?: string;
+  departmentId?: string;
   department?: string;
+  areaId?: string;
   area?: string;
+  teamId?: string;
   team?: string;
+  positionId?: string;
   position?: string;
+  siteId?: string;
   supervisorId?: string;
   supervisorName?: string;
   startDate?: string;
   contractType?: ContractType;
   workDay?: string;
+  scheduleId?: string;
+  scheduleName?: string;
   workMode?: WorkMode;
   site?: string;
   employmentStatus?: EmploymentStatus;
@@ -122,9 +129,29 @@ export interface AttendanceRecord extends OperationalAuditFields {
   employeeId: string;
   employeeName: string;
   type: AttendanceType;
+  dayKey?: string;
   occurredAt?: unknown;
   note?: string;
   source: "manual" | "self_service";
+}
+
+export interface AttendanceWindow {
+  startTime: string;
+  endTime: string;
+  maxPerDay: number;
+}
+
+/** Política global para la marcación personal; Administración/IT es la única entidad que la modifica. */
+export interface AttendanceSettings {
+  id: "global";
+  timezone?: string;
+  clockIn: AttendanceWindow;
+  clockOut: AttendanceWindow;
+  breakStart: AttendanceWindow;
+  breakEnd: AttendanceWindow;
+  updatedBy?: string;
+  updatedByName?: string;
+  updatedAt?: unknown;
 }
 
 export interface LeaveRequest extends OperationalAuditFields {
@@ -358,8 +385,16 @@ export interface CarbonUsage {
   userId: string;
   displayName: string;
   email: string;
+  departmentId?: string;
+  departmentName?: string;
+  deviceClass?: "desktop" | "tablet" | "mobile";
   transferredBytes: number;
   resourceCount: number;
+  activeMilliseconds?: number;
+  operationCount?: number;
+  pageViews?: number;
+  sessionStartedAt?: unknown;
+  sessionEndedAt?: unknown;
   estimatedGramsCO2e: number;
   factorGramsCO2ePerGB: number;
   methodology: "SWDM-v4";

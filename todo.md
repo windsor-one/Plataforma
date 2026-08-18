@@ -49,3 +49,6 @@
 - [x] Añadir una barra lateral colapsable y mostrar el nombre del usuario activo en el encabezado.
 - [x] Renovar toda la interfaz con la paleta azul, verde, amarillo y violeta de la referencia proporcionada.
 - [ ] Publicar las reglas de Firestore actualizadas para habilitar `activityLogs` y validar los flujos con una sesión real.
+- [x] Reemplazar las altas rápidas fallidas por paneles relacionados que conservan el formulario principal y seleccionan el registro creado sin recarga.
+- [x] Aplicar animación fluida a la apertura, desplazamiento y cierre de paneles relacionados en pagos y reservas.
+- [ ] Validar los nuevos paneles coordinados con una sesión real y las reglas de Firestore publicadas.

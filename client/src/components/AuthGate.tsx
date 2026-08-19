@@ -237,12 +237,12 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     return <div className="grid min-h-screen place-items-center bg-background"><div className="flex items-center gap-3 font-semibold"><span className="h-3 w-3 animate-pulse rounded-full bg-[#0F8F73]" />Preparando tu espacio de trabajo…</div></div>;
   }
 
-  if (user && profile) return <>{children(user, profile)}{idleWarning && <div className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border border-[#FFC72C]/45 bg-card p-4 shadow-2xl sm:bottom-6"><p className="text-sm font-extrabold">Tu sesión está por cerrarse</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Por seguridad, se cerrará en menos de un minuto si no continúas trabajando.</p><button className="primary-button mt-4 w-full" onClick={() => { setIdleWarning(false); setActivityCycle((cycle) => cycle + 1); }}>Continuar sesión</button></div>}</>;
+  if (user && profile) return <>{children(user, profile)}{idleWarning && <div className="floating-surface fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-2xl border-[#FFC72C]/45 p-4 sm:bottom-6"><p className="text-sm font-extrabold">Tu sesión está por cerrarse</p><p className="mt-1 text-sm leading-6 text-muted-foreground">Por seguridad, se cerrará en menos de un minuto si no continúas trabajando.</p><button className="primary-button mt-4 w-full" onClick={() => { setIdleWarning(false); setActivityCycle((cycle) => cycle + 1); }}>Continuar sesión</button></div>}</>;
   if (!isFirebaseConfigured) return <SetupPending />;
 
   return (
     <main className="min-h-screen bg-[#132A32] p-3 sm:p-6 lg:p-8">
-      <section className="mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-6xl overflow-hidden rounded-[1.75rem] bg-[#F6F4EE] shadow-2xl shadow-black/25 lg:grid-cols-[1.1fr_.9fr] dark:bg-[#17242A]">
+      <section className="mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-6xl overflow-hidden rounded-[1.75rem] border bg-[#F6F4EE] lg:grid-cols-[1.1fr_.9fr] dark:bg-[#17242A]">
         <div className="relative hidden overflow-hidden bg-[#102B35] p-10 text-white lg:flex lg:flex-col">
           <div className="absolute inset-0 auth-pattern opacity-80" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0B2027]/55 via-[#0B2027]/35 to-[#0B2027]/80" />

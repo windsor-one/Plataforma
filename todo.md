@@ -136,3 +136,6 @@
 - [x] Añadir un dashboard de resumen de rendimiento basado en asistencia, tareas, formación y objetivos registrados.
 - [x] Publicar las reglas de Firestore que permiten marcaciones administrativas de terceros y sus correcciones auditables.
 - [x] Mover Perfil y Cerrar sesión desde la barra lateral al menú contextual del usuario en el encabezado.
+- [x] Añadir selección múltiple, selección total y acciones masivas seguras para clientes, pagos, Personal y registros de RR. HH.
+- [x] Eliminar sombras, brillos y elevaciones visuales de toda la interfaz, manteniendo contraste y jerarquía plana.
+- [x] Aplicar fondo translúcido con desenfoque solo a submenús, menús emergentes y paneles flotantes para asegurar legibilidad.

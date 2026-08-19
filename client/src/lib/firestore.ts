@@ -226,6 +226,38 @@ export async function deleteHrAttendanceRecord(id: string, actorId: string) {
   await batch.commit();
 }
 
+/** Procesa hasta 200 registros por lote para reservar capacidad a la auditoría de cada operación. */
+const bulkChunks = <T,>(items: T[], size = 200) => Array.from({ length: Math.ceil(items.length / size) }, (_, index) => items.slice(index * size, (index + 1) * size));
+
+export async function bulkUpdateAttendanceRecords(ids: string[], payload: Pick<AttendanceRecord, "type" | "note" | "correctionReason">, actorId: string) {
+  const uniqueIds = Array.from(new Set(ids)).filter(Boolean);
+  if (!uniqueIds.length) return;
+  const actor = await activityActor(actorId);
+  const recordPayload = { ...withoutUndefined(payload), source: "manual" as const, adjustedAt: serverTimestamp(), adjustedBy: actorId, adjustedByName: actor.actorName, updatedAt: serverTimestamp() };
+  for (const group of bulkChunks(uniqueIds)) {
+    const batch = writeBatch(db);
+    group.forEach((id) => {
+      batch.update(doc(db, "attendanceRecords", id), recordPayload);
+      batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "attendance", id, "Corrigió una marcación mediante edición masiva", actor));
+    });
+    await batch.commit();
+  }
+}
+
+export async function bulkDeleteHrAttendanceRecords(ids: string[], actorId: string) {
+  const uniqueIds = Array.from(new Set(ids)).filter(Boolean);
+  if (!uniqueIds.length) return;
+  const actor = await activityActor(actorId);
+  for (const group of bulkChunks(uniqueIds)) {
+    const batch = writeBatch(db);
+    group.forEach((id) => {
+      batch.delete(doc(db, "attendanceRecords", id));
+      batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "attendance", id, "Eliminó una marcación mediante selección masiva", actor));
+    });
+    await batch.commit();
+  }
+}
+
 /** Administración/IT puede ajustar íntegramente una ausencia cuando el Personal cometió un error de captura. */
 export async function saveHrLeaveRequest(record: Partial<LeaveRequest> & Pick<LeaveRequest, "employeeId" | "employeeName" | "type" | "startDate" | "endDate" | "days" | "status">, actorId: string) {
   const actor = await activityActor(actorId);
@@ -292,6 +324,37 @@ export async function removeRecord(name: OperationalCollection, id: string, acto
   batch.delete(doc(db, name, id));
   batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", entityFromCollection(name), id, `Eliminó un registro de ${pluralLabel(name)}`, actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await deleteDoc(doc(db, name, id)); }
+}
+
+/** Actualiza registros operativos seleccionados y deja una entrada de Historial por cada uno. */
+export async function bulkUpdateRecords(name: OperationalCollection, ids: string[], payload: DocumentData, actorId: string) {
+  const uniqueIds = Array.from(new Set(ids)).filter(Boolean);
+  if (!uniqueIds.length) return;
+  const actor = await activityActor(actorId);
+  const recordPayload = { ...withoutUndefined(payload), updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp() };
+  for (const group of bulkChunks(uniqueIds)) {
+    const batch = writeBatch(db);
+    group.forEach((id) => {
+      batch.update(doc(db, name, id), recordPayload);
+      batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", entityFromCollection(name), id, `Actualizó masivamente un registro de ${pluralLabel(name)}`, actor));
+    });
+    try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await Promise.all(group.map((id) => updateDoc(doc(db, name, id), recordPayload))); }
+  }
+}
+
+/** Elimina registros operativos seleccionados, preservando la evidencia de cada eliminación en Historial. */
+export async function bulkRemoveRecords(name: OperationalCollection, ids: string[], actorId: string) {
+  const uniqueIds = Array.from(new Set(ids)).filter(Boolean);
+  if (!uniqueIds.length) return;
+  const actor = await activityActor(actorId);
+  for (const group of bulkChunks(uniqueIds)) {
+    const batch = writeBatch(db);
+    group.forEach((id) => {
+      batch.delete(doc(db, name, id));
+      batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", entityFromCollection(name), id, `Eliminó masivamente un registro de ${pluralLabel(name)}`, actor));
+    });
+    try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await Promise.all(group.map((id) => deleteDoc(doc(db, name, id)))); }
+  }
 }
 
 async function createSequencedWorkRecord(name: "tasks" | "incidents" | "expenses", entity: ActivityEntity, summary: string, payload: DocumentData, actorId: string) {
@@ -421,6 +484,35 @@ export async function deleteEmployeeProfile(employeeId: string, actorId: string)
   batch.delete(doc(db, "users", employeeId));
   batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "employee", employeeId, "Eliminó un perfil de empleado", actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await deleteDoc(doc(db, "users", employeeId)); }
+}
+
+export async function bulkUpdateEmployees(ids: string[], payload: Partial<Pick<UserProfile, "role" | "status">>, actorId: string) {
+  const uniqueIds = Array.from(new Set(ids)).filter(Boolean);
+  if (!uniqueIds.length) return;
+  const actor = await activityActor(actorId);
+  const employeePayload = { ...payload, updatedAt: serverTimestamp() };
+  for (const group of bulkChunks(uniqueIds)) {
+    const batch = writeBatch(db);
+    group.forEach((id) => {
+      batch.update(doc(db, "users", id), employeePayload);
+      batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "employee", id, "Actualizó masivamente la configuración de Personal", actor));
+    });
+    try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await Promise.all(group.map((id) => updateDoc(doc(db, "users", id), employeePayload))); }
+  }
+}
+
+export async function bulkDeleteEmployeeProfiles(ids: string[], actorId: string) {
+  const uniqueIds = Array.from(new Set(ids)).filter(Boolean);
+  if (!uniqueIds.length) return;
+  const actor = await activityActor(actorId);
+  for (const group of bulkChunks(uniqueIds)) {
+    const batch = writeBatch(db);
+    group.forEach((id) => {
+      batch.delete(doc(db, "users", id));
+      batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "employee", id, "Eliminó un perfil de Personal mediante selección masiva", actor));
+    });
+    try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await Promise.all(group.map((id) => deleteDoc(doc(db, "users", id)))); }
+  }
 }
 
 export async function updateOwnProfile(userId: string, displayName: string) {

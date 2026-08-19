@@ -150,3 +150,22 @@
 - [x] Sustituir el verde de la interfaz SIGES por una paleta azul consistente, preservando los estados semánticos.
 - [x] Mover Pendientes de configuración a una sección exclusiva de Administración/IT fuera del Resumen.
 - [x] Aplicar animaciones suaves y accesibles a navegación, paneles, listas, botones y menús de SIGES.
+- [ ] Permitir crear unidades organizacionales y horarios desde el expediente de RR. HH. sin cambiar de módulo.
+- [ ] Registrar los cambios de sección de SIGES en el historial del navegador para que Atrás y Adelante permanezcan dentro de la plataforma.
+- [ ] Aplicar fondo translúcido con desenfoque y contraste suficiente a las notificaciones emergentes.
+- [ ] Reemplazar el esquema binario por los roles Departamento de IT, Administrador y Personal con permisos diferenciados.
+- [ ] Añadir un calendario operativo al menú con reservas y actividades programadas.
+- [ ] Crear solicitudes de actualización asignables por persona, módulo y fecha límite, con cierre automático al vencer.
+- [ ] Añadir guardia semanal de asistencia para los jueves con rotación y ajustes de Administración/IT.
+- [ ] Permitir abrir y editar registros tocando sus filas y tarjetas, sin depender de iconos pequeños.
+- [ ] Mostrar las casillas de selección masiva solo al activar un modo de edición por lote.
+- [ ] Añadir filtros por tipo de movimiento en Historial y filtros específicos en los demás listados operativos.
+- [ ] Eliminar el desplazamiento visible de la barra lateral, conservar accesos a la vista y situar el control de colapsar junto a SIGES.
+- [ ] Añadir correo interno empresarial con bandeja, destinatarios múltiples, borradores y envíos programados.
+- [ ] Permitir adjuntar, descargar y retirar archivos privados en los mensajes internos autorizados.
+- [ ] Añadir automatizaciones auditables con creación, edición, pausa y eliminación por personas autorizadas.
+- [x] Mover los accesos de Correo e Impacto digital al encabezado junto a Buscar para liberar espacio lateral.
+- [x] Incorporar correo interno inmediato con bandeja, múltiples destinatarios, enviados, borradores y contador de no leídos.
+- [x] Implementar adjuntos privados del correo mediante Firebase Storage con descarga autenticada y límite de 10 MB por archivo.
+- [ ] Implementar envíos programados persistentes del correo mediante una ejecución de servidor compatible con el esquema de despliegue elegido.
+- [ ] Permitir retirar adjuntos privados de borradores y mensajes autorizados con eliminación sincronizada de Firebase Storage.

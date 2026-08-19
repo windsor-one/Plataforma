@@ -2,7 +2,8 @@
  * Sala de Operaciones Editorial: tipos explícitos para que permisos, estados y registros
  * mantengan la misma semántica desde Firestore hasta cada panel de la interfaz.
  */
-export type UserRole = "admin" | "personal";
+/** Jerarquía de acceso: IT controla la plataforma; Administración opera los módulos esenciales; Personal trabaja en sus propios flujos. */
+export type UserRole = "it" | "admin" | "personal";
 export type EmployeeStatus = "active" | "suspended";
 export type ReservationStatus = "pending" | "confirmed" | "completed" | "cancelled";
 export type PaymentStatus = "paid" | "pending" | "refunded";
@@ -24,6 +25,32 @@ export type AttendanceType = "clock_in" | "clock_out" | "break_start" | "break_e
 export type ReviewStatus = "draft" | "shared" | "acknowledged";
 export type ActivityAction = "created" | "updated" | "deleted" | "invited" | "profile_updated";
 export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access" | "task" | "incident" | "expense" | "hr_profile" | "contract" | "document" | "attendance" | "leave" | "goal" | "review" | "training" | "recognition" | "policy";
+
+export interface InternalAttachment {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  storagePath: string;
+}
+
+export interface InternalMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  senderEmail: string;
+  recipientIds: string[];
+  participantIds: string[];
+  subject: string;
+  body: string;
+  status: "draft" | "scheduled" | "sent";
+  scheduledFor?: string;
+  sentAt?: unknown;
+  readByIds?: string[];
+  attachments?: InternalAttachment[];
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
 
 export interface UserProfile {
   id: string;

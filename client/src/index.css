@@ -44,11 +44,11 @@
   .app-shell.sidebar-collapsed { @apply lg:grid-cols-[5.25rem_minmax(0,1fr)]; }
   .sidebar-panel { @apply flex h-full min-h-screen flex-col border-r px-4 py-6 text-foreground; background: var(--card); border-color: var(--border); }
   .sidebar-panel.is-collapsed { @apply px-2; }
-  .sidebar-header { @apply flex flex-col gap-5 px-2; }.sidebar-navigation-tools { @apply flex items-center border-t pt-3 text-[10px] font-medium uppercase tracking-[.1em] text-muted-foreground; }.sidebar-collapse-control { @apply inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg bg-muted px-2.5 text-xs font-semibold text-foreground transition-[background-color,transform] duration-150 hover:bg-[#E5E5EA] active:scale-[.97] dark:hover:bg-[#3A3A3C]; }.sidebar-navigation { @apply mt-6; }.sidebar-footer { @apply mt-auto border-t pt-5; }.sidebar-footer p { @apply px-3 pt-3 text-[10px] font-medium uppercase tracking-[.1em] text-muted-foreground; }
+  .sidebar-header { @apply flex items-start justify-between gap-2 px-2; }.sidebar-collapse-control { @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground transition-[background-color,transform] duration-150 hover:bg-[#E5E5EA] active:scale-[.97] dark:hover:bg-[#3A3A3C]; }.sidebar-navigation { @apply mt-4; }.sidebar-footer { @apply mt-auto border-t pt-3; }.sidebar-footer p { @apply px-3 pt-2 text-[9px] font-medium uppercase tracking-[.09em] text-muted-foreground; }
   .side-link { @apply flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-muted-foreground transition-[transform,background-color,color] duration-150 hover:bg-muted hover:text-foreground active:scale-[.98]; }
   .side-link.active { @apply bg-[#007AFF]/12 text-[#005DBB]; }
   .dark .side-link.active { @apply text-[#64D2FF]; }
-  .sidebar-group { @apply mb-1; }.sidebar-group-trigger { @apply flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-muted-foreground transition-[background-color,color,transform] duration-150 hover:bg-muted hover:text-foreground active:scale-[.98]; }.sidebar-group-trigger.has-active { @apply text-foreground; }.sidebar-submenu { @apply mt-1 space-y-0.5 pb-2 pl-3; }.side-sub-link { @apply flex min-h-10 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-medium text-muted-foreground transition-[background-color,color,transform] duration-150 hover:bg-muted hover:text-foreground active:scale-[.98]; }.side-sub-link.active { @apply bg-[#007AFF]/12 font-semibold text-[#005DBB]; }.dark .side-sub-link.active { @apply text-[#64D2FF]; }
+  .sidebar-group { @apply mb-0.5; }.sidebar-group-trigger { @apply flex min-h-9 w-full items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-[background-color,color,transform] duration-150 hover:bg-muted hover:text-foreground active:scale-[.98]; }.sidebar-group-trigger.has-active { @apply text-foreground; }.sidebar-submenu { @apply mt-0.5 space-y-0 pb-1 pl-3; }.side-sub-link { @apply flex min-h-9 w-full items-center gap-3 rounded-xl px-3 py-1.5 text-left text-sm font-medium text-muted-foreground transition-[background-color,color,transform] duration-150 hover:bg-muted hover:text-foreground active:scale-[.98]; }.side-sub-link.active { @apply bg-[#007AFF]/12 font-semibold text-[#005DBB]; }.dark .side-sub-link.active { @apply text-[#64D2FF]; }
   .primary-button { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-[#007AFF] px-4 py-2 text-sm font-semibold text-white active:scale-[.97]; }
   .primary-button:hover { background: #005DBB; }
   .secondary-button { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-muted px-4 py-2 text-sm font-semibold text-foreground active:scale-[.97]; }
@@ -100,9 +100,11 @@
 @media (min-width: 1024px) {
   .app-shell { min-height: 100vh; }
   .app-shell > .hidden.lg\:block { position: sticky; top: 0; height: 100vh; align-self: start; }
-  .sidebar-panel { height: 100dvh; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-  .sidebar-panel nav { margin-top: 1.5rem; }
-  .sidebar-panel .side-link { padding-top: .6rem; padding-bottom: .6rem; }
+  .sidebar-panel { height: 100dvh; min-height: 0; overflow: hidden; overscroll-behavior: contain; scrollbar-width: none; }
+  .sidebar-panel::-webkit-scrollbar { display: none; }
+  .sidebar-panel nav { margin-top: 1rem; }
+  .sidebar-panel .side-link { padding-top: .5rem; padding-bottom: .5rem; }
+  @media (max-height: 720px) { .sidebar-panel { padding-top: 1rem; padding-bottom: .75rem; }.sidebar-footer { display: none; }.sidebar-header p { max-width: 11rem; }.sidebar-navigation { margin-top: .7rem; } }
 }
 @media (max-width: 1023px) {
   .sidebar-panel { min-height: 0; height: auto; padding: .75rem; }
@@ -123,3 +125,7 @@
 [class*="bg-[#38D98B]"] { background-color: #0A84FF !important; } [class*="bg-[#38D98B]/"] { background-color: color-mix(in srgb, #0A84FF 14%, transparent) !important; }
 [class*="text-[#855CF5]"] { color: #007AFF !important; } [class*="bg-[#855CF5]"] { background-color: color-mix(in srgb, #007AFF 12%, transparent) !important; } [class*="border-[#855CF5]"] { border-color: color-mix(in srgb, #007AFF 24%, transparent) !important; }
 .shadow, .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl { box-shadow: none !important; }
+.toaster [data-sonner-toast] { border-color: color-mix(in srgb, var(--border) 82%, transparent) !important; background: color-mix(in srgb, var(--card) 88%, transparent) !important; color: var(--foreground) !important; backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%); }
+.toaster [data-sonner-toast] [data-title] { color: var(--foreground) !important; font-weight: 700; }.toaster [data-sonner-toast] [data-description] { color: var(--muted-foreground) !important; }
+table th:has(> input[aria-label^="Seleccionar"]), table td:has(> input[aria-label^="Seleccionar"]) { display: none; }
+.bulk-editing table th:has(> input[aria-label^="Seleccionar"]), .bulk-editing table td:has(> input[aria-label^="Seleccionar"]) { display: table-cell; }

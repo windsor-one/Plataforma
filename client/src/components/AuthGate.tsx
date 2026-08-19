@@ -120,7 +120,8 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     let warningTimer: number | undefined;
     let timeoutTimer: number | undefined;
     const inactivityTimeout = inactivityMilliseconds(inactivityPolicy.value, inactivityPolicy.unit);
-    const freshSession = window.sessionStorage.getItem(freshSessionKey(user.uid)) === "1";
+    const freshLoginAt = Number(window.sessionStorage.getItem(freshSessionKey(user.uid)) || 0);
+    const freshSession = Number.isFinite(freshLoginAt) && freshLoginAt > 0 && Date.now() - freshLoginAt < 30_000;
     const persistedActivity = Number(window.localStorage.getItem(activityStorageKey(user.uid)) || 0);
     let lastInteraction = freshSession || !persistedActivity ? Date.now() : persistedActivity;
     let endingSession = false;
@@ -191,10 +192,10 @@ export default function AuthGate({ children }: { children: (user: User, profile:
     try {
       if (mode === "login") {
         const credential = await signInWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-        window.sessionStorage.setItem(freshSessionKey(credential.user.uid), "1");
+        window.sessionStorage.setItem(freshSessionKey(credential.user.uid), String(Date.now()));
       } else {
         const credential = await createUserWithEmailAndPassword(auth, email.trim().toLowerCase(), password);
-        window.sessionStorage.setItem(freshSessionKey(credential.user.uid), "1");
+        window.sessionStorage.setItem(freshSessionKey(credential.user.uid), String(Date.now()));
         if (name.trim()) await updateProfile(credential.user, { displayName: name.trim() });
       }
     } catch (caught) {

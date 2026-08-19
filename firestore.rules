@@ -13,8 +13,14 @@ service cloud.firestore {
       return signedIn() && profile().data.status == 'active';
     }
 
+    // Departamento de IT: control total de identidad, seguridad y auditoría.
+    function it() {
+      return activeEmployee() && profile().data.role == 'it';
+    }
+
+    // Administración opera los módulos esenciales; IT hereda estos permisos.
     function admin() {
-      return activeEmployee() && profile().data.role == 'admin';
+      return activeEmployee() && (profile().data.role == 'admin' || profile().data.role == 'it');
     }
 
     function bootstrapAdmin() {
@@ -41,24 +47,27 @@ service cloud.firestore {
         || (bootstrapAdmin()
           && request.auth.uid == userId
           && request.resource.data.email == request.auth.token.email
-          && request.resource.data.role == 'admin'
+          && request.resource.data.role == 'it'
           && request.resource.data.status == 'active');
 
-      // Un empleado solo puede cambiar su nombre. Rol, estado y correo se mantienen fuera de su alcance.
-      allow update: if admin() || (
+      // IT gestiona identidad y roles. El perfil del propietario puede migrarse de admin a IT.
+      allow update: if it() || (bootstrapAdmin()
+        && request.auth.uid == userId
+        && request.resource.data.role == 'it'
+        && request.resource.data.diff(resource).affectedKeys().hasOnly(['role', 'updatedAt'])) || (
         signedIn()
         && request.auth.uid == userId
         && immutableFieldsUnchanged(['email', 'role', 'status', 'createdAt'])
         && request.resource.data.diff(resource).affectedKeys().hasOnly(['displayName', 'updatedAt'])
       );
-      allow delete: if admin();
+      allow delete: if it();
     }
 
     match /invitations/{email} {
-      allow get: if admin() || (signedIn() && request.auth.token.email == email && resource.data.email == email);
-      allow list: if admin();
-      allow create, delete: if admin();
-      allow update: if admin() || (
+      allow get: if it() || (signedIn() && request.auth.token.email == email && resource.data.email == email);
+      allow list: if it();
+      allow create, delete: if it();
+      allow update: if it() || (
         signedIn()
         && request.auth.token.email == email
         && resource.data.status == 'pending'
@@ -214,11 +223,27 @@ service cloud.firestore {
       allow create, update, delete: if admin();
     }
 
+    match /internalMessages/{messageId} {
+      // Correo estrictamente interno: emisor, destinatarios y supervisores autorizados.
+      allow create: if activeEmployee()
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.recipientIds.size() > 0;
+      allow get, list: if admin() || (activeEmployee() && resource.data.participantIds.hasAny([request.auth.uid]));
+      allow update: if admin() || (activeEmployee()
+        && resource.data.participantIds.hasAny([request.auth.uid])
+        && request.resource.data.diff(resource).affectedKeys().hasOnly(['readByIds', 'updatedAt']))
+        || (activeEmployee()
+          && resource.data.senderId == request.auth.uid
+          && request.resource.data.diff(resource).affectedKeys().hasOnly(['attachments', 'updatedAt']));
+      allow delete: if admin() || (activeEmployee() && resource.data.senderId == request.auth.uid && resource.data.status == 'draft');
+    }
+
     match /accessLogs/{accessId} {
       // Cada integrante registra únicamente su propio acceso; la consulta es administrativa.
       allow create: if activeEmployee()
         && request.resource.data.userId == request.auth.uid;
-      allow get, list: if admin();
+      allow get, list: if it();
       allow update, delete: if false;
     }
 
@@ -235,9 +260,9 @@ service cloud.firestore {
     }
 
     match /securitySettings/{settingId} {
-      // Toda persona activa puede leer la política vigente; solo Administración/IT la modifica.
+      // Toda persona activa puede leer la política vigente; solo IT la modifica.
       allow read: if activeEmployee();
-      allow create, update: if admin();
+      allow create, update: if it();
       allow delete: if false;
     }
 
@@ -247,7 +272,7 @@ service cloud.firestore {
         && request.resource.data.actorId == request.auth.uid;
       allow get, list: if admin();
       allow update: if false;
-      allow delete: if admin();
+      allow delete: if it();
     }
 
     match /generalReminders/{reminderId} {

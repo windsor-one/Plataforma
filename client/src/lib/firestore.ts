@@ -5,9 +5,9 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceRecord, AttendanceSettings, AttendanceType, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UserProfile, UserRole, WorkSchedule } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceRecord, AttendanceSettings, AttendanceType, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UserProfile, UserRole, WorkSchedule } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments";
+type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses" | "employees";
 type HrAdminCollection = "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies";
@@ -53,8 +53,25 @@ function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId:
 }
 
 export function subscribeCollection<T extends { id: string }>(name: ManagedCollection, onData: (data: T[]) => void, onError: (error: Error) => void) {
-  const sortField = name === "users" || name === "invitations" || name === "generalReminders" || name === "products" ? "createdAt" : name === "activityLogs" || name === "accessLogs" || name === "attendanceRecords" || name === "policyAcknowledgments" ? "occurredAt" : name === "hrPolicies" ? "publishedAt" : "updatedAt";
+  const sortField = name === "users" || name === "invitations" || name === "generalReminders" || name === "products" || name === "internalMessages" ? "createdAt" : name === "activityLogs" || name === "accessLogs" || name === "attendanceRecords" || name === "policyAcknowledgments" ? "occurredAt" : name === "hrPolicies" ? "publishedAt" : "updatedAt";
   return onSnapshot(query(collection(db, name), orderBy(sortField, "desc")), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
+}
+
+export function subscribeInternalMessages(userId: string, isAdmin: boolean, onData: (data: InternalMessage[]) => void, onError: (error: Error) => void) {
+  const source = collection(db, "internalMessages");
+  const request = isAdmin ? query(source, orderBy("createdAt", "desc")) : query(source, where("participantIds", "array-contains", userId));
+  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as InternalMessage).sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))), onError);
+}
+
+export async function saveInternalMessage(message: Omit<InternalMessage, "createdAt" | "updatedAt">) {
+  const reference = message.id ? doc(db, "internalMessages", message.id) : doc(collection(db, "internalMessages"));
+  const existing = await getDoc(reference);
+  await setDoc(reference, { ...withoutUndefined(message as unknown as DocumentData), id: reference.id, createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+  return reference.id;
+}
+
+export async function markInternalMessageRead(messageId: string, userId: string, readByIds: string[]) {
+  await updateDoc(doc(db, "internalMessages", messageId), { readByIds: Array.from(new Set([...readByIds, userId])), updatedAt: serverTimestamp() });
 }
 
 const hrEntityForCollection: Record<HrAdminCollection, ActivityEntity> = {
@@ -448,12 +465,19 @@ export async function completeInvitationOnboarding(user: User): Promise<UserProf
   const profileRef = doc(db, "users", user.uid);
   const invitationRef = doc(db, "invitations", email);
   const profileSnapshot = await getDoc(profileRef);
-  if (profileSnapshot.exists()) return { id: profileSnapshot.id, ...profileSnapshot.data() } as UserProfile;
+  if (profileSnapshot.exists()) {
+    const existing = { id: profileSnapshot.id, ...profileSnapshot.data() } as UserProfile;
+    if (bootstrapAdminEmail && email === bootstrapAdminEmail && existing.role === "admin") {
+      await updateDoc(profileRef, { role: "it", updatedAt: serverTimestamp() });
+      return { ...existing, role: "it" };
+    }
+    return existing;
+  }
   let accountCreated = false;
   const invitationSnapshot = await getDoc(invitationRef);
   if (!invitationSnapshot.exists()) {
     if (!bootstrapAdminEmail || email !== bootstrapAdminEmail) throw new Error("No existe una invitación activa para este correo. Pide al administrador que te invite.");
-    await setDoc(profileRef, { email, displayName: user.displayName || email.split("@")[0], role: "admin", status: "active", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    await setDoc(profileRef, { email, displayName: user.displayName || email.split("@")[0], role: "it", status: "active", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
     accountCreated = true;
   } else {
     const invitation = invitationSnapshot.data() as Omit<Invitation, "id">;
@@ -534,7 +558,6 @@ const CARBON_FACTOR_GRAMS_PER_GB = 148.2;
 
 export async function recordCarbonUsage(userId: string, profile: UserProfile, transferredBytes: number, resourceCount: number, context: Pick<CarbonUsage, "departmentId" | "departmentName" | "deviceClass"> = {}) {
   const safeBytes = Math.max(0, Math.round(transferredBytes));
-  if (!safeBytes) throw new Error("No se observaron bytes transferidos para registrar la sesión ambiental.");
   const payload = {
     userId,
     displayName: profile.displayName,

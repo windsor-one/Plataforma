@@ -155,18 +155,18 @@
 - [x] Aplicar fondo translúcido con desenfoque y contraste suficiente a las notificaciones emergentes.
 - [x] Reemplazar el esquema binario por los roles Departamento de IT, Administrador y Personal con permisos diferenciados.
 - [x] Añadir un calendario operativo al menú con reservas y actividades programadas.
-- [ ] Crear solicitudes de actualización asignables por persona, módulo y fecha límite, con cierre automático al vencer.
-- [ ] Añadir guardia semanal de asistencia para los jueves con rotación y ajustes de Administración/IT.
+- [x] Crear solicitudes de actualización asignables por persona, módulo y fecha límite, con cierre automático al vencer.
+- [x] Añadir guardia semanal de asistencia para los jueves con rotación y ajustes de Administración/IT.
 - [x] Permitir abrir y editar registros tocando sus filas y tarjetas, sin depender de iconos pequeños.
 - [x] Mostrar las casillas de selección masiva solo al activar un modo de edición por lote.
 - [x] Añadir filtros por tipo de movimiento en Historial y filtros específicos en los demás listados operativos.
 - [x] Eliminar el desplazamiento visible de la barra lateral, conservar accesos a la vista y situar el control de colapsar junto a SIGES.
 - [x] Añadir correo interno empresarial con bandeja, destinatarios múltiples, borradores y envíos programados.
-- [x] Permitir adjuntar, descargar y retirar archivos privados en los mensajes internos autorizados.
+- [ ] Permitir adjuntar, descargar y retirar archivos privados en los mensajes internos autorizados sin exigir un plan de Firebase Storage de pago.
 - [x] Añadir automatizaciones auditables con creación, edición, pausa y eliminación por personas autorizadas.
 - [x] Mover los accesos de Correo e Impacto digital al encabezado junto a Buscar para liberar espacio lateral.
 - [x] Incorporar correo interno inmediato con bandeja, múltiples destinatarios, enviados, borradores y contador de no leídos.
-- [x] Implementar adjuntos privados del correo mediante Firebase Storage con descarga autenticada y límite de 10 MB por archivo.
+- [ ] Implementar adjuntos privados del correo mediante una alternativa gratuita compatible, con descarga autenticada y límite de 10 MB por archivo.
 - [x] Implementar envíos programados persistentes del correo mediante una ejecución de servidor compatible con el esquema de despliegue elegido.
 - [x] Permitir retirar adjuntos privados de borradores y mensajes autorizados con eliminación sincronizada de Firebase Storage.
 - [x] Crear una tarea programada de GitHub Actions sin costo para convertir correos internos vencidos de programados a enviados.

@@ -3232,15 +3232,16 @@ function Control({
   };
   const recentAttendance = attendance.slice(0, 50);
   const currentWeekKey = isoWeekKey();
+  const nextWeekKey = isoWeekKey(new Date(Date.now() + 7 * 86_400_000));
   const currentGuard = guards.find(item => item.weekKey === currentWeekKey);
   const activeGuardCandidates = employees.filter(item => item.status === "active");
-  const saveGuard = async (override = false) => {
-    const previousGuard = [...guards].sort((left, right) => String(right.weekKey).localeCompare(String(left.weekKey)))[0];
+  const saveGuard = async (weekKey: string, override = false) => {
+    const previousGuard = guards.filter(item => String(item.weekKey).localeCompare(weekKey) < 0).sort((left, right) => String(right.weekKey).localeCompare(String(left.weekKey)))[0] || guards.find(item => item.weekKey === currentWeekKey);
     const previousIndex = activeGuardCandidates.findIndex(item => item.id === previousGuard?.guardUserId);
     const rotated = activeGuardCandidates[(previousIndex + 1 + activeGuardCandidates.length) % activeGuardCandidates.length];
     const selected = activeGuardCandidates.find(item => item.id === selectedGuardId) || (override ? undefined : rotated);
     if (!selected) { toast.error("Selecciona a la persona responsable de la guardia."); return; }
-    try { await assignAttendanceGuard(currentWeekKey, selected, userId, override || Boolean(currentGuard)); setSelectedGuardId(""); toast.success(`Guardia de ${currentWeekKey} asignada a ${selected.displayName}.`); }
+    try { await assignAttendanceGuard(weekKey, selected, userId, override || Boolean(guards.find(item => item.weekKey === weekKey))); setSelectedGuardId(""); toast.success(`Guardia de ${weekKey} asignada a ${selected.displayName}.`); }
     catch (error) {
       const code = (error as { code?: string })?.code || "";
       toast.error(code.includes("permission-denied") ? "Firebase rechazó la guardia: publica las reglas actuales de Firestore y vuelve a intentarlo." : "No se pudo guardar la guardia semanal. Comprueba la conexión e inténtalo nuevamente.");
@@ -3330,7 +3331,7 @@ function Control({
       </section>
       <section className="panel-card mt-7 overflow-hidden">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b px-5 py-4"><div><p className="font-extrabold">Guardia semanal de asistencia</p><p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">Cada jueves, la persona asignada registra la asistencia del equipo. La rotación propone a una persona diferente de la última guardia; Administración/IT puede corregirla en cualquier momento.</p></div><span className="rounded-full bg-[#007AFF]/10 px-3 py-1 text-xs font-bold text-[#007AFF]">{currentWeekKey}</span></div>
-        <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end"><div>{currentGuard ? <><p className="text-sm text-muted-foreground">Responsable de esta semana</p><p className="mt-1 text-lg font-extrabold">{currentGuard.guardUserName}</p><p className="mt-1 text-xs text-muted-foreground">Asignada por {currentGuard.assignedByName || "Administración/IT"}{currentGuard.overriddenBy ? " · reasignación registrada" : ""}</p></> : <><p className="text-sm font-bold text-[#C53B53]">Sin guardia asignada</p><p className="mt-1 text-xs text-muted-foreground">Asigna la primera persona disponible usando la rotación.</p></>}</div><div className="flex flex-wrap gap-2"><button type="button" className="secondary-button" onClick={() => void saveGuard(false)}>{currentGuard ? "Rotar próxima semana" : "Asignar por rotación"}</button><select className="field !mt-0 !w-auto !py-2" value={selectedGuardId} onChange={event => setSelectedGuardId(event.target.value)}><option value="">Reasignar manualmente…</option>{activeGuardCandidates.map(item => <option key={item.id} value={item.id}>{item.displayName}</option>)}</select><button type="button" className="primary-button" disabled={!selectedGuardId} onClick={() => void saveGuard(true)}>Guardar reasignación</button></div></div>
+        <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end"><div>{currentGuard ? <><p className="text-sm text-muted-foreground">Responsable de esta semana</p><p className="mt-1 text-lg font-extrabold">{currentGuard.guardUserName}</p><p className="mt-1 text-xs text-muted-foreground">Asignada por {currentGuard.assignedByName || "Administración/IT"}{currentGuard.overriddenBy ? " · reasignación registrada" : ""}</p></> : <><p className="text-sm font-bold text-[#C53B53]">Sin guardia asignada</p><p className="mt-1 text-xs text-muted-foreground">Asigna la primera persona disponible usando la rotación.</p></>}</div><div className="flex flex-wrap gap-2"><button type="button" className="secondary-button" onClick={() => void saveGuard(currentGuard ? nextWeekKey : currentWeekKey)}>{currentGuard ? `Asignar ${nextWeekKey}` : "Asignar por rotación"}</button><select className="field !mt-0 !w-auto !py-2" value={selectedGuardId} onChange={event => setSelectedGuardId(event.target.value)}><option value="">Reasignar manualmente…</option>{activeGuardCandidates.map(item => <option key={item.id} value={item.id}>{item.displayName}</option>)}</select><button type="button" className="primary-button" disabled={!selectedGuardId} onClick={() => void saveGuard(currentWeekKey, true)}>Guardar reasignación</button></div></div>
       </section>
       <section className="panel-card mt-7 overflow-hidden">
         <div className="border-b px-5 py-4">

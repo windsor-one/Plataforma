@@ -143,3 +143,4 @@
 - [x] Sustituir la marca visual Heliot por la identidad tipográfica SIGES (Sistema Integral de Gestión Estratégica).
 - [x] Reorganizar la barra lateral de SIGES con categorías desplegables y submenús para reducir saturación visual.
 - [x] Ampliar la marca SIGES y separar el botón de colapsar en la cabecera lateral.
+- [x] Limitar las categorías desplegables de la barra lateral a una abierta a la vez.

@@ -145,3 +145,4 @@
 - [x] Ampliar la marca SIGES y separar el botón de colapsar en la cabecera lateral.
 - [x] Limitar las categorías desplegables de la barra lateral a una abierta a la vez.
 - [x] Reubicar el control de colapsar, asegurar la composición completa de la barra lateral y cambiar el título del navegador a SIGES.
+- [x] Dejar únicamente iconos en el control de contraer y expandir la barra lateral.

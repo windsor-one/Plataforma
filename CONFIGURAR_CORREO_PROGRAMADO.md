@@ -1,6 +1,6 @@
 # Configuración gratuita del correo interno programado
 
-SIGES entrega mensajes programados mediante una tarea de GitHub Actions que se ejecuta cada cinco minutos. La tarea no envía correos externos: convierte los mensajes internos cuyo horario ya venció de `scheduled` a `sent`, de modo que aparecen en la bandeja de sus destinatarios. El horario es aproximado porque GitHub puede retrasar ejecuciones programadas.
+SIGES entrega mensajes programados mediante una tarea de GitHub Actions que se ejecuta aproximadamente cada hora. La tarea no envía correos externos: convierte los mensajes internos cuyo horario ya venció de `scheduled` a `sent`, de modo que aparecen en la bandeja de sus destinatarios. Esta frecuencia conserva el uso gratuito; el horario no es exacto y GitHub puede añadir retrasos.
 
 ## Secreto requerido
 

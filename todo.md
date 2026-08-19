@@ -162,7 +162,7 @@
 - [ ] Añadir filtros por tipo de movimiento en Historial y filtros específicos en los demás listados operativos.
 - [ ] Eliminar el desplazamiento visible de la barra lateral, conservar accesos a la vista y situar el control de colapsar junto a SIGES.
 - [ ] Añadir correo interno empresarial con bandeja, destinatarios múltiples, borradores y envíos programados.
-- [ ] Permitir adjuntar, descargar y retirar archivos privados en los mensajes internos autorizados.
+- [x] Permitir adjuntar, descargar y retirar archivos privados en los mensajes internos autorizados.
 - [ ] Añadir automatizaciones auditables con creación, edición, pausa y eliminación por personas autorizadas.
 - [x] Mover los accesos de Correo e Impacto digital al encabezado junto a Buscar para liberar espacio lateral.
 - [x] Incorporar correo interno inmediato con bandeja, múltiples destinatarios, enviados, borradores y contador de no leídos.

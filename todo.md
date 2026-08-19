@@ -139,3 +139,4 @@
 - [x] Añadir selección múltiple, selección total y acciones masivas seguras para clientes, pagos, Personal y registros de RR. HH.
 - [x] Eliminar sombras, brillos y elevaciones visuales de toda la interfaz, manteniendo contraste y jerarquía plana.
 - [x] Aplicar fondo translúcido con desenfoque solo a submenús, menús emergentes y paneles flotantes para asegurar legibilidad.
+- [x] Rediseñar integralmente la experiencia visual con una referencia coherente de iPhone, conservando funciones y accesibilidad.

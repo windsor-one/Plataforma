@@ -77,3 +77,54 @@ La marca se identifica con una **G construida por tres segmentos escalonados**, 
 - El grafito azulado estructura navegación y superficies de apoyo; el jade operativo queda reservado para actividad, acciones principales y confirmaciones.
 - Los carriles semánticos se refuerzan como firma del sistema: jade para actividad, ámbar para atención y rojo para riesgo o destrucción. Las etiquetas solo complementan esos carriles.
 - Las superficies adoptan inspiración de macOS mediante esquinas continuas, capas translúcidas sutiles, sombras contenidas y transiciones breves, sin funciones dependientes de Apple para asegurar compatibilidad con Windows, Android e iPhone.
+
+---
+
+## Dirección vigente — Heliot iPhone Native
+
+### Movimiento de diseño
+El rediseño sustituye la estética de sala editorial por una interpretación funcional de **iOS Human Interface Guidelines**: clara, táctil, jerarquizada y tranquila. No pretende imitar una aplicación de Apple literalmente; traduce sus reglas de legibilidad, agrupación y respuesta física al contexto de una plataforma operativa.
+
+### Principios esenciales
+1. **Agrupación por contexto:** las áreas se ordenan como listas y grupos de ajustes de iPhone, con títulos de sección y divisores finos en lugar de bloques pesados.
+2. **Jerarquía tipográfica iOS:** los títulos grandes introducen cada pantalla; los textos secundarios se reducen con contraste accesible y nunca compiten con la información de acción.
+3. **Material, no decoración:** la estructura normal utiliza superficies opacas y planas; solamente menús, avisos, hojas y diálogos flotantes aplican translucidez con desenfoque de fondo.
+4. **Respuesta táctil directa:** los controles tienen área cómoda, estados de presión cortos y transiciones de opacidad o desplazamiento, sin rebotes excesivos ni animación ornamental.
+
+### Filosofía de color
+La aplicación utiliza el fondo agrupado de iOS como base visual —gris cálido muy claro en modo claro y grafito azulado en modo oscuro—. El **jade Heliot** permanece como la firma de marca para acciones principales y actividad, mientras que los tonos de sistema comunican advertencia y riesgo. No se usan degradados luminosos, brillos ni sombras: la profundidad proviene del agrupamiento, los separadores y el material translúcido de las capas flotantes.
+
+### Paradigma de composición
+En escritorio, la barra lateral se convierte en un índice sobrio y estable; el contenido se presenta como una secuencia de grupos operativos con encabezados grandes y listas internas. En móvil, la navegación toma el comportamiento de una barra de pestañas inferior persistente y las acciones de contexto se agrupan en hojas, menús y barras de edición similares a iPhone.
+
+### Elementos distintivos
+1. **Grupos iOS:** superficies de lista con encabezado de sección, esquinas continuas y divisores de un píxel.
+2. **Barra de acción contextual:** al seleccionar filas, aparece una franja compacta para editar, confirmar o eliminar en lote.
+3. **Material translúcido:** submenús, paneles laterales, diálogos y avisos usan desenfoque más un fondo semitransparente para conservar legibilidad sobre el contenido.
+
+### Filosofía de interacción
+El contenido permanece estable; solamente el contexto cambia. Las listas ofrecen selección, los botones destructivos se distinguen con rojo del sistema y las confirmaciones describen con precisión el alcance de cada acción. Toda interacción conserva un foco visible y tamaño cómodo para dedo.
+
+### Animación
+Las entradas se limitan a 180–260 ms y usan opacidad con traslación mínima. Los menús se expanden desde su activador; las hojas se deslizan desde abajo en móvil y desde el lateral en escritorio. Se respeta `prefers-reduced-motion`. No se utilizan escalas dramáticas, resplandores, sombras animadas ni rebotes.
+
+### Sistema tipográfico
+La interfaz adopta una pila de fuentes de sistema que prioriza **SF Pro** en iPhone y macOS, junto con equivalentes nativos en Windows y Android. La tipografía monoespaciada queda únicamente para códigos, horas e importes. Los tamaños siguen una escala de lectura móvil antes que una composición editorial de escritorio.
+
+### Esencia de marca
+**Sistema Heliot organiza la operación diaria de equipos creativos con la familiaridad táctil y clara de una aplicación móvil nativa.**
+
+Personalidad: **serena, intuitiva, precisa**.
+
+### Voz de marca
+Los títulos describen el contenido de la pantalla y las acciones expresan un verbo concreto. Ejemplos:
+
+> “Pagos registrados”
+
+> “Aplicar cambios a 6 elementos”
+
+### Logotipo y símbolo
+El símbolo Heliot se mantiene como marca compacta; se presenta sobre una superficie jade plana y sin brillo, con una proporción suficiente para reconocerlo a distancia.
+
+### Color distintivo
+**Jade Heliot — `#0F8F73`**. Se usa como tinta de interacción, no como fondo decorativo predominante.

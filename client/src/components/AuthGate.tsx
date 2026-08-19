@@ -1,6 +1,6 @@
 /**
- * Sala de Operaciones Editorial: acceso sobrio y directo; la invitación es la puerta
- * de seguridad que evita crear empleados fuera del control del administrador.
+ * Heliot iPhone Native: acceso agrupado, directo y táctil; la invitación mantiene
+ * la puerta de seguridad sin añadir una composición editorial ajena a iPhone.
  */
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
@@ -241,9 +241,9 @@ export default function AuthGate({ children }: { children: (user: User, profile:
   if (!isFirebaseConfigured) return <SetupPending />;
 
   return (
-    <main className="min-h-screen bg-[#132A32] p-3 sm:p-6 lg:p-8">
-      <section className="mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-6xl overflow-hidden rounded-[1.75rem] border bg-[#F6F4EE] lg:grid-cols-[1.1fr_.9fr] dark:bg-[#17242A]">
-        <div className="relative hidden overflow-hidden bg-[#102B35] p-10 text-white lg:flex lg:flex-col">
+    <main className="ios-auth-shell">
+      <section className="ios-auth-card">
+        <div className="hidden">
           <div className="absolute inset-0 auth-pattern opacity-80" />
           <div className="absolute inset-0 bg-gradient-to-b from-[#0B2027]/55 via-[#0B2027]/35 to-[#0B2027]/80" />
           <div className="relative flex items-center gap-3"><BrandMark /><span className="text-xl font-extrabold tracking-tight">Sistema <span className="text-[#5DDBC0]">Heliot</span></span></div>
@@ -255,9 +255,9 @@ export default function AuthGate({ children }: { children: (user: User, profile:
           </div>
         </div>
 
-        <div className="flex flex-col justify-center px-6 py-10 sm:px-12 lg:px-14">
-          <div className="mb-10 flex items-center justify-between lg:hidden"><div className="flex items-center gap-2"><BrandMark /><span className="text-lg font-extrabold">Sistema Heliot</span></div><span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acceso seguro</span></div>
-          <div className="max-w-sm">
+        <div className="ios-auth-content">
+          <div className="mb-10 flex items-center justify-between"><div className="flex items-center gap-2"><BrandMark /><span className="text-lg font-extrabold">Sistema Heliot</span></div><span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acceso seguro</span></div>
+          <div className="max-w-none">
             <>
                 <span className="inline-flex rounded-full bg-[#0F8F73]/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[.12em] text-[#08745D] dark:text-[#5DDBC0]">Sistema Heliot · Acceso del equipo</span>
                 <h2 className="mt-4 text-3xl font-extrabold tracking-tight">{mode === "login" ? "Vuelve a tu operación." : "Activa tu invitación."}</h2>

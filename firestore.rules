@@ -31,6 +31,22 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).unchangedKeys().hasAll(keys);
     }
 
+    function validTemporaryPermission(module, scope, recordId, action) {
+      let permissionId = request.auth.uid + '__' + module + '__' + (scope == 'record' ? recordId : scope);
+      return exists(/databases/$(database)/documents/temporaryPermissions/$(permissionId))
+        && get(/databases/$(database)/documents/temporaryPermissions/$(permissionId)).data.userId == request.auth.uid
+        && get(/databases/$(database)/documents/temporaryPermissions/$(permissionId)).data.module == module
+        && get(/databases/$(database)/documents/temporaryPermissions/$(permissionId)).data.scope == scope
+        && get(/databases/$(database)/documents/temporaryPermissions/$(permissionId)).data.status == 'active'
+        && get(/databases/$(database)/documents/temporaryPermissions/$(permissionId)).data.expiresAt > request.time
+        && get(/databases/$(database)/documents/temporaryPermissions/$(permissionId)).data.actions.hasAny([action]);
+    }
+
+    function temporaryModulePermission(module, recordId, action) {
+      return validTemporaryPermission(module, 'record', recordId, action)
+        || validTemporaryPermission(module, 'module', recordId, action);
+    }
+
     match /users/{userId} {
       // El directorio mínimo permite coordinar guardias, asignaciones y comunicaciones internas.
       // La gestión de roles, estados e identidad permanece reservada al Departamento de IT.
@@ -51,8 +67,14 @@ service cloud.firestore {
           && request.resource.data.role == 'it'
           && request.resource.data.status == 'active');
 
-      // IT gestiona identidad y roles. El perfil del propietario puede migrarse de admin a IT.
-      allow update: if it() || (bootstrapAdmin()
+      // Departamento de IT administra perfiles que aún no son IT; los perfiles IT no se alteran entre sí.
+      // Administración puede actualizar información operativa de Personal, sin cambiar rol ni estado.
+      allow update: if (it() && resource.data.role != 'it') || (admin()
+        && profile().data.role == 'admin'
+        && resource.data.role == 'personal'
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt'])) || (bootstrapAdmin()
         && request.auth.uid == userId
         && request.resource.data.role == 'it'
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role', 'updatedAt'])) || (
@@ -61,14 +83,19 @@ service cloud.firestore {
         && immutableFieldsUnchanged(['email', 'role', 'status', 'createdAt'])
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'updatedAt'])
       );
-      allow delete: if it();
+      allow delete: if it() && resource.data.role != 'it';
     }
 
     match /invitations/{email} {
       allow get: if it() || (signedIn() && request.auth.token.email == email && resource.data.email == email);
       allow list: if it();
-      allow create, delete: if it();
-      allow update: if it() || (
+      allow create: if it() || (admin() && profile().data.role == 'admin' && request.resource.data.role == 'personal');
+      allow delete: if it() && resource.data.role != 'it';
+      allow update: if (it() && resource.data.role != 'it') || (admin()
+        && profile().data.role == 'admin'
+        && resource.data.role == 'personal'
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt'])) || (
         signedIn()
         && request.auth.token.email == email
         && resource.data.status == 'pending'
@@ -130,6 +157,9 @@ service cloud.firestore {
       allow update: if admin() || (activeEmployee()
         && employeeId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['personalEmail', 'personalPhone', 'address', 'emergencyContactName', 'emergencyContactPhone', 'updatedAt']));
+      allow update: if activeEmployee()
+        && employeeId == request.auth.uid
+        && (validTemporaryPermission('hr', 'self', employeeId, 'edit') || validTemporaryPermission('hr', 'record', employeeId, 'edit'));
       allow delete: if admin();
     }
 
@@ -253,7 +283,14 @@ service cloud.firestore {
     match /products/{productId} {
       // El catálogo es visible para todo el Personal; solo Administración/IT lo administra.
       allow read: if activeEmployee();
-      allow create, update, delete: if admin();
+      allow create: if admin();
+      allow update: if admin() || (activeEmployee() && temporaryModulePermission('products', productId, 'edit'));
+      allow delete: if admin() || (activeEmployee() && temporaryModulePermission('products', productId, 'delete'));
+    }
+
+    match /temporaryPermissions/{permissionId} {
+      // Solo Administración/IT crea o revoca permisos. El Personal no puede leerlos ni modificarlos directamente.
+      allow get, list, create, update, delete: if admin();
     }
 
     match /internalMessages/{messageId} {

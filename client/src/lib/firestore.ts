@@ -3,14 +3,15 @@
  * El registro principal nunca se bloquea por una regla de historial aún no publicada.
  */
 import type { User } from "firebase/auth";
-import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
+import { Timestamp, collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
 import { sortInternalMessagesNewest } from "./internalMail";
 import { sortRecordsNewest, uniqueRecordsById } from "./recordSorting";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UpdateRequest, UserProfile, UserRole, WorkSchedule } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
+type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "temporaryPermissions" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
 type OperationalCollection = "customers" | "reservations" | "payments";
+type CascadingDependentCollection = "reservations" | "payments" | "tasks" | "incidents";
 type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses" | "employees";
 type HrAdminCollection = "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies";
 type HrEmployeeCollection = "attendanceRecords" | "leaveRequests" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "policyAcknowledgments";
@@ -25,6 +26,24 @@ const pluralLabel = (name: OperationalCollection) => name === "customers" ? "cli
 const recordLabel = (name: OperationalCollection, payload: DocumentData) => name === "customers" ? `${payload.firstName || ""} ${payload.lastName || ""}`.trim() || payload.fullName || "Cliente" : name === "reservations" ? `Reserva de ${payload.customerName || "cliente"}` : `Pago de ${payload.customerName || "cliente"}`;
 const codePrefix = (name: SequencedCollection) => name === "customers" ? "CLI" : name === "reservations" ? "RES" : name === "payments" ? "PAG" : name === "tasks" ? "TAR" : name === "incidents" ? "INC" : name === "expenses" ? "GAS" : "EMP";
 const sequentialCode = (name: SequencedCollection, number: number) => `${codePrefix(name)}-${String(number).padStart(5, "0")}`;
+const cascadeLabels: Record<CascadingDependentCollection, string> = { reservations: "reservas", payments: "pagos", tasks: "tareas", incidents: "incidencias" };
+
+export type RecordDependencySummary = {
+  total: number;
+  reservations: number;
+  payments: number;
+  tasks: number;
+  incidents: number;
+};
+
+type CascadingDependent = { collection: CascadingDependentCollection; id: string };
+
+const emptyDependencySummary = (): RecordDependencySummary => ({ total: 0, reservations: 0, payments: 0, tasks: 0, incidents: 0 });
+
+const cascadeSummaryText = (summary: RecordDependencySummary) => {
+  const parts = (Object.keys(cascadeLabels) as CascadingDependentCollection[]).filter((collectionName) => summary[collectionName]).map((collectionName) => `${summary[collectionName]} ${cascadeLabels[collectionName]}`);
+  return parts.length ? parts.join(", ") : "sin registros dependientes";
+};
 
 async function fallbackSequence(name: SequencedCollection) {
   if (name === "employees") {
@@ -47,7 +66,7 @@ async function fallbackSequence(name: SequencedCollection) {
 async function activityActor(actorId: string) {
   const snapshot = await getDoc(doc(db, "users", actorId));
   const profile = snapshot.exists() ? snapshot.data() as UserProfile : null;
-  return { actorId, actorName: profile?.displayName || "Empleado", actorEmail: profile?.email || "" };
+  return { actorId, actorName: profile?.displayName || "Empleado", actorEmail: profile?.email || "", actorRole: profile?.role };
 }
 
 function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId: string, summary: string, actor: Awaited<ReturnType<typeof activityActor>>) {
@@ -93,22 +112,102 @@ export function subscribeUpdateRequests(userId: string, isAdmin: boolean, onData
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as UpdateRequest), item => item.updatedAt)), onError);
 }
 
-export async function saveUpdateRequest(record: Omit<UpdateRequest, "id" | "createdAt" | "updatedAt" | "assignedByName">, actorId: string) {
+type UpdateRequestDraft = Omit<UpdateRequest, "id" | "createdAt" | "updatedAt" | "assignedBy" | "assignedByName" | "expiresAt" | "permissionId">;
+
+const temporaryPermissionId = (userId: string, module: UpdateRequestModule, scope: UpdateRequest["scope"], recordId?: string) => `${userId}__${module}__${scope === "record" ? recordId || "missing" : scope}`.replace(/[^a-zA-Z0-9_-]/g, "_");
+const requestExpiry = (deadline: string) => Timestamp.fromDate(new Date(deadline));
+const requestNotification = (request: Pick<UpdateRequest, "targetUserId" | "targetUserName" | "module" | "scope" | "allowedActions" | "deadline" | "fields" | "instructions" | "targetRecordLabel">, actor: Awaited<ReturnType<typeof activityActor>>, subject: string, intro: string) => {
+  const actionText = request.allowedActions.includes("delete") ? "editar o eliminar" : "editar";
+  const scopeText = request.scope === "record" ? `el registro «${request.targetRecordLabel || "asignado"}»` : request.scope === "self" ? "tu información propia" : `el módulo ${request.module}`;
+  return {
+    senderId: actor.actorId,
+    senderName: actor.actorName,
+    senderEmail: actor.actorEmail,
+    recipientIds: [request.targetUserId],
+    participantIds: [actor.actorId, request.targetUserId],
+    subject,
+    body: `${intro}\n\nTienes autorización temporal para ${actionText} en ${scopeText} hasta ${new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short" }).format(new Date(request.deadline))}.\n\nCampos o resultado: ${request.fields.join(", ") || "Según indicaciones"}.${request.instructions ? `\n\nIndicaciones: ${request.instructions}` : ""}`,
+    status: "sent" as const,
+    readByIds: [actor.actorId],
+  };
+};
+
+function temporaryPermissionPayload(requestId: string, request: UpdateRequestDraft, status: TemporaryPermission["status"] = "active") {
+  const permissionId = temporaryPermissionId(request.targetUserId, request.module, request.scope, request.targetRecordId);
+  return {
+    id: permissionId,
+    requestId,
+    userId: request.targetUserId,
+    module: request.module,
+    scope: request.scope,
+    recordId: request.targetRecordId,
+    actions: request.allowedActions,
+    expiresAt: requestExpiry(request.deadline),
+    status,
+    updatedAt: serverTimestamp(),
+  };
+}
+
+export async function saveUpdateRequest(record: UpdateRequestDraft, actorId: string) {
   const actor = await activityActor(actorId);
   const reference = doc(collection(db, "updateRequests"));
-  const payload = { ...withoutUndefined(record as unknown as DocumentData), id: reference.id, assignedBy: actorId, assignedByName: actor.actorName, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const permission = temporaryPermissionPayload(reference.id, record);
+  const payload = { ...withoutUndefined(record as unknown as DocumentData), id: reference.id, assignedBy: actorId, assignedByName: actor.actorName, permissionId: permission.id, expiresAt: permission.expiresAt, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const mailReference = doc(collection(db, "internalMessages"));
   const batch = writeBatch(db);
   batch.set(reference, payload);
-  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "profile", reference.id, `Solicitó una actualización de ${record.module} a ${record.targetUserName}`, actor));
+  batch.set(doc(db, "temporaryPermissions", permission.id), { ...permission, createdAt: serverTimestamp() });
+  batch.set(mailReference, { ...requestNotification(record, actor, `Nueva solicitud: ${record.module}`, "Administración/IT te asignó una solicitud de actualización."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "profile", reference.id, `Asignó permiso temporal de ${record.module} a ${record.targetUserName}`, actor));
   await batch.commit();
   return reference.id;
 }
 
 export async function completeUpdateRequest(id: string, userId: string) {
   const actor = await activityActor(userId);
+  const reference = doc(db, "updateRequests", id);
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists()) throw new Error("La solicitud ya no existe.");
+  const request = { id: snapshot.id, ...snapshot.data() } as UpdateRequest;
   const batch = writeBatch(db);
-  batch.update(doc(db, "updateRequests", id), { status: "completed", completedAt: serverTimestamp(), completedBy: userId, updatedAt: serverTimestamp() });
+  batch.update(reference, { status: "completed", completedAt: serverTimestamp(), completedBy: userId, updatedAt: serverTimestamp() });
+  if (request.permissionId) batch.set(doc(db, "temporaryPermissions", request.permissionId), { status: "revoked", updatedAt: serverTimestamp() }, { merge: true });
+  if (request.assignedBy) { const mailReference = doc(collection(db, "internalMessages")); batch.set(mailReference, { id: mailReference.id, senderId: actor.actorId, senderName: actor.actorName, senderEmail: actor.actorEmail, recipientIds: [request.assignedBy], participantIds: [actor.actorId, request.assignedBy], subject: `Solicitud completada: ${request.module}`, body: `${request.targetUserName} marcó como completada la solicitud «${request.fields.join(", ") || request.module}». El permiso temporal fue revocado.`, status: "sent", sentAt: serverTimestamp(), readByIds: [actor.actorId], createdAt: serverTimestamp(), updatedAt: serverTimestamp() }); }
   batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "profile", id, "Completó una solicitud de actualización asignada.", actor));
+  await batch.commit();
+}
+
+export async function updateUpdateRequest(id: string, record: UpdateRequestDraft, actorId: string) {
+  const actor = await activityActor(actorId);
+  const reference = doc(db, "updateRequests", id);
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists()) throw new Error("La solicitud ya no existe.");
+  const existing = { id: snapshot.id, ...snapshot.data() } as UpdateRequest;
+  const active = record.status === "pending" && new Date(record.deadline).getTime() > Date.now();
+  const permission = temporaryPermissionPayload(id, record, active ? "active" : "revoked");
+  const mailReference = doc(collection(db, "internalMessages"));
+  const batch = writeBatch(db);
+  if (existing.permissionId && existing.permissionId !== permission.id) batch.set(doc(db, "temporaryPermissions", existing.permissionId), { status: "revoked", updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(reference, { ...withoutUndefined(record as unknown as DocumentData), permissionId: permission.id, expiresAt: permission.expiresAt, updatedAt: serverTimestamp(), updatedBy: actorId, updatedByName: actor.actorName }, { merge: true });
+  batch.set(doc(db, "temporaryPermissions", permission.id), { ...permission, createdAt: existing.createdAt || serverTimestamp() }, { merge: true });
+  const changeIntro = record.status === "rejected" ? `La solicitud fue rechazada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "cancelled" ? `La solicitud fue cancelada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "completed" ? "La solicitud fue cerrada por Administración/IT." : "Administración/IT modificó tu solicitud y permiso temporal.";
+  batch.set(mailReference, { ...requestNotification(record, actor, `Solicitud actualizada: ${record.module}`, changeIntro), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "profile", id, `Actualizó la solicitud de ${record.module} para ${record.targetUserName}.`, actor));
+  await batch.commit();
+}
+
+export async function deleteUpdateRequest(id: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const reference = doc(db, "updateRequests", id);
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists()) return;
+  const request = { id: snapshot.id, ...snapshot.data() } as UpdateRequest;
+  const mailReference = doc(collection(db, "internalMessages"));
+  const batch = writeBatch(db);
+  batch.delete(reference);
+  if (request.permissionId) batch.set(doc(db, "temporaryPermissions", request.permissionId), { status: "revoked", updatedAt: serverTimestamp() }, { merge: true });
+  batch.set(mailReference, { ...requestNotification(request, actor, `Solicitud cancelada: ${request.module}`, "Administración/IT eliminó la solicitud. Cualquier permiso temporal asociado fue revocado."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "profile", id, `Eliminó una solicitud de actualización para ${request.targetUserName}.`, actor));
   await batch.commit();
 }
 
@@ -229,10 +328,50 @@ export async function saveEmployeeHrProfile(employeeId: string, payload: Omit<Hr
 
 export async function deleteHrAdminRecord(name: HrAdminCollection, id: string, actorId: string, summary: string) {
   const actor = await activityActor(actorId);
-  const batch = writeBatch(db);
-  batch.delete(doc(db, name, id));
-  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", hrEntityForCollection[name], id, summary, actor));
-  await batch.commit();
+  const reference = doc(db, name, id);
+  const existing = await getDoc(reference);
+  if (!existing.exists()) return;
+  const profileReferences: Array<{ id: string; idField: keyof HrProfile; nameField: keyof HrProfile; label: string }> = [];
+  let childUnits: Array<{ id: string }> = [];
+  if (name === "organizationUnits") {
+    const unit = existing.data() as OrganizationUnit;
+    const fields: Record<OrganizationUnit["kind"], { idField: keyof HrProfile; nameField: keyof HrProfile; label: string }> = {
+      department: { idField: "departmentId", nameField: "department", label: "departamento" },
+      area: { idField: "areaId", nameField: "area", label: "área" },
+      team: { idField: "teamId", nameField: "team", label: "equipo" },
+      position: { idField: "positionId", nameField: "position", label: "cargo" },
+      site: { idField: "siteId", nameField: "site", label: "sede" },
+    };
+    const fieldsToClear = fields[unit.kind];
+    const [profiles, children] = await Promise.all([
+      getDocs(query(collection(db, "hrProfiles"), where(fieldsToClear.idField, "==", id))),
+      getDocs(query(collection(db, "organizationUnits"), where("parentId", "==", id))),
+    ]);
+    profiles.docs.forEach((profile) => profileReferences.push({ id: profile.id, idField: fieldsToClear.idField, nameField: fieldsToClear.nameField, label: fieldsToClear.label }));
+    childUnits = children.docs.map((child) => ({ id: child.id }));
+  }
+  if (name === "workSchedules") {
+    const profiles = await getDocs(query(collection(db, "hrProfiles"), where("scheduleId", "==", id)));
+    profiles.docs.forEach((profile) => profileReferences.push({ id: profile.id, idField: "scheduleId", nameField: "scheduleName", label: "horario" }));
+  }
+  const operations: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
+  profileReferences.forEach((profile) => operations.push((batch) => {
+    batch.update(doc(db, "hrProfiles", profile.id), { [profile.idField]: deleteField(), [profile.nameField]: deleteField(), updatedAt: serverTimestamp(), updatedBy: actorId, updatedByName: actor.actorName });
+    batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "hr_profile", profile.id, `Retiró la referencia de ${profile.label} al eliminar una configuración organizativa.`, actor));
+  }));
+  childUnits.forEach((child) => operations.push((batch) => {
+    batch.update(doc(db, "organizationUnits", child.id), { parentId: deleteField(), parentName: deleteField(), updatedAt: serverTimestamp() });
+    batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "hr_profile", child.id, "Desvinculó una unidad organizativa de su unidad padre eliminada.", actor));
+  }));
+  operations.push((batch) => {
+    batch.delete(reference);
+    batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", hrEntityForCollection[name], id, summary, actor));
+  });
+  for (let index = 0; index < operations.length; index += 200) {
+    const batch = writeBatch(db);
+    operations.slice(index, index + 200).forEach((operation) => operation(batch));
+    await batch.commit();
+  }
 }
 
 export async function updateOwnHrProfile(userId: string, payload: Pick<HrProfile, "personalEmail" | "personalPhone" | "address" | "emergencyContactName" | "emergencyContactPhone">) {
@@ -428,19 +567,95 @@ export async function createRecord(name: OperationalCollection, payload: Operati
 
 export async function updateRecord(name: OperationalCollection, id: string, payload: DocumentData, actorId: string) {
   const actor = await activityActor(actorId);
-  const recordPayload = { ...withoutUndefined(payload), updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp() };
+  const isReservationUnassignment = name === "reservations" && payload.assignedToId === undefined && payload.assignedToName === "";
+  const recordPayload = {
+    ...withoutUndefined(payload),
+    ...(isReservationUnassignment ? { assignedToId: deleteField(), assignedToName: deleteField(), assignmentNote: deleteField() } : {}),
+    updatedBy: actorId,
+    updatedByName: actor.actorName,
+    updatedAt: serverTimestamp(),
+  };
   const batch = writeBatch(db);
   batch.update(doc(db, name, id), recordPayload);
   batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", entityFromCollection(name), id, `Actualizó un registro de ${pluralLabel(name)}`, actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await updateDoc(doc(db, name, id), recordPayload); }
 }
 
-export async function removeRecord(name: OperationalCollection, id: string, actorId: string) {
+async function documentsWithField(collectionName: CascadingDependentCollection, field: "customerId" | "reservationId", values: string[]) {
+  const uniqueValues = Array.from(new Set(values.filter(Boolean)));
+  if (!uniqueValues.length) return [];
+  const chunks = Array.from({ length: Math.ceil(uniqueValues.length / 30) }, (_, index) => uniqueValues.slice(index * 30, index * 30 + 30));
+  const snapshots = await Promise.all(chunks.map((valuesChunk) => valuesChunk.length === 1
+    ? getDocs(query(collection(db, collectionName), where(field, "==", valuesChunk[0])))
+    : getDocs(query(collection(db, collectionName), where(field, "in", valuesChunk)))));
+  return snapshots.flatMap((snapshot) => snapshot.docs.map((item) => ({ collection: collectionName, id: item.id } as CascadingDependent)));
+}
+
+async function cascadingDependents(name: OperationalCollection, id: string) {
+  if (name === "payments") return [] as CascadingDependent[];
+  if (name === "reservations") {
+    const [payments, tasks, incidents] = await Promise.all([
+      documentsWithField("payments", "reservationId", [id]),
+      documentsWithField("tasks", "reservationId", [id]),
+      documentsWithField("incidents", "reservationId", [id]),
+    ]);
+    return [...payments, ...tasks, ...incidents];
+  }
+  const [reservations, customerPayments, customerTasks, customerIncidents] = await Promise.all([
+    documentsWithField("reservations", "customerId", [id]),
+    documentsWithField("payments", "customerId", [id]),
+    documentsWithField("tasks", "customerId", [id]),
+    documentsWithField("incidents", "customerId", [id]),
+  ]);
+  const reservationIds = reservations.map((reservation) => reservation.id);
+  const [reservationPayments, reservationTasks, reservationIncidents] = await Promise.all([
+    documentsWithField("payments", "reservationId", reservationIds),
+    documentsWithField("tasks", "reservationId", reservationIds),
+    documentsWithField("incidents", "reservationId", reservationIds),
+  ]);
+  const unique = new Map<string, CascadingDependent>();
+  [...reservations, ...customerPayments, ...customerTasks, ...customerIncidents, ...reservationPayments, ...reservationTasks, ...reservationIncidents].forEach((item) => unique.set(`${item.collection}/${item.id}`, item));
+  return Array.from(unique.values());
+}
+
+export async function getRecordDependencySummary(name: OperationalCollection, id: string): Promise<RecordDependencySummary> {
+  const summary = emptyDependencySummary();
+  const dependents = await cascadingDependents(name, id);
+  dependents.forEach((dependent) => { summary[dependent.collection] += 1; summary.total += 1; });
+  return summary;
+}
+
+async function commitCascadingDeletion(name: OperationalCollection, id: string, actorId: string) {
   const actor = await activityActor(actorId);
-  const batch = writeBatch(db);
-  batch.delete(doc(db, name, id));
-  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", entityFromCollection(name), id, `Eliminó un registro de ${pluralLabel(name)}`, actor));
-  try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await deleteDoc(doc(db, name, id)); }
+  const dependents = await cascadingDependents(name, id);
+  const requiresAdministrativeDeletion = dependents.some((dependent) => dependent.collection === "tasks" || dependent.collection === "incidents");
+  if (requiresAdministrativeDeletion && actor.actorRole !== "admin" && actor.actorRole !== "it") {
+    throw new Error("La eliminación incluye tareas o incidencias vinculadas y requiere Administración o Departamento de IT.");
+  }
+  const summary = emptyDependencySummary();
+  dependents.forEach((dependent) => { summary[dependent.collection] += 1; summary.total += 1; });
+  const targets = [{ collection: name, id }, ...dependents];
+  const groups = Array.from({ length: Math.ceil(targets.length / 200) }, (_, index) => targets.slice(index * 200, index * 200 + 200));
+  for (const group of groups) {
+    const batch = writeBatch(db);
+    group.forEach((target) => {
+      batch.delete(doc(db, target.collection, target.id));
+      const entity = target.collection === "customers" ? "customer" : target.collection === "reservations" ? "reservation" : target.collection === "payments" ? "payment" : target.collection === "tasks" ? "task" : "incident";
+      const message = target.collection === name && target.id === id
+        ? `Eliminó un registro de ${pluralLabel(name)}${summary.total ? ` junto con ${cascadeSummaryText(summary)}` : ""}`
+        : `Eliminó ${cascadeLabels[target.collection as CascadingDependentCollection]} vinculadas a un registro eliminado de ${pluralLabel(name)}`;
+      batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", entity, target.id, message, actor));
+    });
+    try { await batch.commit(); } catch (error) {
+      if (!auditWriteBlocked(error)) throw error;
+      await Promise.all(group.map((target) => deleteDoc(doc(db, target.collection, target.id))));
+    }
+  }
+  return summary;
+}
+
+export async function removeRecord(name: OperationalCollection, id: string, actorId: string) {
+  return commitCascadingDeletion(name, id, actorId);
 }
 
 /** Actualiza registros operativos seleccionados y deja una entrada de Historial por cada uno. */
@@ -463,15 +678,7 @@ export async function bulkUpdateRecords(name: OperationalCollection, ids: string
 export async function bulkRemoveRecords(name: OperationalCollection, ids: string[], actorId: string) {
   const uniqueIds = Array.from(new Set(ids)).filter(Boolean);
   if (!uniqueIds.length) return;
-  const actor = await activityActor(actorId);
-  for (const group of bulkChunks(uniqueIds)) {
-    const batch = writeBatch(db);
-    group.forEach((id) => {
-      batch.delete(doc(db, name, id));
-      batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", entityFromCollection(name), id, `Eliminó masivamente un registro de ${pluralLabel(name)}`, actor));
-    });
-    try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await Promise.all(group.map((id) => deleteDoc(doc(db, name, id)))); }
-  }
+  for (const id of uniqueIds) await commitCascadingDeletion(name, id, actorId);
 }
 
 async function createSequencedWorkRecord(name: "tasks" | "incidents" | "expenses", entity: ActivityEntity, summary: string, payload: DocumentData, actorId: string) {
@@ -754,6 +961,14 @@ export async function deleteProduct(id: string, actorId: string) {
   batch.set(doc(db, "products", id), { id, active: false, updatedAt: serverTimestamp() }, { merge: true });
   batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "product", id, "Eliminó un paquete del catálogo", actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await setDoc(doc(db, "products", id), { id, active: false, updatedAt: serverTimestamp() }, { merge: true }); }
+}
+
+export async function clearReservationAssignment(reservationId: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.update(doc(db, "reservations", reservationId), { assignedToId: deleteField(), assignedToName: deleteField(), assignmentNote: deleteField(), updatedAt: serverTimestamp(), updatedBy: actorId, updatedByName: actor.actorName });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "reservation", reservationId, "Retiró la asignación de responsable de la reserva.", actor));
+  await batch.commit();
 }
 
 export async function deleteGeneralReminder(id: string, actorId: string) {

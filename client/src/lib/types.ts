@@ -182,20 +182,47 @@ export interface AttendanceGuard {
   updatedAt?: unknown;
 }
 
-/** Solicitud administrativa para actualizar información antes de una fecha límite. */
+export type UpdateRequestModule = "profile" | "hr" | "products" | "tasks" | "reservations" | "customers" | "payments" | "employees" | "other";
+export type UpdateRequestAction = "edit" | "delete";
+export type UpdateRequestStatus = "pending" | "completed" | "expired" | "cancelled" | "rejected";
+
+/** Solicitud administrativa que puede delegar, de forma temporal y limitada, una acción concreta. */
 export interface UpdateRequest {
   id: string;
   targetUserId: string;
   targetUserName: string;
-  module: "profile" | "hr" | "products" | "tasks" | "reservations" | "other";
+  module: UpdateRequestModule;
+  scope: "self" | "record" | "module";
+  targetRecordId?: string;
+  targetRecordLabel?: string;
+  allowedActions: UpdateRequestAction[];
+  permissionId?: string;
   fields: string[];
   instructions?: string;
   deadline: string;
-  status: "pending" | "completed" | "expired";
+  /** Marca de tiempo comparable desde las reglas de Firestore. */
+  expiresAt?: unknown;
+  status: UpdateRequestStatus;
+  decisionReason?: string;
   assignedBy: string;
   assignedByName?: string;
   createdAt?: unknown;
   completedAt?: unknown;
+  updatedAt?: unknown;
+}
+
+/** Espejo de una solicitud pendiente que las reglas usan para permitir una acción concreta hasta su vencimiento. */
+export interface TemporaryPermission {
+  id: string;
+  requestId: string;
+  userId: string;
+  module: UpdateRequestModule;
+  scope: "self" | "record" | "module";
+  recordId?: string;
+  actions: UpdateRequestAction[];
+  expiresAt: unknown;
+  status: "active" | "revoked" | "expired";
+  createdAt?: unknown;
   updatedAt?: unknown;
 }
 

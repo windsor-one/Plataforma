@@ -2354,6 +2354,9 @@ function MineSpace({
               "Horario",
               profile?.scheduleName || profile?.workDay || "Pendiente",
             ],
+            ["Supervisión", profile?.supervisorName || "Sin supervisor asignado"],
+            ["Sede", profile?.site || "Sin sede asignada"],
+            ["Modalidad", profile?.workMode === "remote" ? "Remoto" : profile?.workMode === "hybrid" ? "Híbrido" : profile?.workMode === "onsite" ? "Presencial" : "Pendiente"],
           ].map(([heading, value]) => (
             <div className="bg-card p-4" key={heading}>
               <p className="font-mono text-[10px] uppercase tracking-[.12em] text-muted-foreground">

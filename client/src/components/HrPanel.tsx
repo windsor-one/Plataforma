@@ -2734,8 +2734,13 @@ function Organization({
   const groupedUnits = (Object.keys(kindLabels) as OrganizationUnit["kind"][]).map(kind => ({ kind, label: kindLabels[kind], units: units.filter(unit => unit.kind === kind) })).filter(group => group.units.length);
   const profileById = new Map(profiles.map(profile => [profile.employeeId, profile]));
   const employeeById = new Map(employees.map(employee => [employee.id, employee]));
-  const hierarchyLevel = (profile: HrProfile, seen = new Set<string>()): number => { if (!profile.supervisorId || seen.has(profile.employeeId)) return 0; const supervisor = profileById.get(profile.supervisorId); return supervisor ? Math.min(6, hierarchyLevel(supervisor, new Set(Array.from(seen).concat(profile.employeeId))) + 1) : 0; };
-  const chartRows = profiles.map(profile => ({ profile, employee: employeeById.get(profile.employeeId), level: hierarchyLevel(profile) })).sort((left, right) => left.level - right.level || (left.employee?.displayName || "").localeCompare(right.employee?.displayName || ""));
+  const childrenBySupervisor = new Map<string, HrProfile[]>();
+  profiles.forEach(profile => { if (profile.supervisorId && profileById.has(profile.supervisorId)) childrenBySupervisor.set(profile.supervisorId, [...(childrenBySupervisor.get(profile.supervisorId) || []), profile]); });
+  const chartRows: Array<{ profile: HrProfile; employee?: UserProfile; level: number }> = [];
+  const appendBranch = (profile: HrProfile, level: number, path: Set<string>) => { if (path.has(profile.employeeId)) return; chartRows.push({ profile, employee: employeeById.get(profile.employeeId), level }); const nextPath = new Set(path); nextPath.add(profile.employeeId); (childrenBySupervisor.get(profile.employeeId) || []).sort((left, right) => (employeeById.get(left.employeeId)?.displayName || "").localeCompare(employeeById.get(right.employeeId)?.displayName || "")).forEach(child => appendBranch(child, Math.min(6, level + 1), nextPath)); };
+  const roots = profiles.filter(profile => !profile.supervisorId || !profileById.has(profile.supervisorId)).sort((left, right) => (employeeById.get(left.employeeId)?.displayName || "").localeCompare(employeeById.get(right.employeeId)?.displayName || ""));
+  roots.forEach(root => appendBranch(root, 0, new Set<string>()));
+  profiles.filter(profile => !chartRows.some(row => row.profile.employeeId === profile.employeeId)).sort((left, right) => (employeeById.get(left.employeeId)?.displayName || "").localeCompare(employeeById.get(right.employeeId)?.displayName || "")).forEach(profile => appendBranch(profile, 0, new Set<string>()));
   return (
     <section className="mt-7">
       <div className="panel-card overflow-hidden">

@@ -34,7 +34,7 @@ service cloud.firestore {
     match /users/{userId} {
       // El directorio mínimo permite coordinar guardias, asignaciones y comunicaciones internas.
       // La gestión de roles, estados e identidad permanece reservada al Departamento de IT.
-      allow get: if activeEmployee();
+      allow get: if activeEmployee() || (bootstrapAdmin() && request.auth.uid == userId);
       allow list: if activeEmployee();
 
       // El perfil inicial se crea únicamente a partir de una invitación pendiente y vinculada al correo autenticado.

@@ -2162,6 +2162,8 @@ export default function HrPanel({
         <Organization
           units={units}
           schedules={schedules}
+          profiles={profiles}
+          employees={employees}
           onEditor={setEditor}
           onDelete={remove}
         />
@@ -2712,11 +2714,15 @@ function People({
 function Organization({
   units,
   schedules,
+  profiles,
+  employees,
   onEditor,
   onDelete,
 }: {
   units: OrganizationUnit[];
   schedules: WorkSchedule[];
+  profiles: HrProfile[];
+  employees: UserProfile[];
   onEditor: (editor: Editor) => void;
   onDelete: (
     collection: "organizationUnits" | "workSchedules",
@@ -2724,8 +2730,14 @@ function Organization({
     summary: string
   ) => void;
 }) {
+  const kindLabels: Record<OrganizationUnit["kind"], string> = { department: "Departamentos", area: "Áreas", team: "Equipos", position: "Cargos", site: "Sedes" };
+  const groupedUnits = (Object.keys(kindLabels) as OrganizationUnit["kind"][]).map(kind => ({ kind, label: kindLabels[kind], units: units.filter(unit => unit.kind === kind) })).filter(group => group.units.length);
+  const profileById = new Map(profiles.map(profile => [profile.employeeId, profile]));
+  const employeeById = new Map(employees.map(employee => [employee.id, employee]));
+  const hierarchyLevel = (profile: HrProfile, seen = new Set<string>()): number => { if (!profile.supervisorId || seen.has(profile.employeeId)) return 0; const supervisor = profileById.get(profile.supervisorId); return supervisor ? Math.min(6, hierarchyLevel(supervisor, new Set(Array.from(seen).concat(profile.employeeId))) + 1) : 0; };
+  const chartRows = profiles.map(profile => ({ profile, employee: employeeById.get(profile.employeeId), level: hierarchyLevel(profile) })).sort((left, right) => left.level - right.level || (left.employee?.displayName || "").localeCompare(right.employee?.displayName || ""));
   return (
-    <section className="mt-7 grid gap-7 xl:grid-cols-2">
+    <section className="mt-7">
       <div className="panel-card overflow-hidden">
         <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
           <div>
@@ -2745,29 +2757,7 @@ function Organization({
         </div>
         {units.length ? (
           <div className="divide-y">
-            {units.map(unit => (
-              <div
-                className="flex items-center justify-between gap-3 px-5 py-3"
-                key={unit.id}
-              >
-                <div>
-                  <p className="font-semibold">{unit.name}</p>
-                  <span className="text-xs text-muted-foreground">
-                    {unit.kind} {unit.parentName ? `· ${unit.parentName}` : ""}
-                  </span>
-                </div>
-                <ActionButtons
-                  onEdit={() => onEditor({ type: "unit", record: unit })}
-                  onDelete={() =>
-                    onDelete(
-                      "organizationUnits",
-                      unit,
-                      `Eliminó la unidad «${unit.name}»`
-                    )
-                  }
-                />
-              </div>
-            ))}
+            {groupedUnits.map(group => <section className="border-b last:border-b-0" key={group.kind}><div className="bg-muted/25 px-5 py-2.5 text-[11px] font-extrabold uppercase tracking-[.12em] text-muted-foreground">{group.label}</div>{group.units.map(unit => <div className="flex items-center justify-between gap-3 px-5 py-3" key={unit.id}><div><p className="font-semibold">{unit.name}</p><span className="text-xs text-muted-foreground">{unit.parentName ? `Depende de ${unit.parentName}` : "Nivel superior"}</span></div><ActionButtons onEdit={() => onEditor({ type: "unit", record: unit })} onDelete={() => onDelete("organizationUnits", unit, `Eliminó la unidad «${unit.name}»`)} /></div>)}</section>)}
           </div>
         ) : (
           <Empty
@@ -2832,6 +2822,7 @@ function Organization({
           />
         )}
       </div>
+      <section className="panel-card mt-7 overflow-hidden"><div className="border-b px-5 py-4"><p className="font-extrabold">Organigrama y cadena de responsabilidad</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Se actualiza con el supervisor, cargo y unidades asignadas en cada expediente. Los perfiles sin supervisor aparecen como nivel superior.</p></div>{chartRows.length ? <div className="divide-y">{chartRows.map(({ profile, employee, level }) => <div className="flex items-center gap-3 px-5 py-3" style={{ paddingLeft: `${1.25 + level * 1.6}rem` }} key={profile.employeeId}><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0F8F73]/10 text-xs font-extrabold text-[#08745D]">{(employee?.displayName || "?").slice(0, 2).toUpperCase()}</div><div className="min-w-0"><p className="font-bold">{employee?.displayName || profile.employeeId}</p><p className="text-xs text-muted-foreground">Nivel {level + 1} · {profile.position || "Sin cargo"} · {profile.department || "Sin departamento"}{profile.area ? ` · ${profile.area}` : ""}{profile.team ? ` · ${profile.team}` : ""}</p></div><span className="ml-auto rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold">{profile.supervisorName ? `Reporta a ${profile.supervisorName}` : "Nivel superior"}</span></div>)}</div> : <Empty title="Organigrama pendiente" detail="Completa supervisores y cargos en los expedientes para construir la jerarquía." />}</section>
     </section>
   );
 }

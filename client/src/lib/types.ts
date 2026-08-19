@@ -182,6 +182,23 @@ export interface AttendanceGuard {
   updatedAt?: unknown;
 }
 
+/** Solicitud administrativa para actualizar información antes de una fecha límite. */
+export interface UpdateRequest {
+  id: string;
+  targetUserId: string;
+  targetUserName: string;
+  module: "profile" | "hr" | "products" | "tasks" | "reservations" | "other";
+  fields: string[];
+  instructions?: string;
+  deadline: string;
+  status: "pending" | "completed" | "expired";
+  assignedBy: string;
+  assignedByName?: string;
+  createdAt?: unknown;
+  completedAt?: unknown;
+  updatedAt?: unknown;
+}
+
 export interface AttendanceWindow {
   startTime: string;
   endTime: string;

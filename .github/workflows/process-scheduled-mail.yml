@@ -36,3 +36,7 @@ jobs:
         run: pnpm process:attendance-guard
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Cerrar solicitudes de actualización vencidas
+        run: pnpm process:expired-update-requests
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

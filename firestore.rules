@@ -172,6 +172,17 @@ service cloud.firestore {
       allow create, update, delete: if admin();
     }
 
+    match /updateRequests/{requestId} {
+      // Administración/IT asigna y controla; cada persona consulta y marca completadas solo sus propias solicitudes.
+      allow get, list: if admin() || (activeEmployee() && resource.data.targetUserId == request.auth.uid);
+      allow create, delete: if admin();
+      allow update: if admin() || (activeEmployee()
+        && resource.data.targetUserId == request.auth.uid
+        && request.resource.data.diff(resource).affectedKeys().hasOnly(['status', 'completedAt', 'completedBy', 'updatedAt'])
+        && request.resource.data.status == 'completed'
+        && request.resource.data.completedBy == request.auth.uid);
+    }
+
     match /attendanceCounters/{counterId} {
       allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
       allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid && request.resource.data.count == 1;

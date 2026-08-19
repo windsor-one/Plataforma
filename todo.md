@@ -148,3 +148,5 @@
 - [x] Dejar únicamente iconos en el control de contraer y expandir la barra lateral.
 - [x] Añadir un panel exclusivo de Administración/IT que consolide datos operativos pendientes de completar.
 - [x] Sustituir el verde de la interfaz SIGES por una paleta azul consistente, preservando los estados semánticos.
+- [x] Mover Pendientes de configuración a una sección exclusiva de Administración/IT fuera del Resumen.
+- [x] Aplicar animaciones suaves y accesibles a navegación, paneles, listas, botones y menús de SIGES.

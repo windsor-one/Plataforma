@@ -14,8 +14,51 @@ export const defaultProducts: Product[] = [
   { id: "heliot-star", name: "Estrella Heliot", category: "promotion", price: 3, unit: "estrella", tagline: "El paquete más completo", active: true, details: [{ label: "Fotos", value: "10 fotografías digitales editadas" }, { label: "Sesión", value: "Sesión completa de 10 minutos" }, { label: "Contenido", value: "Fotos individuales y grupales ilimitadas durante la sesión" }, { label: "Edición", value: "Edición premium" }, { label: "Diseño", value: "Diseño conmemorativo del Día del Alumno" }, { label: "Redes", value: "Fotografía destacada para redes sociales" }, { label: "Promoción grupal", value: "5 alumnos o más reciben una fotografía grupal adicional GRATIS" }] },
 ];
 
-export function resolveProducts(remote: Product[]) {
-  const overrides = new Map(remote.map((product) => [product.id, product]));
-  const catalog = defaultProducts.map((product) => overrides.get(product.id) || product);
-  return [...catalog, ...remote.filter((product) => !defaultProducts.some((item) => item.id === product.id))].filter((product) => product.active);
+type ProductDetail = Product["details"][number];
+
+const isProductCategory = (value: unknown): value is Product["category"] => value === "tariff" || value === "promotion";
+
+function normalizeDetails(value: unknown, fallback: ProductDetail[] = []): ProductDetail[] {
+  if (!Array.isArray(value)) return [...fallback];
+  return value
+    .filter((item): item is Partial<ProductDetail> => Boolean(item) && typeof item === "object")
+    .map((item) => ({
+      label: typeof item.label === "string" ? item.label.trim() : "",
+      value: typeof item.value === "string" ? item.value.trim() : "",
+    }))
+    .filter((item) => item.label || item.value)
+    .map((item) => ({ label: item.label || "Detalle", value: item.value || "Incluido" }));
+}
+
+/**
+ * Firestore puede contener documentos antiguos o editados manualmente que no
+ * cumplen el contrato completo de Product. Esta normalización evita que esos
+ * documentos rompan la interfaz y conserva los valores del catálogo base.
+ */
+export function normalizeProduct(value: Partial<Product>, fallback?: Product): Product {
+  const base = fallback || defaultProducts.find((item) => item.id === value.id);
+  const id = typeof value.id === "string" && value.id.trim() ? value.id : base?.id || `product-${Date.now()}`;
+  const price = Number(value.price);
+  return {
+    id,
+    name: typeof value.name === "string" && value.name.trim() ? value.name.trim() : base?.name || "Paquete sin nombre",
+    category: isProductCategory(value.category) ? value.category : base?.category || "tariff",
+    price: Number.isFinite(price) && price >= 0 ? price : base?.price || 0,
+    unit: typeof value.unit === "string" && value.unit.trim() ? value.unit.trim() : base?.unit || "por servicio",
+    tagline: typeof value.tagline === "string" && value.tagline.trim() ? value.tagline.trim() : base?.tagline || "Paquete disponible",
+    active: value.active !== false,
+    details: normalizeDetails(value.details, base?.details),
+    createdBy: value.createdBy || base?.createdBy,
+    createdAt: value.createdAt || base?.createdAt,
+  };
+}
+
+export function resolveProducts(remote: Product[] = []) {
+  const safeRemote = Array.isArray(remote) ? remote : [];
+  const overrides = new Map(safeRemote.map((product) => [product.id, product]));
+  const catalog = defaultProducts.map((product) => normalizeProduct(overrides.get(product.id) || product, product));
+  const extras = safeRemote
+    .filter((product) => !defaultProducts.some((item) => item.id === product.id))
+    .map((product) => normalizeProduct(product));
+  return [...catalog, ...extras].filter((product) => product.active);
 }

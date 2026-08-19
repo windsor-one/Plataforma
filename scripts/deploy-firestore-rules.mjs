@@ -96,7 +96,7 @@ async function deployFirestoreRules() {
   const project = `projects/${account.project_id}`;
   const ruleset = await rulesRequest(accessToken, `${project}/rulesets`, {
     method: "POST",
-    body: JSON.stringify({ files: [{ name: "firestore.rules", content: rules }] }),
+    body: JSON.stringify({ source: { files: [{ name: "firestore.rules", content: rules }] } }),
   });
   const releaseName = `${project}/releases/cloud.firestore`;
 

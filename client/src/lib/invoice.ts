@@ -4,6 +4,7 @@
  */
 import { jsPDF } from "jspdf";
 import type { Payment, Reservation } from "./types";
+import { addDownloadFooter } from "./pdfFooter";
 
 const money = (amount: number, currency = "USD") => new Intl.NumberFormat("es-ES", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount || 0);
 
@@ -49,5 +50,6 @@ export function downloadPaymentInvoice(payment: Payment, reservation?: Reservati
   document.setFont("helvetica", "normal");
   document.setFontSize(8);
   document.text("Documento generado por Heliot Media. Conserva este comprobante como constancia del pago.", 16, 274);
+  addDownloadFooter(document);
   document.save(`Comprobante-${code}.pdf`);
 }

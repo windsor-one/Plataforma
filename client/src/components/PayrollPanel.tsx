@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
 import { CheckCircle2, Download, FileText, LockKeyhole, Play, Save, WalletCards } from "lucide-react";
+import { jsPDF } from "jspdf";
 import { toast } from "sonner";
 import { savePayrollRun, updatePayrollRunStatus } from "@/lib/firestore";
 import { buildPayrollLines, recalculatePayrollLine } from "@/lib/payrollMath";
 import type { AttendanceRecord, EmploymentContract, HrProfile, LeaveRequest, PayrollLine, PayrollRun, UserProfile } from "@/lib/types";
+import { addDownloadFooter } from "@/lib/pdfFooter";
 
 const statusLabels: Record<PayrollRun["status"], string> = { draft: "Borrador", in_review: "En revisión", approved: "Aprobada", paid: "Pagada" };
 const money = (value: number, currency = "USD") => new Intl.NumberFormat("es-ES", { style: "currency", currency, maximumFractionDigits: 2 }).format(value || 0);
@@ -11,10 +13,12 @@ const monthNow = () => new Date().toISOString().slice(0, 7);
 const periodBounds = (period: string) => { const [year, month] = period.split("-").map(Number); return { start: `${period}-01`, end: new Date(year, month, 0).toISOString().slice(0, 10) }; };
 
 function payrollPdf(period: string, lines: PayrollLine[], totals: { gross: number; deductions: number; net: number }) {
-  const rows = lines.map(line => `${line.employeeName} · ${line.regularHours.toFixed(2)} h · ${money(line.hourlyRate, line.currency)}/h · Bruto ${money(line.grossPay, line.currency)} · Deducciones ${money(line.deductions, line.currency)} · Neto ${money(line.netPay, line.currency)}`);
-  const content = [`SIGES · Planilla de empleados`, `Período: ${period}`, `Total bruto: ${money(totals.gross)}`, `Total deducciones: ${money(totals.deductions)}`, `Total neto: ${money(totals.net)}`, "", ...rows].join("\n");
-  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `siges-planilla-${period}.txt`; link.click(); URL.revokeObjectURL(link.href);
+  const document = new jsPDF({ unit: "mm", format: "a4" });
+  document.setFont("helvetica", "bold"); document.setFontSize(16); document.text("SIGES · Planilla de empleados", 17, 18);
+  document.setFontSize(10); document.setFont("helvetica", "normal"); document.text(`Período: ${period}`, 17, 27); document.text(`Total bruto: ${money(totals.gross)}`, 17, 34); document.text(`Total deducciones: ${money(totals.deductions)}`, 17, 41); document.text(`Total neto: ${money(totals.net)}`, 17, 48);
+  let y = 60; document.setFontSize(9); lines.forEach(line => { const text = `${line.employeeName} · ${line.regularHours.toFixed(2)} h · ${money(line.hourlyRate, line.currency)}/h · Bruto ${money(line.grossPay, line.currency)} · Deducciones ${money(line.deductions, line.currency)} · Neto ${money(line.netPay, line.currency)}`; const wrapped = document.splitTextToSize(text, 176) as string[]; document.text(wrapped, 17, y); y += wrapped.length * 5 + 2; if (y > 275) { document.addPage(); y = 20; } });
+  addDownloadFooter(document);
+  document.save(`siges-planilla-${period}.pdf`);
 }
 
 export default function PayrollPanel({ employees, profiles, contracts, attendance, leaves, payrollRuns, userId }: { employees: UserProfile[]; profiles: HrProfile[]; contracts: EmploymentContract[]; attendance: AttendanceRecord[]; leaves: LeaveRequest[]; payrollRuns: PayrollRun[]; userId: string }) {

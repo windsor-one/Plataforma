@@ -4,6 +4,7 @@ import { jsPDF } from "jspdf";
 import { balanceRows, buildFinanceSummary, type FinanceReportPeriod } from "@/lib/financeReports";
 import { currencyTotalEntries } from "@/lib/financeMath";
 import type { Expense, Payment, Reservation } from "@/lib/types";
+import { addDownloadFooter } from "@/lib/pdfFooter";
 
 const money = (amount: number, currency = "USD") => new Intl.NumberFormat("es-ES", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount || 0);
 const labelCategory: Record<string, string> = { materials: "Materiales", equipment: "Equipo", transport: "Transporte", marketing: "Marketing", services: "Servicios", payroll: "Personal", other: "Otros" };
@@ -19,6 +20,7 @@ function pdfDocument(title: string, period: FinanceReportPeriod, sections: Array
   write(`Generado: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeStyle: "short" }).format(new Date())}`, 9);
   sections.forEach(section => { y += 4; write(section.heading, 13, true); section.rows.forEach(([name, value]) => write(`${name}: ${value}`, 10)); });
   write("Nota: este reporte refleja únicamente los registros existentes en SIGES, separados por moneda y sin conversiones implícitas. Debe ser revisado por la persona responsable de contabilidad antes de una presentación fiscal o legal.", 8);
+  addDownloadFooter(document);
   return document;
 }
 

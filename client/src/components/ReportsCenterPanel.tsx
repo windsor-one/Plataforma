@@ -4,6 +4,7 @@ import { jsPDF } from "jspdf";
 import type { Expense, Payment, Reservation } from "@/lib/types";
 import { downloadStatement } from "./FinancialStatementsPanel";
 import { buildFinanceSummary } from "@/lib/financeReports";
+import { addDownloadFooter } from "@/lib/pdfFooter";
 
  type ReportKind = "balance" | "income" | "cash" | "full" | "generic";
  type Report = { id: string; name: string; category: string; description: string; kind: ReportKind };
@@ -62,6 +63,7 @@ function genericPdf(report: Report, period: string, payments: Payment[], expense
   document.setFont("helvetica", "bold"); document.setFontSize(16); document.text("SIGES · Centro de Informes", 17, 18); document.setFontSize(13); document.text(report.name, 17, 28); document.setFont("helvetica", "normal"); document.setFontSize(9); document.text(`Categoría: ${report.category} · Período: ${period}`, 17, 35); document.text(`Registros: ${rows.length}`, 17, 41);
   let y = 51; document.setFontSize(9); rows.slice(0, 85).forEach(row => { const wrapped = document.splitTextToSize(row, 176) as string[]; document.text(wrapped, 17, y); y += wrapped.length * 4.5 + 1; if (y > 280) { document.addPage(); y = 20; } });
   if (!rows.length) document.text("No hay registros suficientes para este informe en el período seleccionado.", 17, y);
+  addDownloadFooter(document);
   document.save(`siges-${fileSafe(report.name)}-${period}.pdf`);
 }
 

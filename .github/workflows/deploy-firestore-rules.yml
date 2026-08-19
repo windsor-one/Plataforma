@@ -1,6 +1,12 @@
 name: Publicar reglas de Firestore
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "firestore.rules"
+      - "scripts/deploy-firestore-rules.mjs"
+      - ".github/workflows/deploy-firestore-rules.yml"
   workflow_dispatch:
 
 permissions:

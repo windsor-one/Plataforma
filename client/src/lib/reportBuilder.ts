@@ -1,6 +1,6 @@
-import { balanceRows, buildFinanceSummary, inFinancePeriod, type FinanceSummary } from "./financeReports";
+import { balanceRows, buildFinanceSummary, financePeriodKey, inFinancePeriod, type FinanceSummary } from "./financeReports";
 import { receivableAccounts } from "./accountsReceivable";
-import type { ActivityLog, AttendanceRecord, Automation, Customer, Expense, HrProfile, Incident, InternalMessage, LeaveRequest, Payment, PayrollRun, Reservation, Task, UserProfile } from "./types";
+import type { ActivityLog, AttendanceRecord, Automation, Customer, EmploymentContract, Expense, HrDocument, HrProfile, Incident, InternalMessage, LeaveRequest, Payment, PayrollRun, Reservation, Task, UserProfile } from "./types";
 
 export type ReportSection = { heading: string; headers: string[]; rows: string[][] };
 export type ReportDefinition = { id: string; name: string; category: string; description: string };
@@ -14,6 +14,8 @@ export type ReportSnapshot = {
   activityLogs?: ActivityLog[];
   employees?: UserProfile[];
   hrProfiles?: HrProfile[];
+  employmentContracts?: EmploymentContract[];
+  hrDocuments?: HrDocument[];
   attendanceRecords?: AttendanceRecord[];
   leaveRequests?: LeaveRequest[];
   payrollRuns?: PayrollRun[];
@@ -57,6 +59,15 @@ export const reportDefinitions: ReportDefinition[] = [
   ["currency-gains", "Ganancias o pérdidas obtenidas", "Moneda", "Resultado registrado por moneda, sin conversión implícita."],
   ["activity-log", "Registros de actividad", "Actividad", "Actividad financiera y operativa disponible en el período."],
   ["automation-rules", "Registros de ejecución del flujo de trabajo", "Automatización", "Automatizaciones financieras y sus resultados registrados."],
+  ["payroll", "Planilla de empleados", "Recursos Humanos", "Horas, bruto, deducciones y neto de las planillas registradas."],
+  ["hr-files", "Expedientes del personal", "Recursos Humanos", "Expedientes laborales y asignaciones organizacionales."],
+  ["attendance", "Asistencia registrada", "Recursos Humanos", "Marcaciones reales de entrada, salida y recesos."],
+  ["leaves", "Ausencias y permisos", "Recursos Humanos", "Solicitudes, fechas, días y estados de ausencia."],
+  ["contracts", "Contratos laborales", "Recursos Humanos", "Vigencia, modalidad, jornada y salario registrado."],
+  ["hr-documents", "Documentos de RR. HH.", "Recursos Humanos", "Documentos, vigencia y estado documental."],
+  ["tasks", "Tareas operativas", "Operación", "Tareas reales, prioridad, responsable y estado."],
+  ["incidents", "Incidencias operativas", "Operación", "Incidencias reales, prioridad, responsable y resolución."],
+  ["internal-mail", "Correo interno", "Comunicación", "Mensajes internos del período y sus estados."],
 ].map(([id, name, category, description]) => ({ id, name, category, description }));
 
 export const reportCategories = Array.from(new Set(reportDefinitions.map((report) => report.category)));
@@ -69,12 +80,12 @@ const dateText = (value: unknown) => {
   if (value instanceof Date) return value.toLocaleDateString("es-ES");
   return String(value).slice(0, 10);
 };
-const emptyRows = (message: string): string[][] => [[message, "—"]];
+const emptyRows = (message: string, width: number): string[][] => [Array.from({ length: Math.max(1, width) }, (_, index) => index === 0 ? message : "—")];
 const periodFilter = <T,>(items: T[], getter: (item: T) => unknown, period: string) => items.filter((item) => inFinancePeriod(getter(item), period));
 const summaryValue = (values: Record<string, number>) => Object.entries(values).map(([currency, amount]) => money(amount, currency)).join(" · ") || "0";
 
 function table(heading: string, headers: string[], rows: string[][]): ReportSection {
-  return { heading, headers, rows: rows.length ? rows : emptyRows("No hay registros reales para este período") };
+  return { heading, headers, rows: rows.length ? rows : emptyRows("No hay registros reales para este período", headers.length) };
 }
 
 function groupedRows(items: Array<{ key: string; currency: string; amount: number }>, firstHeader: string, firstFallback = "Sin clasificar") {
@@ -83,7 +94,7 @@ function groupedRows(items: Array<{ key: string; currency: string; amount: numbe
   return Array.from(totals.entries()).sort((left, right) => right[1].amount - left[1].amount).map(([key, value]) => [key.split("__")[0], value.currency, money(value.amount, value.currency)]);
 }
 
-function financialSections(reportId: string, summary: FinanceSummary, snapshot: ReportSnapshot, period: string): ReportSection[] {
+function financialSections(reportId: string, summary: FinanceSummary, snapshot: ReportSnapshot, period: string, accounts: ReturnType<typeof receivableAccounts>): ReportSection[] {
   const rows = balanceRows(summary);
   const periodPayments = periodFilter(snapshot.payments, (item) => item.paidAt, period);
   const paidPayments = periodPayments.filter((item) => item.status === "paid");
@@ -93,7 +104,6 @@ function financialSections(reportId: string, summary: FinanceSummary, snapshot: 
   const cash = table("Flujo de caja", ["Concepto", "Valor"], [["Entradas de efectivo", summaryValue(summary.income)], ["Salidas de efectivo", summaryValue(summary.paidExpenses)], ["Flujo neto", summaryValue(summary.cashFlow)], ["Pagos pagados", String(paidPayments.length)], ["Gastos registrados", String(periodExpenses.length)]]);
   const paymentDetail = table("Pagos registrados en el período", ["Código · Fecha", "Cliente", "Concepto", "Estado", "Importe"], periodPayments.map((item) => [code("PAG", item.id, item.code) + ` · ${dateText(item.paidAt)}`, item.customerName, item.productName || item.kind || "Pago operativo", label(item.status), money(item.amount, item.currency)]));
   const expenseDetail = table("Gastos registrados en el período", ["Código · Fecha", "Concepto", "Categoría", "Estado", "Importe"], periodExpenses.map((item) => [code("GAS", item.id, item.code) + ` · ${dateText(item.spentAt)}`, item.concept, item.category, item.status, money(item.amount, item.currency)]));
-  const accounts = receivableAccounts(snapshot.reservations, snapshot.payments);
   const receivable = table("Cartera y cuentas por cobrar", ["Reserva", "Cliente", "Valor", "Abonado", "Saldo", "Cuotas"], accounts.map((account) => [code("RES", account.reservation.id, account.reservation.code), account.reservation.customerName, money(account.totalDue, account.currency), money(account.paidTotal, account.currency), money(account.pendingBalance, account.currency), String(account.installmentCount)]));
   if (reportId === "balance-sheet" || reportId === "trial-balance") return [balance, receivable];
   if (reportId === "profit-loss") return [income, paymentDetail, expenseDetail];
@@ -110,7 +120,8 @@ export function buildReport(reportId: string, period: string, snapshot: ReportSn
   const periodPayments = periodFilter(snapshot.payments, (item) => item.paidAt, period);
   const paidPayments = periodPayments.filter((item) => item.status === "paid");
   const periodExpenses = periodFilter(snapshot.expenses.filter((item) => !item.archived), (item) => item.spentAt, period);
-  const accounts = receivableAccounts(snapshot.reservations, snapshot.payments);
+  const cutoffPayments = snapshot.payments.filter((item) => { const key = financePeriodKey(item.paidAt); return Boolean(key) && key <= period; });
+  const accounts = receivableAccounts(snapshot.reservations, cutoffPayments);
   let sections: ReportSection[];
   switch (reportId) {
     case "sales-customer": sections = [table("Ventas por cliente", ["Cliente", "Moneda", "Cobrado"], groupedRows(paidPayments.map((item) => ({ key: item.customerName, currency: item.currency, amount: item.amount })), "Cliente"))]; break;
@@ -138,8 +149,17 @@ export function buildReport(reportId: string, period: string, snapshot: ReportSn
     case "journal": sections = [table("Diario de movimientos", ["Fecha", "Entidad", "Acción", "Detalle", "Responsable"], (snapshot.activityLogs || []).filter((item) => inFinancePeriod(item.occurredAt, period)).map((item) => [dateText(item.occurredAt), item.entity, item.action, item.summary, item.actorName]))]; break;
     case "currency-gains": sections = [table("Resultado por moneda", ["Moneda", "Ingresos", "Gastos", "Resultado"], Array.from(new Set([...Object.keys(summary.income), ...Object.keys(summary.paidExpenses)])).sort().map((currency) => [currency, money(summary.income[currency] || 0, currency), money(summary.paidExpenses[currency] || 0, currency), money((summary.cashFlow[currency] || 0), currency)]))]; break;
     case "activity-log": sections = [table("Actividad registrada", ["Fecha", "Entidad", "Acción", "Detalle", "Responsable"], (snapshot.activityLogs || []).filter((item) => inFinancePeriod(item.occurredAt, period)).map((item) => [dateText(item.occurredAt), item.entity, item.action, item.summary, item.actorName]))]; break;
-    case "automation-rules": sections = [table("Automatizaciones configuradas", ["Nombre", "Disparador", "Acción", "Estado", "Ejecuciones"], (snapshot.automations || []).filter((item) => !item.createdAt || inFinancePeriod(item.createdAt, period)).map((item) => [item.name, item.trigger, item.action, item.status, String(item.runCount || 0)]))]; break;
-    default: sections = financialSections(reportId, summary, snapshot, period); break;
+    case "automation-rules": sections = [table("Automatizaciones configuradas", ["Nombre", "Disparador", "Acción", "Estado", "Ejecuciones"], (snapshot.automations || []).filter((item) => !item.createdAt || financePeriodKey(item.createdAt) <= period).map((item) => [item.name, item.trigger, item.action, item.status, String(item.runCount || 0)]))]; break;
+    case "payroll": sections = [table("Planilla del período", ["Período", "Estado", "Moneda", "Bruto", "Deducciones", "Neto"], (snapshot.payrollRuns || []).filter((item) => item.periodKey === period).map((item) => [item.periodKey, item.status, item.currency, money(item.totalGross, item.currency), money(item.totalDeductions, item.currency), money(item.totalNet, item.currency)]))]; break;
+    case "hr-files": sections = [table("Expedientes laborales", ["Empleado", "Cargo", "Departamento", "Área", "Equipo", "Modalidad"], (snapshot.hrProfiles || []).map((item) => [snapshot.employees?.find((employee) => employee.id === item.employeeId)?.displayName || item.employeeId, item.position || "—", item.department || "—", item.area || "—", item.team || "—", item.workMode || "—"]))]; break;
+    case "attendance": sections = [table("Asistencia registrada", ["Fecha", "Empleado", "Evento", "Origen", "Nota"], (snapshot.attendanceRecords || []).filter((item) => inFinancePeriod(item.dayKey || item.occurredAt, period)).map((item) => [dateText(item.dayKey || item.occurredAt), item.employeeName, item.type, item.source, item.note || "—"]))]; break;
+    case "leaves": sections = [table("Ausencias y permisos", ["Inicio", "Fin", "Empleado", "Tipo", "Días", "Estado"], (snapshot.leaveRequests || []).filter((item) => inFinancePeriod(item.startDate, period) || inFinancePeriod(item.endDate, period)).map((item) => [item.startDate, item.endDate, item.employeeName, item.type, String(item.days), item.status]))]; break;
+    case "contracts": sections = [table("Contratos laborales", ["Empleado", "Tipo", "Estado", "Inicio", "Fin", "Modalidad"], (snapshot.employmentContracts || []).map((item) => [item.employeeName, item.contractType, item.status, item.startDate, item.endDate || "—", item.workMode || "—"]))]; break;
+    case "hr-documents": sections = [table("Documentos de RR. HH.", ["Empleado", "Documento", "Tipo", "Estado", "Emisión", "Vencimiento"], (snapshot.hrDocuments || []).map((item) => [item.employeeName, item.name, item.type, item.status, item.issuedAt || "—", item.expiresAt || "—"]))]; break;
+    case "tasks": sections = [table("Tareas operativas", ["Código", "Título", "Prioridad", "Estado", "Responsable", "Vencimiento"], (snapshot.tasks || []).filter((item) => !item.archived && (!item.dueDate || inFinancePeriod(item.dueDate, period))).map((item) => [code("TAR", item.id, item.code), item.title, item.priority, item.status, item.assignedToName || "—", item.dueDate || "—"]))]; break;
+    case "incidents": sections = [table("Incidencias operativas", ["Código", "Título", "Prioridad", "Estado", "Responsable", "Resolución"], (snapshot.incidents || []).filter((item) => !item.archived && (!item.resolvedAt || inFinancePeriod(item.resolvedAt, period))).map((item) => [code("INC", item.id, item.code), item.title, item.priority, item.status, item.assignedToName || "—", dateText(item.resolvedAt)]))]; break;
+    case "internal-mail": sections = [table("Correo interno", ["Fecha", "Asunto", "Emisor", "Estado", "Destinatarios"], (snapshot.internalMessages || []).filter((item) => inFinancePeriod(item.createdAt, period)).map((item) => [dateText(item.createdAt), item.subject, item.senderName, item.status, String(item.recipientIds.length)]))]; break;
+    default: sections = financialSections(reportId, summary, snapshot, period, accounts); break;
   }
   return { report, period, summary, sections, totalRows: sections.reduce((total, section) => total + section.rows.length, 0) };
 }

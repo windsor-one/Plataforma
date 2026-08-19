@@ -3,11 +3,13 @@
  * El registro principal nunca se bloquea por una regla de historial aún no publicada.
  */
 import type { User } from "firebase/auth";
-import { Timestamp, arrayRemove, arrayUnion, collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
+import { Timestamp, arrayRemove, arrayUnion, collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
 import { sortInternalMessagesNewest } from "./internalMail";
 import { sortRecordsNewest, uniqueRecordsById } from "./recordSorting";
 import { normalizeUpdateRequest } from "./updateRequests";
+import { businessToday } from "./businessDate";
+import { receivableAccounts } from "./accountsReceivable";
 import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PaymentAdjustmentRequest, PerformanceReview, PolicyAcknowledgment, Product, ProductCategory, ProductCategorySetting, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule, PayrollRun } from "./types";
 
 type ManagedCollection = "customers" | "reservations" | "payments" | "paymentAdjustmentRequests" | "products" | "productCategorySettings" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "temporaryPermissions" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages" | "payrollRuns";
@@ -86,7 +88,8 @@ export function subscribeCollection<T extends { id: string }>(name: ManagedColle
 
 export function subscribeInternalMessages(userId: string, isAdmin: boolean, onData: (data: InternalMessage[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "internalMessages");
-  const request = isAdmin ? query(source, orderBy("createdAt", "desc")) : query(source, where("participantIds", "array-contains", userId));
+  // Sin orderBy para no excluir mensajes históricos que aún no tienen createdAt.
+  const request = isAdmin ? source : query(source, where("participantIds", "array-contains", userId));
   return onSnapshot(request, (snapshot) => onData(sortInternalMessagesNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as InternalMessage))), onError);
 }
 
@@ -114,14 +117,14 @@ export async function recordGuardAttendance(guard: AttendanceGuard, employee: Pi
 
 export function subscribeUpdateRequests(userId: string, isAdmin: boolean, onData: (data: UpdateRequest[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "updateRequests");
-  const request = isAdmin ? query(source, orderBy("updatedAt", "desc")) : query(source, where("targetUserId", "==", userId));
+  const request = isAdmin ? source : query(source, where("targetUserId", "==", userId));
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => normalizeUpdateRequest({ id: item.id, ...item.data() }, item.id)), item => item.updatedAt)), onError);
 }
 
 /** Las solicitudes de pago se muestran completas a Administración y Departamento de IT, y solo propias al solicitante. */
 export function subscribePaymentAdjustmentRequests(userId: string, isAdmin: boolean, onData: (data: PaymentAdjustmentRequest[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "paymentAdjustmentRequests");
-  const request = isAdmin ? query(source, orderBy("updatedAt", "desc")) : query(source, where("requestedBy", "==", userId));
+  const request = isAdmin ? source : query(source, where("requestedBy", "==", userId));
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as PaymentAdjustmentRequest), item => item.updatedAt)), onError);
 }
 
@@ -290,6 +293,13 @@ export async function approvePaymentAdjustmentRequest(requestId: string, decisio
     const paymentRef = doc(db, "payments", request.paymentId);
     const paymentSnapshot = await transaction.get(paymentRef);
     if (!paymentSnapshot.exists()) throw new Error("El pago asociado ya no existe.");
+    const currentPayment = { id: paymentSnapshot.id, ...paymentSnapshot.data() } as Payment;
+    const reservationRef = currentPayment.reservationId ? doc(db, "reservations", currentPayment.reservationId) : null;
+    const reservationSnapshot = reservationRef ? await transaction.get(reservationRef) : null;
+    const relatedPaymentSnapshot = currentPayment.reservationId ? await getDocs(query(collection(db, "payments"), where("reservationId", "==", currentPayment.reservationId))) : null;
+    const proposedPayment = { ...currentPayment, ...request.proposedChanges } as Payment;
+    const relatedPayments = relatedPaymentSnapshot ? relatedPaymentSnapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as Payment).map((item) => item.id === currentPayment.id ? proposedPayment : item) : [proposedPayment];
+    const reservationAccount = reservationSnapshot?.exists() ? receivableAccounts([{ id: reservationSnapshot.id, ...reservationSnapshot.data() } as Reservation], relatedPayments)[0] : null;
     const mailReference = doc(collection(db, "internalMessages"));
     transaction.update(paymentRef, {
       ...withoutUndefined(request.proposedChanges as DocumentData),
@@ -298,6 +308,7 @@ export async function approvePaymentAdjustmentRequest(requestId: string, decisio
       updatedByName: actor.actorName,
       updatedAt: serverTimestamp(),
     });
+    if (reservationRef && reservationAccount) transaction.update(reservationRef, { paymentStatus: reservationAccount.status, updatedAt: serverTimestamp() });
     transaction.update(requestRef, {
       status: "approved",
       decisionReason: decisionReason.trim() || deleteField(),
@@ -414,13 +425,13 @@ export function subscribeEmployeeHrRecords<T extends { id: string }>(name: HrEmp
     }, onError);
     return () => { stopOwn(); stopCompany(); };
   }
-  const request = isAdmin ? query(source, orderBy(sortField, "desc")) : query(source, where("employeeId", "==", employeeId));
+  const request = isAdmin ? source : query(source, where("employeeId", "==", employeeId));
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T), item => (item as Record<string, unknown>)[sortField])), onError);
 }
 
 export function subscribeHrPolicies(isAdmin: boolean, onData: (data: HrPolicy[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "hrPolicies");
-  const request = isAdmin ? query(source, orderBy("publishedAt", "desc")) : query(source, where("active", "==", true));
+  const request = isAdmin ? source : query(source, where("active", "==", true));
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as HrPolicy), item => item.publishedAt)), onError);
 }
 
@@ -455,7 +466,7 @@ export async function updatePayrollRunStatus(id: string, status: PayrollRun["sta
   batch.update(reference, payload);
   if (status === "paid") {
     const expenseId = `payroll-${id}`;
-    batch.set(doc(db, "expenses", expenseId), { id: expenseId, code: `NOM-${current.periodKey.replace("-", "")}`, concept: `Planilla de empleados ${current.periodKey}`, category: "payroll", amount: current.totalNet, currency: current.currency, method: "transfer", status: "paid", spentAt: new Date().toISOString().slice(0, 10), department: "Recursos Humanos", project: "Planilla", notes: `Generado desde la planilla ${id}`, createdBy: actorId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+    batch.set(doc(db, "expenses", expenseId), { id: expenseId, code: `NOM-${current.periodKey.replace("-", "")}`, concept: `Planilla de empleados ${current.periodKey}`, category: "payroll", amount: current.totalNet, currency: current.currency, method: "transfer", status: "paid", spentAt: businessToday(), department: "Recursos Humanos", project: "Planilla", notes: `Generado desde la planilla ${id}`, createdBy: actorId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
   }
   batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "payroll", id, `Cambió la planilla ${current.periodKey} a ${status}`, actor));
   await batch.commit();
@@ -1055,9 +1066,9 @@ export async function updateCarbonUsageSession(recordId: string, userId: string,
 export function subscribeCarbonUsage(userId: string, isAdmin: boolean, onData: (data: CarbonUsage[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "carbonUsage");
   const request = isAdmin
-    ? query(source, orderBy("recordedAt", "desc"))
-    : query(source, where("userId", "==", userId), orderBy("recordedAt", "desc"));
-  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as CarbonUsage)), onError);
+    ? source
+    : query(source, where("userId", "==", userId));
+  return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as CarbonUsage), item => item.recordedAt)), onError);
 }
 
 export async function recordAccountCreated(userId: string, profile: UserProfile) {

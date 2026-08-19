@@ -21,24 +21,26 @@ export type FinanceSummary = {
 
 const activeExpense = (expense: Expense) => !expense.archived && expense.status !== "cancelled";
 
-/** Convierte fechas de formularios, Date y Timestamp de Firestore a YYYY-MM. */
+const localPeriodKey = (date: Date) => Number.isNaN(date.getTime()) ? "" : `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+/** Convierte fechas de formularios, Date y Timestamp de Firestore a YYYY-MM usando la zona local del usuario. */
 export function financePeriodKey(value: unknown) {
   if (!value) return "";
   if (typeof value === "string") {
     const direct = value.match(/^(\d{4}-\d{2})/);
     if (direct) return direct[1];
   }
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? "" : value.toISOString().slice(0, 7);
+  if (value instanceof Date) return localPeriodKey(value);
   if (typeof value === "object" && "toDate" in value && typeof (value as { toDate?: unknown }).toDate === "function") {
     const date = (value as { toDate: () => Date }).toDate();
-    return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 7);
+    return localPeriodKey(date);
   }
   if (typeof value === "object" && "seconds" in value) {
     const seconds = Number((value as { seconds?: unknown }).seconds);
-    if (Number.isFinite(seconds)) return new Date(seconds * 1000).toISOString().slice(0, 7);
+    if (Number.isFinite(seconds)) return localPeriodKey(new Date(seconds * 1000));
   }
   const parsed = new Date(String(value));
-  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 7);
+  return localPeriodKey(parsed);
 }
 
 export const inFinancePeriod = (value: unknown, period: string) => financePeriodKey(value) === period;
@@ -47,15 +49,16 @@ export function buildFinanceSummary(payments: Payment[], expenses: Expense[], re
   const periodPayments = payments.filter(payment => inFinancePeriod(payment.paidAt, period.key));
   const periodExpenses = expenses.filter(expense => activeExpense(expense) && inFinancePeriod(expense.spentAt, period.key));
   const paidExpenses = periodExpenses.filter(expense => expense.status === "paid");
-  const committedExpenses = periodExpenses.filter(expense => expense.status === "paid" || expense.status === "approved");
+  const committedExpenses = periodExpenses.filter(expense => expense.status === "approved");
   const pendingExpenses = periodExpenses.filter(expense => expense.status === "pending");
   const income = totalsByCurrency(periodPayments.filter(payment => payment.status === "paid"));
   const paidExpenseTotals = totalsByCurrency(paidExpenses);
   const committedExpenseTotals = totalsByCurrency(committedExpenses);
   const pendingExpenseTotals = totalsByCurrency(pendingExpenses);
   const cashFlow = subtractCurrencyTotals(income, paidExpenseTotals);
-  const projectedResult = subtractCurrencyTotals(income, committedExpenseTotals);
-  const accounts = receivableAccounts(reservations, payments);
+  const projectedResult = subtractCurrencyTotals(subtractCurrencyTotals(subtractCurrencyTotals(income, paidExpenseTotals), committedExpenseTotals), pendingExpenseTotals);
+  const paymentsAtCutoff = payments.filter(payment => { const key = financePeriodKey(payment.paidAt); return Boolean(key) && key <= period.key; });
+  const accounts = receivableAccounts(reservations, paymentsAtCutoff);
   const revenueMap = new Map<string, number>();
   periodPayments.filter(payment => payment.status === "paid").forEach(payment => {
     const currency = payment.currency || "USD";
@@ -92,7 +95,7 @@ export function balanceRows(summary: FinanceSummary) {
   return Array.from(currencies).sort().map(currency => {
     const cash = summary.cashFlow[currency] || 0;
     const receivable = summary.receivables[currency]?.pendingBalance || 0;
-    const liabilities = summary.pendingExpenses[currency] || 0;
+    const liabilities = (summary.committedExpenses[currency] || 0) + (summary.pendingExpenses[currency] || 0);
     const assets = cash + receivable;
     return { currency, cash, receivable, assets, liabilities, netPosition: assets - liabilities };
   });

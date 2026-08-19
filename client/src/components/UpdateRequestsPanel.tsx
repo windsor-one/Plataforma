@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { completeUpdateRequest, deleteUpdateRequest, saveUpdateRequest, updateUpdateRequest } from "@/lib/firestore";
 import type { UpdateRequest, UpdateRequestAction, UpdateRequestModule, UserProfile } from "@/lib/types";
 import { normalizeUpdateRequest } from "@/lib/updateRequests";
+import { businessDateTimeInput } from "@/lib/businessDate";
 
 const moduleLabels: Record<UpdateRequestModule, string> = {
   profile: "Información personal",
@@ -33,7 +34,7 @@ const moduleLabels: Record<UpdateRequestModule, string> = {
 const scopeLabels: Record<UpdateRequest["scope"], string> = { self: "Información propia", record: "Registro específico", module: "Módulo asignado" };
 const actionLabels: Record<UpdateRequestAction, string> = { edit: "Editar", delete: "Eliminar" };
 const dateText = (value: string) => value ? new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Sin fecha";
-const inputDateTime = (value?: string) => value ? new Date(value).toISOString().slice(0, 16) : "";
+const inputDateTime = (value?: string) => businessDateTimeInput(value);
 
 type RequestNavigation = Exclude<UpdateRequestModule, "other">;
 

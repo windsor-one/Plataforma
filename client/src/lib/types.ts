@@ -7,6 +7,7 @@ export type UserRole = "it" | "admin" | "personal";
 export type EmployeeStatus = "active" | "suspended";
 export type ReservationStatus = "pending" | "confirmed" | "completed" | "cancelled";
 export type PaymentStatus = "paid" | "pending" | "refunded";
+export type PaymentSettlementStatus = "pending" | "settled" | "overpaid";
 
 export interface PaymentAdjustmentRequest {
   id: string;
@@ -462,6 +463,8 @@ export interface Reservation extends OperationalAuditFields {
   durationMinutes: number;
   status: ReservationStatus;
   totalDue?: number;
+  /** Estado financiero derivado de los pagos acumulados de la reserva. */
+  paymentStatus?: PaymentSettlementStatus;
   currency?: string;
   groupName?: string;
   groupSize?: number;
@@ -489,6 +492,8 @@ export interface Payment extends OperationalAuditFields {
   currency: string;
   method: PaymentMethod;
   status: PaymentStatus;
+  /** Estado financiero derivado al registrar esta cuota, no sustituye al estado del movimiento. */
+  settlementStatus?: PaymentSettlementStatus;
   paidAt: string;
   notes?: string;
   /** Solicitud administrativa cuyo dictamen autorizó el último ajuste de un pago confirmado. */

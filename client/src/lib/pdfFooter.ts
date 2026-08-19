@@ -1,6 +1,6 @@
 import type { jsPDF } from "jspdf";
 
-export const downloadFooterText = (downloadedAt = new Date()) => `Obtenido del Sistema SIGES — ${new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "medium" }).format(downloadedAt)}`;
+export const downloadFooterText = (downloadedAt = new Date()) => `Obtenido del Sistema SIGES — fecha y hora de la descarga: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "medium" }).format(downloadedAt)}`;
 
 export function addDownloadFooter(document: jsPDF, downloadedAt = new Date()) {
   const totalPages = document.getNumberOfPages();

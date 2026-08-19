@@ -2,7 +2,7 @@ import type { ProductCategory, ProductCategorySetting } from "./types";
 
 export const defaultProductCategoryLabels: Record<ProductCategory, string> = {
   tariff: "Aranceles",
-  promotion: "Promociones Heliot",
+  promotion: "Promociones SIGES",
 };
 
 /** Fusiona la configuración persistida con etiquetas seguras para catálogos sin inicializar. */

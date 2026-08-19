@@ -6,12 +6,13 @@ import { useMemo, useState } from "react";
 import { BarChart3, CalendarCheck, Download, FileSpreadsheet, Gauge, GraduationCap, ListChecks, UsersRound } from "lucide-react";
 import type { AttendanceRecord, HrGoal, HrProfile, LeaveRequest, PerformanceReview, Task, TrainingRecord, UserProfile } from "@/lib/types";
 import { downloadFooterText } from "@/lib/pdfFooter";
+import { businessToday } from "@/lib/businessDate";
 
 const asDate = (value: unknown) => value && typeof value === "object" && "toDate" in value && typeof (value as { toDate?: unknown }).toDate === "function" ? (value as { toDate: () => Date }).toDate() : value instanceof Date ? value : null;
 const dateKey = (value: unknown) => { const date = asDate(value); return date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}` : ""; };
 const readable = (value: unknown) => { const date = asDate(value); return date ? new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short" }).format(date) : "Pendiente"; };
 const firstOfMonth = () => { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`; };
-const today = () => new Date().toISOString().slice(0, 10);
+const today = businessToday;
 const attendanceName: Record<AttendanceRecord["type"], string> = { clock_in: "Entrada", clock_out: "Salida", break_start: "Inicio descanso", break_end: "Fin descanso" };
 const leaveName: Record<LeaveRequest["type"], string> = { vacation: "Vacaciones", personal: "Permiso personal", medical: "Permiso médico", academic: "Permiso académico", unpaid: "Permiso no remunerado", other: "Otra ausencia" };
 

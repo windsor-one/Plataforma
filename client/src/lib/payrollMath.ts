@@ -1,12 +1,13 @@
 import type { AttendanceRecord, EmploymentContract, HrProfile, LeaveRequest, PayrollLine, UserProfile } from "./types";
+import { businessDateKey } from "./businessDate";
 
 const dateValue = (value: unknown) => {
   if (value && typeof value === "object" && "toDate" in value && typeof (value as { toDate?: unknown }).toDate === "function") return (value as { toDate: () => Date }).toDate().getTime();
   const time = new Date(String(value || "")).getTime();
   return Number.isFinite(time) ? time : 0;
 };
-const periodMatch = (value: unknown, periodKey: string) => String(value || "").startsWith(periodKey);
-const dayKey = (record: AttendanceRecord) => record.dayKey || new Date(dateValue(record.occurredAt)).toISOString().slice(0, 10);
+const periodMatch = (value: unknown, periodKey: string) => (businessDateKey(value) || String(value || "")).startsWith(periodKey);
+const dayKey = (record: AttendanceRecord) => record.dayKey || businessDateKey(record.occurredAt);
 const hours = (milliseconds: number) => Math.max(0, milliseconds / 3_600_000);
 
 export function workedHoursForEmployee(records: AttendanceRecord[], periodKey: string) {

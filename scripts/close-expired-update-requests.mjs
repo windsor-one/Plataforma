@@ -12,6 +12,12 @@ function serviceAccountFromEnvironment() {
   throw new Error("FIREBASE_SERVICE_ACCOUNT debe contener el JSON de una cuenta de servicio de Firebase.");
 }
 
+const deadlineDate = (value) => {
+  if (!value) return null;
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 async function closeExpiredRequests() {
   const serviceAccount = serviceAccountFromEnvironment();
   const app = getApps()[0] || initializeApp({ credential: cert(serviceAccount), projectId: serviceAccount.project_id });
@@ -22,16 +28,23 @@ async function closeExpiredRequests() {
     console.log(JSON.stringify({ ok: true, skipped: true, reason: "automation_paused_or_removed" }));
     return;
   }
-  const today = new Date().toISOString().slice(0, 10);
+  const now = Date.now();
   const snapshot = await db.collection("updateRequests").where("status", "==", "pending").get();
-  const expired = snapshot.docs.filter(item => typeof item.data().deadline === "string" && item.data().deadline < today);
-  for (let start = 0; start < expired.length; start += 450) {
+  const expired = snapshot.docs.filter(item => {
+    const deadline = deadlineDate(item.data().deadline);
+    return deadline && deadline.getTime() <= now;
+  });
+  for (let start = 0; start < expired.length; start += 220) {
     const batch = db.batch();
-    expired.slice(start, start + 450).forEach(item => batch.update(item.ref, { status: "expired", expiredAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), closedBy: "github-actions" }));
+    expired.slice(start, start + 220).forEach(item => {
+      const data = item.data();
+      batch.update(item.ref, { status: "expired", expiredAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), closedBy: "github-actions" });
+      if (data.permissionId) batch.set(db.collection("temporaryPermissions").doc(data.permissionId), { status: "expired", updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    });
     await batch.commit();
   }
   await Promise.all(activeAutomations.map(item => item.ref.update({ lastRunAt: FieldValue.serverTimestamp(), runCount: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() })));
-  console.log(JSON.stringify({ ok: true, closed: expired.length, checkedAt: today }));
+  console.log(JSON.stringify({ ok: true, closed: expired.length, checkedAt: new Date(now).toISOString() }));
 }
 
 closeExpiredRequests().catch((error) => { console.error(error instanceof Error ? error.stack || error.message : error); process.exitCode = 1; });

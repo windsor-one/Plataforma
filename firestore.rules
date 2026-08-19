@@ -48,6 +48,13 @@ service cloud.firestore {
     }
 
     /** Un pago confirmado solo cambia como parte del dictamen administrativo que referencia. */
+    function paymentCurrencyMatchesReservation() {
+      return !request.resource.data.keys().hasAny(['reservationId'])
+        || request.resource.data.reservationId == ''
+        || (exists(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId))
+          && request.resource.data.currency == get(/databases/$(database)/documents/reservations/$(request.resource.data.reservationId)).data.currency);
+    }
+
     function approvedPaymentAdjustment(paymentId) {
       let adjustmentId = request.resource.data.lastAdjustmentRequestId;
       let adjustmentPath = /databases/$(database)/documents/paymentAdjustmentRequests/$(adjustmentId);
@@ -134,20 +141,26 @@ service cloud.firestore {
     // Los módulos operativos son accesibles solo a empleados activos. Las reglas se evalúan
     // para cada lectura/escritura, incluso si alguien intenta saltarse la interfaz.
     match /customers/{customerId} {
-      allow read, create, update, delete: if activeEmployee();
+    allow read, create, update: if activeEmployee();
+      allow delete: if admin();
     }
 
     match /reservations/{reservationId} {
-      allow read, create, update, delete: if activeEmployee();
+      allow read, create, update: if activeEmployee();
+      allow delete: if admin();
     }
 
     match /payments/{paymentId} {
-      allow read, create, delete: if activeEmployee();
+      allow read: if activeEmployee();
+      allow create: if activeEmployee()
+        && request.resource.data.amount > 0
+        && paymentCurrencyMatchesReservation();
+      allow delete: if admin();
       // Un pago confirmado permanece inmutable; sus correcciones se solicitan y aprueban por separado.
-      allow update: if activeEmployee() && (
-        resource.data.status != "paid"
-        || approvedPaymentAdjustment(paymentId)
-      );
+      allow update: if activeEmployee()
+        && request.resource.data.amount > 0
+        && paymentCurrencyMatchesReservation()
+        && (resource.data.status != "paid" || approvedPaymentAdjustment(paymentId));
     }
 
     match /paymentAdjustmentRequests/{requestId} {
@@ -340,8 +353,13 @@ service cloud.firestore {
     }
 
     match /temporaryPermissions/{permissionId} {
-      // Solo Administración/IT crea o revoca permisos. El Personal no puede leerlos ni modificarlos directamente.
-      allow get, list, create, update, delete: if admin();
+      // Administración/IT administra permisos; Personal solo puede revocar el suyo al completar la solicitud asociada.
+      allow get, list, create, delete: if admin();
+      allow update: if admin() || (activeEmployee()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'revoked'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && getAfter(/databases/$(database)/documents/updateRequests/$(resource.data.requestId)).data.status == 'completed');
     }
 
     match /internalMessages/{messageId} {
@@ -401,7 +419,7 @@ service cloud.firestore {
         && request.resource.data.actorId == request.auth.uid;
       allow get, list: if admin();
       allow update: if false;
-      allow delete: if admin();
+      allow delete: if false;
     }
 
     match /generalReminders/{reminderId} {

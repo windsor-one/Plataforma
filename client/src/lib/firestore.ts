@@ -105,7 +105,11 @@ export async function saveUpdateRequest(record: Omit<UpdateRequest, "id" | "crea
 }
 
 export async function completeUpdateRequest(id: string, userId: string) {
-  await updateDoc(doc(db, "updateRequests", id), { status: "completed", completedAt: serverTimestamp(), completedBy: userId, updatedAt: serverTimestamp() });
+  const actor = await activityActor(userId);
+  const batch = writeBatch(db);
+  batch.update(doc(db, "updateRequests", id), { status: "completed", completedAt: serverTimestamp(), completedBy: userId, updatedAt: serverTimestamp() });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "profile", id, "Completó una solicitud de actualización asignada.", actor));
+  await batch.commit();
 }
 
 export async function saveAutomation(record: Omit<Automation, "id" | "createdAt" | "updatedAt" | "createdByName"> & { id?: string }, actorId: string) {
@@ -564,9 +568,11 @@ export async function completeInvitationOnboarding(user: User): Promise<UserProf
   } else {
     const invitation = invitationSnapshot.data() as Omit<Invitation, "id">;
     if (invitation.status !== "pending" || normalizedEmail(invitation.email) !== email) throw new Error("La invitación no está disponible. Solicita una nueva invitación al administrador.");
-    await setDoc(profileRef, { email, displayName: invitation.displayName || user.displayName || email.split("@")[0], role: invitation.role, status: "active", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    const onboarding = writeBatch(db);
+    onboarding.set(profileRef, { email, displayName: invitation.displayName || user.displayName || email.split("@")[0], role: invitation.role, status: "active", createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    onboarding.update(invitationRef, { status: "accepted", acceptedBy: user.uid, acceptedAt: serverTimestamp() });
+    await onboarding.commit();
     accountCreated = true;
-    try { await updateDoc(invitationRef, { status: "accepted", acceptedBy: user.uid, acceptedAt: serverTimestamp() }); } catch (error) { console.warn("El perfil del invitado fue creado, pero no se pudo cerrar la invitación.", error); }
   }
   const completed = await getDoc(profileRef);
   if (!completed.exists()) throw new Error("No se pudo finalizar el acceso a la plataforma.");

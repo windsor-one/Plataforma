@@ -429,7 +429,11 @@ export default function Dashboard({ user, profile }: { user: User; profile: User
   const latestHrProfile = useRef<HrProfile | null>(null);
   const logout = () => void (async () => {
     try { await recordAccess(user.uid, profile, "logout"); }
-    finally { await signOut(auth); }
+    finally {
+      window.localStorage.removeItem(`sistema-heliot:last-activity:${user.uid}`);
+      window.sessionStorage.removeItem(`sistema-heliot:fresh-session:${user.uid}`);
+      await signOut(auth);
+    }
   })();
 
   useEffect(() => { latestHrProfile.current = hrProfile; }, [hrProfile]);

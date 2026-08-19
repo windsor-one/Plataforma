@@ -140,3 +140,4 @@
 - [x] Eliminar sombras, brillos y elevaciones visuales de toda la interfaz, manteniendo contraste y jerarquía plana.
 - [x] Aplicar fondo translúcido con desenfoque solo a submenús, menús emergentes y paneles flotantes para asegurar legibilidad.
 - [x] Rediseñar integralmente la experiencia visual con una referencia coherente de iPhone, conservando funciones y accesibilidad.
+- [x] Sustituir la marca visual Heliot por la identidad tipográfica SIGES (Sistema Integral de Gestión Estratégica).

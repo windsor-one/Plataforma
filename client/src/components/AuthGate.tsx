@@ -43,8 +43,12 @@ function readableAccessError(caught: unknown, fallback: string) {
   return `${known[code] || message || fallback}${code ? ` [${code}]` : ""}`;
 }
 
+function SigesWordmark({ className = "" }: { className?: string }) {
+  return <span className={`siges-wordmark ${className}`} title="Sistema Integral de Gestión Estratégica">SIGES</span>;
+}
+
 function BrandMark() {
-  return <span className="brand-mark" aria-hidden="true"><i /><i /></span>;
+  return <span className="legacy-siges"><SigesWordmark /></span>;
 }
 
 function SetupPending() {
@@ -256,10 +260,10 @@ export default function AuthGate({ children }: { children: (user: User, profile:
         </div>
 
         <div className="ios-auth-content">
-          <div className="mb-10 flex items-center justify-between"><div className="flex items-center gap-2"><BrandMark /><span className="text-lg font-extrabold">Sistema Heliot</span></div><span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acceso seguro</span></div>
+          <div className="mb-10 flex items-center justify-between"><SigesWordmark /><span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acceso seguro</span></div>
           <div className="max-w-none">
             <>
-                <span className="inline-flex rounded-full bg-[#0F8F73]/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[.12em] text-[#08745D] dark:text-[#5DDBC0]">Sistema Heliot · Acceso del equipo</span>
+                <span className="inline-flex rounded-full bg-[#0F8F73]/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[.12em] text-[#08745D] dark:text-[#5DDBC0]">SIGES · Acceso del equipo</span>
                 <h2 className="mt-4 text-3xl font-extrabold tracking-tight">{mode === "login" ? "Vuelve a tu operación." : "Activa tu invitación."}</h2>
                 <p className="mt-3 text-sm leading-6 text-muted-foreground">{mode === "login" ? "Inicia sesión con tus credenciales de empleado." : "Solo puedes registrarte si un administrador autorizó previamente tu correo."}</p>
                 <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
@@ -272,7 +276,7 @@ export default function AuthGate({ children }: { children: (user: User, profile:
                 </form>
                 {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="mt-5 w-full text-center text-sm font-bold text-[#0C58C7] hover:underline dark:text-[#87A9FF]">¿Olvidaste tu contraseña? Restablécela por correo</button>}
                 <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }} className="mt-5 w-full text-center text-sm font-bold text-[#08745D] hover:underline dark:text-[#5DDBC0]">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
-                <div className="mt-8 grid grid-cols-2 gap-3 border-t pt-6 text-xs text-muted-foreground"><div className="flex items-start gap-2"><LockKeyhole className="mt-0.5 text-[#0F8F73]" size={15} />Tus permisos se validan en cada sesión.</div><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 text-[#0F8F73]" size={15} />Datos protegidos por reglas de acceso.</div></div><p className="mt-5 text-center text-[11px] font-semibold tracking-wide text-muted-foreground">Sistema Heliot · Con tecnología de Windsor</p>
+                <div className="mt-8 grid grid-cols-2 gap-3 border-t pt-6 text-xs text-muted-foreground"><div className="flex items-start gap-2"><LockKeyhole className="mt-0.5 text-[#0F8F73]" size={15} />Tus permisos se validan en cada sesión.</div><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 text-[#0F8F73]" size={15} />Datos protegidos por reglas de acceso.</div></div><p className="mt-5 text-center text-[11px] font-semibold tracking-wide text-muted-foreground">SIGES · Sistema Integral de Gestión Estratégica</p>
             </>
           </div>
         </div>

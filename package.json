@@ -10,8 +10,10 @@
     "check": "tsc --noEmit",
     "deploy:firestore": "npx --yes firebase-tools deploy --only firestore --project gestionpro-firebase",
     "process:attendance-guard": "node scripts/ensure-attendance-guard.mjs",
+    "seed:core-automations": "node scripts/seed-core-automations.mjs",
     "process:scheduled-mail": "node scripts/process-scheduled-mail.mjs",
     "process:expired-update-requests": "node scripts/close-expired-update-requests.mjs",
+    "process:hr-expiry-alerts": "node scripts/process-hr-expiry-alerts.mjs",
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate"

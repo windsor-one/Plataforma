@@ -16,6 +16,12 @@ async function closeExpiredRequests() {
   const serviceAccount = serviceAccountFromEnvironment();
   const app = getApps()[0] || initializeApp({ credential: cert(serviceAccount), projectId: serviceAccount.project_id });
   const db = getFirestore(app);
+  const automationSnapshot = await db.collection("automations").get();
+  const activeAutomations = automationSnapshot.docs.filter(item => item.data().trigger === "update_deadline" && item.data().status === "active");
+  if (!activeAutomations.length) {
+    console.log(JSON.stringify({ ok: true, skipped: true, reason: "automation_paused_or_removed" }));
+    return;
+  }
   const today = new Date().toISOString().slice(0, 10);
   const snapshot = await db.collection("updateRequests").where("status", "==", "pending").get();
   const expired = snapshot.docs.filter(item => typeof item.data().deadline === "string" && item.data().deadline < today);
@@ -24,6 +30,7 @@ async function closeExpiredRequests() {
     expired.slice(start, start + 450).forEach(item => batch.update(item.ref, { status: "expired", expiredAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), closedBy: "github-actions" }));
     await batch.commit();
   }
+  await Promise.all(activeAutomations.map(item => item.ref.update({ lastRunAt: FieldValue.serverTimestamp(), runCount: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() })));
   console.log(JSON.stringify({ ok: true, closed: expired.length, checkedAt: today }));
 }
 

@@ -40,3 +40,7 @@ jobs:
         run: pnpm process:expired-update-requests
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Alertar vencimientos de RR. HH.
+        run: pnpm process:hr-expiry-alerts
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

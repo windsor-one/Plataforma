@@ -163,7 +163,7 @@
 - [x] Eliminar el desplazamiento visible de la barra lateral, conservar accesos a la vista y situar el control de colapsar junto a SIGES.
 - [x] Añadir correo interno empresarial con bandeja, destinatarios múltiples, borradores y envíos programados.
 - [x] Permitir adjuntar, descargar y retirar archivos privados en los mensajes internos autorizados.
-- [ ] Añadir automatizaciones auditables con creación, edición, pausa y eliminación por personas autorizadas.
+- [x] Añadir automatizaciones auditables con creación, edición, pausa y eliminación por personas autorizadas.
 - [x] Mover los accesos de Correo e Impacto digital al encabezado junto a Buscar para liberar espacio lateral.
 - [x] Incorporar correo interno inmediato con bandeja, múltiples destinatarios, enviados, borradores y contador de no leídos.
 - [x] Implementar adjuntos privados del correo mediante Firebase Storage con descarga autenticada y límite de 10 MB por archivo.

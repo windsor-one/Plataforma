@@ -106,13 +106,14 @@ export async function completeUpdateRequest(id: string, userId: string) {
   await updateDoc(doc(db, "updateRequests", id), { status: "completed", completedAt: serverTimestamp(), completedBy: userId, updatedAt: serverTimestamp() });
 }
 
-export async function saveAutomation(record: Omit<Automation, "id" | "createdAt" | "updatedAt" | "createdByName">, actorId: string) {
+export async function saveAutomation(record: Omit<Automation, "id" | "createdAt" | "updatedAt" | "createdByName"> & { id?: string }, actorId: string) {
   const actor = await activityActor(actorId);
-  const reference = doc(collection(db, "automations"));
-  const payload = { ...withoutUndefined(record as unknown as DocumentData), id: reference.id, createdBy: actorId, createdByName: actor.actorName, runCount: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const reference = record.id ? doc(db, "automations", record.id) : doc(collection(db, "automations"));
+  const existing = await getDoc(reference);
+  const payload = { ...withoutUndefined(record as unknown as DocumentData), id: reference.id, createdBy: existing.exists() ? existing.data().createdBy : actorId, createdByName: existing.exists() ? existing.data().createdByName : actor.actorName, runCount: existing.exists() ? existing.data().runCount || 0 : 0, createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(), updatedAt: serverTimestamp() };
   const batch = writeBatch(db);
-  batch.set(reference, payload);
-  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "task", reference.id, `Creó la automatización ${record.name}`, actor));
+  batch.set(reference, payload, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry(existing.exists() ? "updated" : "created", "task", reference.id, `${existing.exists() ? "Actualizó" : "Creó"} la automatización ${record.name}`, actor));
   await batch.commit();
   return reference.id;
 }

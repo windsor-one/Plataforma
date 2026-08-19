@@ -29,10 +29,17 @@ async function ensureAttendanceGuard() {
   const serviceAccount = serviceAccountFromEnvironment();
   const app = getApps()[0] || initializeApp({ credential: cert(serviceAccount), projectId: serviceAccount.project_id });
   const db = getFirestore(app);
+  const automationSnapshot = await db.collection("automations").get();
+  const activeAutomations = automationSnapshot.docs.filter(item => item.data().trigger === "weekly_attendance" && item.data().status === "active");
+  if (!activeAutomations.length) {
+    console.log(JSON.stringify({ ok: true, skipped: true, reason: "automation_paused_or_removed" }));
+    return;
+  }
   const weekKey = isoWeekKey();
   const guardRef = db.collection("attendanceGuards").doc(weekKey);
   const current = await guardRef.get();
   if (current.exists) {
+    await Promise.all(activeAutomations.map(item => item.ref.update({ lastRunAt: FieldValue.serverTimestamp(), runCount: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() })));
     console.log(JSON.stringify({ ok: true, weekKey, created: false, guardUserId: current.data()?.guardUserId }));
     return;
   }
@@ -56,6 +63,7 @@ async function ensureAttendanceGuard() {
     assignedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
+  await Promise.all(activeAutomations.map(item => item.ref.update({ lastRunAt: FieldValue.serverTimestamp(), runCount: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() })));
   console.log(JSON.stringify({ ok: true, weekKey, created: true, guardUserId: selected.id, guardUserName: selected.displayName }));
 }
 

@@ -3241,7 +3241,10 @@ function Control({
     const selected = activeGuardCandidates.find(item => item.id === selectedGuardId) || (override ? undefined : rotated);
     if (!selected) { toast.error("Selecciona a la persona responsable de la guardia."); return; }
     try { await assignAttendanceGuard(currentWeekKey, selected, userId, override || Boolean(currentGuard)); setSelectedGuardId(""); toast.success(`Guardia de ${currentWeekKey} asignada a ${selected.displayName}.`); }
-    catch { toast.error("No se pudo guardar la guardia semanal."); }
+    catch (error) {
+      const code = (error as { code?: string })?.code || "";
+      toast.error(code.includes("permission-denied") ? "Firebase rechazó la guardia: publica las reglas actuales de Firestore y vuelve a intentarlo." : "No se pudo guardar la guardia semanal. Comprueba la conexión e inténtalo nuevamente.");
+    }
   };
   const toggleAttendance = (id: string) =>
     setSelectedAttendanceIds(current =>

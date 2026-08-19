@@ -180,3 +180,5 @@
 - [ ] Completar autónomamente las mejoras pendientes y guardar puntos de recuperación después de cada bloque estable.
 - [x] Crear y verificar la primera guardia real de asistencia con rotación automática idempotente para la semana 2026-W34.
 - [ ] Republicar las reglas de Firestore actualizadas para habilitar en producción las marcaciones colectivas de la guardia semanal.
+- [ ] Corregir el fallo que impide asignar automáticamente o reasignar manualmente la guardia semanal de asistencia.
+- [x] Elaborar una guía completa y actualizada de las funciones disponibles de SIGES por módulo y nivel de permiso.

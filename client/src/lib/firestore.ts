@@ -8,13 +8,13 @@ import { db } from "./firebase";
 import { sortInternalMessagesNewest } from "./internalMail";
 import { sortRecordsNewest, uniqueRecordsById } from "./recordSorting";
 import { normalizeUpdateRequest } from "./updateRequests";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PaymentAdjustmentRequest, PerformanceReview, PolicyAcknowledgment, Product, ProductCategory, ProductCategorySetting, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PaymentAdjustmentRequest, PerformanceReview, PolicyAcknowledgment, Product, ProductCategory, ProductCategorySetting, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule, PayrollRun } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "paymentAdjustmentRequests" | "products" | "productCategorySettings" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "temporaryPermissions" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
+type ManagedCollection = "customers" | "reservations" | "payments" | "paymentAdjustmentRequests" | "products" | "productCategorySettings" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "temporaryPermissions" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages" | "payrollRuns";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type CascadingDependentCollection = "reservations" | "payments" | "tasks" | "incidents";
 type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses" | "employees";
-type HrAdminCollection = "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies";
+type HrAdminCollection = "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "payrollRuns";
 type HrEmployeeCollection = "attendanceRecords" | "leaveRequests" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "policyAcknowledgments";
 type OperationalPayload = Omit<Customer, "id" | "createdAt" | "updatedAt"> | Omit<Reservation, "id" | "createdAt" | "updatedAt"> | Omit<Payment, "id" | "createdAt" | "updatedAt">;
 
@@ -385,7 +385,7 @@ export async function permanentlyDeleteInternalMessage(messageId: string, userId
 }
 
 const hrEntityForCollection: Record<HrAdminCollection, ActivityEntity> = {
-  hrProfiles: "hr_profile", organizationUnits: "employee", employmentContracts: "contract", hrDocuments: "document", workSchedules: "employee", lifecycleChecklists: "employee", hrGoals: "goal", performanceReviews: "review", trainingRecords: "training", recognitions: "recognition", hrPolicies: "policy",
+  hrProfiles: "hr_profile", organizationUnits: "employee", employmentContracts: "contract", hrDocuments: "document", workSchedules: "employee", lifecycleChecklists: "employee", hrGoals: "goal", performanceReviews: "review", trainingRecords: "training", recognitions: "recognition", hrPolicies: "policy", payrollRuns: "payroll",
 };
 
 export function subscribeOwnHrProfile(userId: string, onData: (profile: HrProfile | null) => void, onError: (error: Error) => void) {
@@ -432,6 +432,30 @@ export async function saveHrAdminRecord<T extends { id: string }>(name: HrAdminC
 }
 
 /** Los códigos EMP-xxxxx se generan por secuencia y los expedientes existentes preservan su código histórico. */
+export async function savePayrollRun(run: Omit<PayrollRun, "id" | "createdAt" | "updatedAt" | "createdBy" | "createdByName" | "createdByEmail">, actorId: string) {
+  const id = await saveHrAdminRecord("payrollRuns", { ...run, id: "" } as PayrollRun, actorId, `Guardó la planilla ${run.periodKey} en estado ${run.status}`);
+  return id;
+}
+
+export async function updatePayrollRunStatus(id: string, status: PayrollRun["status"], actorId: string) {
+  const actor = await activityActor(actorId);
+  const reference = doc(db, "payrollRuns", id);
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists()) throw new Error("La planilla no existe.");
+  const current = snapshot.data() as PayrollRun;
+  const allowed: Record<PayrollRun["status"], PayrollRun["status"][]> = { draft: ["in_review"], in_review: ["draft", "approved"], approved: ["in_review", "paid"], paid: [] };
+  if (!allowed[current.status]?.includes(status)) throw new Error(`No se puede pasar de ${current.status} a ${status}.`);
+  const payload = { status, updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp(), ...(status === "approved" ? { approvedBy: actorId, approvedByName: actor.actorName } : {}), ...(status === "paid" ? { paidAt: serverTimestamp(), paidBy: actorId, paidByName: actor.actorName } : {}) };
+  const batch = writeBatch(db);
+  batch.update(reference, payload);
+  if (status === "paid") {
+    const expenseId = `payroll-${id}`;
+    batch.set(doc(db, "expenses", expenseId), { id: expenseId, code: `NOM-${current.periodKey.replace("-", "")}`, concept: `Planilla de empleados ${current.periodKey}`, category: "payroll", amount: current.totalNet, currency: current.currency, method: "transfer", status: "paid", spentAt: new Date().toISOString().slice(0, 10), department: "Recursos Humanos", project: "Planilla", notes: `Generado desde la planilla ${id}`, createdBy: actorId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+  }
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "payroll", id, `Cambió la planilla ${current.periodKey} a ${status}`, actor));
+  await batch.commit();
+}
+
 export async function saveEmployeeHrProfile(employeeId: string, payload: Omit<HrProfile, "id" | "employeeId" | "employeeCode" | "createdAt" | "updatedAt" | "createdBy" | "createdByName" | "createdByEmail">, actorId: string) {
   const actor = await activityActor(actorId);
   const profileRef = doc(db, "hrProfiles", employeeId);

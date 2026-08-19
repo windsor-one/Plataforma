@@ -41,7 +41,7 @@ export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
 export type AttendanceType = "clock_in" | "clock_out" | "break_start" | "break_end";
 export type ReviewStatus = "draft" | "shared" | "acknowledged";
 export type ActivityAction = "created" | "updated" | "deleted" | "invited" | "profile_updated";
-export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access" | "task" | "incident" | "expense" | "hr_profile" | "contract" | "document" | "attendance" | "leave" | "goal" | "review" | "training" | "recognition" | "policy";
+export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access" | "task" | "incident" | "expense" | "payroll" | "hr_profile" | "contract" | "document" | "attendance" | "leave" | "goal" | "review" | "training" | "recognition" | "policy";
 
 export interface InternalMessage {
   id: string;
@@ -134,6 +134,7 @@ export interface EmploymentContract extends OperationalAuditFields {
   workDay?: string;
   workMode?: WorkMode;
   salaryAmount?: number;
+  hourlyRate?: number;
   currency?: string;
   notes?: string;
 }
@@ -171,6 +172,42 @@ export interface WorkSchedule extends OperationalAuditFields {
   assignedUnitId?: string;
   assignedUnitName?: string;
   active: boolean;
+}
+
+export type PayrollStatus = "draft" | "in_review" | "approved" | "paid";
+
+export interface PayrollLine {
+  employeeId: string;
+  employeeName: string;
+  employeeCode?: string;
+  regularHours: number;
+  overtimeHours: number;
+  hourlyRate: number;
+  grossPay: number;
+  deductions: number;
+  netPay: number;
+  currency: string;
+  attendanceRecordCount: number;
+  leaveDays: number;
+  notes?: string;
+}
+
+export interface PayrollRun extends OperationalAuditFields {
+  id: string;
+  periodKey: string;
+  periodStart: string;
+  periodEnd: string;
+  status: PayrollStatus;
+  currency: string;
+  lines: PayrollLine[];
+  totalGross: number;
+  totalDeductions: number;
+  totalNet: number;
+  approvedBy?: string;
+  approvedByName?: string;
+  paidAt?: unknown;
+  paidBy?: string;
+  paidByName?: string;
 }
 
 export interface AttendanceRecord extends OperationalAuditFields {

@@ -754,6 +754,7 @@ function AdminEditor({
               form.get("workMode")
             ) as EmploymentContract["workMode"],
             salaryAmount: Number(form.get("salaryAmount")) || undefined,
+            hourlyRate: Number(form.get("hourlyRate")) || undefined,
             currency: String(form.get("currency")) || "USD",
             notes: String(form.get("notes")).trim(),
             createdBy: userId,
@@ -1346,6 +1347,19 @@ const ContractFields = ({ value }: { value: (key: string) => string }) => (
           name="salaryAmount"
           defaultValue={value("salaryAmount")}
         />
+      </label>
+      <label>
+        Tarifa horaria para planilla
+        <input
+          className="field"
+          type="number"
+          min="0"
+          step=".01"
+          name="hourlyRate"
+          defaultValue={value("hourlyRate")}
+          placeholder="Ej. 8.50"
+        />
+        <span className="mt-1 block text-xs font-normal text-muted-foreground">Se usa para calcular bruto, horas extra y neto. No se convierte automáticamente desde el salario mensual.</span>
       </label>
       <label>
         Moneda

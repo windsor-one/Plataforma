@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterInternalMessages, isMailUnread } from "./internalMail";
+import { filterInternalMessages, isMailUnread, sortInternalMessagesNewest } from "./internalMail";
 import type { InternalMessage } from "./types";
 
 const message = (overrides: Partial<InternalMessage>): InternalMessage => ({
@@ -19,5 +19,15 @@ describe("correo interno", () => {
     expect(isMailUnread(message({ readByIds: ["recipient"] }), "recipient")).toBe(false);
     expect(isMailUnread(message({ senderId: "recipient" }), "recipient")).toBe(false);
     expect(isMailUnread(message({ status: "draft" }), "recipient")).toBe(false);
+  });
+
+  it("ordena los mensajes con marcas de tiempo de Firestore de más reciente a más antiguo", () => {
+    const timestamp = (milliseconds: number) => ({ toMillis: () => milliseconds });
+    const ordered = sortInternalMessagesNewest([
+      message({ id: "old", createdAt: timestamp(1_000) }),
+      message({ id: "new", createdAt: timestamp(3_000) }),
+      message({ id: "middle", createdAt: timestamp(2_000) }),
+    ]);
+    expect(ordered.map(item => item.id)).toEqual(["new", "middle", "old"]);
   });
 });

@@ -5,6 +5,8 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
+import { sortInternalMessagesNewest } from "./internalMail";
+import { sortRecordsNewest } from "./recordSorting";
 import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UpdateRequest, UserProfile, UserRole, WorkSchedule } from "./types";
 
 type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
@@ -53,14 +55,14 @@ function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId:
 }
 
 export function subscribeCollection<T extends { id: string }>(name: ManagedCollection, onData: (data: T[]) => void, onError: (error: Error) => void) {
-  const sortField = name === "users" || name === "invitations" || name === "generalReminders" || name === "products" || name === "internalMessages" ? "createdAt" : name === "activityLogs" || name === "accessLogs" || name === "attendanceRecords" || name === "policyAcknowledgments" ? "occurredAt" : name === "hrPolicies" ? "publishedAt" : "updatedAt";
+  const sortField = name === "users" || name === "invitations" || name === "generalReminders" || name === "products" || name === "internalMessages" ? "createdAt" : name === "activityLogs" || name === "accessLogs" || name === "attendanceRecords" ? "occurredAt" : name === "policyAcknowledgments" ? "acknowledgedAt" : name === "hrPolicies" ? "publishedAt" : "updatedAt";
   return onSnapshot(query(collection(db, name), orderBy(sortField, "desc")), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
 }
 
 export function subscribeInternalMessages(userId: string, isAdmin: boolean, onData: (data: InternalMessage[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "internalMessages");
   const request = isAdmin ? query(source, orderBy("createdAt", "desc")) : query(source, where("participantIds", "array-contains", userId));
-  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as InternalMessage).sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))), onError);
+  return onSnapshot(request, (snapshot) => onData(sortInternalMessagesNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as InternalMessage))), onError);
 }
 
 export async function assignAttendanceGuard(weekKey: string, guard: Pick<UserProfile, "id" | "displayName">, actorId: string, override = false) {
@@ -88,7 +90,7 @@ export async function recordGuardAttendance(guard: AttendanceGuard, employee: Pi
 export function subscribeUpdateRequests(userId: string, isAdmin: boolean, onData: (data: UpdateRequest[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "updateRequests");
   const request = isAdmin ? query(source, orderBy("updatedAt", "desc")) : query(source, where("targetUserId", "==", userId));
-  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as UpdateRequest)), onError);
+  return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as UpdateRequest), item => item.updatedAt)), onError);
 }
 
 export async function saveUpdateRequest(record: Omit<UpdateRequest, "id" | "createdAt" | "updatedAt" | "assignedByName">, actorId: string) {
@@ -163,14 +165,15 @@ export function subscribeOwnHrProfile(userId: string, onData: (profile: HrProfil
 
 export function subscribeEmployeeHrRecords<T extends { id: string }>(name: HrEmployeeCollection, employeeId: string, isAdmin: boolean, onData: (data: T[]) => void, onError: (error: Error) => void) {
   const source = collection(db, name);
-  const request = isAdmin ? query(source, orderBy(name === "attendanceRecords" || name === "policyAcknowledgments" ? "occurredAt" : "updatedAt", "desc")) : query(source, where("employeeId", "==", employeeId));
-  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
+  const sortField = name === "attendanceRecords" ? "occurredAt" : name === "policyAcknowledgments" ? "acknowledgedAt" : "updatedAt";
+  const request = isAdmin ? query(source, orderBy(sortField, "desc")) : query(source, where("employeeId", "==", employeeId));
+  return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T), item => (item as Record<string, unknown>)[sortField])), onError);
 }
 
 export function subscribeHrPolicies(isAdmin: boolean, onData: (data: HrPolicy[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "hrPolicies");
   const request = isAdmin ? query(source, orderBy("publishedAt", "desc")) : query(source, where("active", "==", true));
-  return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as HrPolicy)), onError);
+  return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as HrPolicy), item => item.publishedAt)), onError);
 }
 
 export async function saveHrAdminRecord<T extends { id: string }>(name: HrAdminCollection, record: T, actorId: string, summary: string) {

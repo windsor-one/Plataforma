@@ -185,3 +185,7 @@
 - [x] Elaborar una guía completa y actualizada de las funciones disponibles de SIGES por módulo y nivel de permiso.
 - [x] Diseñar la conversión multiempresa de SIGES con IT central, administradores por empresa y aislamiento estricto de cada ecosistema.
 - [x] Mantener la implementación actual enfocada exclusivamente en Heliot Media; la arquitectura multiempresa queda documentada para una futura decisión comercial.
+- [ ] Auditar integralmente SIGES para localizar, reproducir y corregir errores de módulos, roles, Firebase, automatizaciones y flujos críticos sin afectar datos existentes.
+- [ ] Corregir los permisos de Firestore y operaciones de Recursos Humanos que aún muestran errores de actualización de reglas.
+- [ ] Trazar lógicamente cada flujo crítico desde la interfaz hasta Firestore, automatizaciones y lectura posterior, verificando datos, roles, permisos y coherencia entre módulos.
+- [ ] Diseñar y ejecutar una matriz de pruebas unitarias, integración, escenarios de negocio, regresión y exploración manual para los flujos críticos de SIGES.

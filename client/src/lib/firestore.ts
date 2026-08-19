@@ -112,7 +112,7 @@ export function subscribeUpdateRequests(userId: string, isAdmin: boolean, onData
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as UpdateRequest), item => item.updatedAt)), onError);
 }
 
-/** Las solicitudes de pago se muestran completas a Administración/IT y solo propias al solicitante. */
+/** Las solicitudes de pago se muestran completas a Administración y Departamento de IT, y solo propias al solicitante. */
 export function subscribePaymentAdjustmentRequests(userId: string, isAdmin: boolean, onData: (data: PaymentAdjustmentRequest[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "paymentAdjustmentRequests");
   const request = isAdmin ? query(source, orderBy("updatedAt", "desc")) : query(source, where("requestedBy", "==", userId));
@@ -164,7 +164,7 @@ export async function saveUpdateRequest(record: UpdateRequestDraft, actorId: str
   const batch = writeBatch(db);
   batch.set(reference, payload);
   batch.set(doc(db, "temporaryPermissions", permission.id), { ...permission, createdAt: serverTimestamp() });
-  batch.set(mailReference, { ...requestNotification(record, actor, `Nueva solicitud: ${record.module}`, "Administración/IT te asignó una solicitud de actualización."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.set(mailReference, { ...requestNotification(record, actor, `Nueva solicitud: ${record.module}`, "Administración o el Departamento de IT te asignaron una solicitud de actualización."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "profile", reference.id, `Asignó permiso temporal de ${record.module} a ${record.targetUserName}`, actor));
   await batch.commit();
   return reference.id;
@@ -197,7 +197,7 @@ export async function updateUpdateRequest(id: string, record: UpdateRequestDraft
   if (existing.permissionId && existing.permissionId !== permission.id) batch.set(doc(db, "temporaryPermissions", existing.permissionId), { status: "revoked", updatedAt: serverTimestamp() }, { merge: true });
   batch.set(reference, { ...withoutUndefined(record as unknown as DocumentData), permissionId: permission.id, expiresAt: permission.expiresAt, updatedAt: serverTimestamp(), updatedBy: actorId, updatedByName: actor.actorName }, { merge: true });
   batch.set(doc(db, "temporaryPermissions", permission.id), { ...permission, createdAt: existing.createdAt || serverTimestamp() }, { merge: true });
-  const changeIntro = record.status === "rejected" ? `La solicitud fue rechazada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "cancelled" ? `La solicitud fue cancelada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "completed" ? "La solicitud fue cerrada por Administración/IT." : "Administración/IT modificó tu solicitud y permiso temporal.";
+  const changeIntro = record.status === "rejected" ? `La solicitud fue rechazada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "cancelled" ? `La solicitud fue cancelada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "completed" ? "La solicitud fue cerrada por Administración o el Departamento de IT." : "Administración o el Departamento de IT modificaron tu solicitud y permiso temporal.";
   batch.set(mailReference, { ...requestNotification(record, actor, `Solicitud actualizada: ${record.module}`, changeIntro), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "profile", id, `Actualizó la solicitud de ${record.module} para ${record.targetUserName}.`, actor));
   await batch.commit();
@@ -213,7 +213,7 @@ export async function deleteUpdateRequest(id: string, actorId: string) {
   const batch = writeBatch(db);
   batch.delete(reference);
   if (request.permissionId) batch.set(doc(db, "temporaryPermissions", request.permissionId), { status: "revoked", updatedAt: serverTimestamp() }, { merge: true });
-  batch.set(mailReference, { ...requestNotification(request, actor, `Solicitud cancelada: ${request.module}`, "Administración/IT eliminó la solicitud. Cualquier permiso temporal asociado fue revocado."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.set(mailReference, { ...requestNotification(request, actor, `Solicitud cancelada: ${request.module}`, "Administración o el Departamento de IT eliminaron la solicitud. Cualquier permiso temporal asociado fue revocado."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "profile", id, `Eliminó una solicitud de actualización para ${request.targetUserName}.`, actor));
   await batch.commit();
 }
@@ -570,7 +570,7 @@ export async function reviewLeaveRequest(id: string, status: LeaveRequest["statu
   await batch.commit();
 }
 
-/** Administración/IT puede registrar o corregir marcaciones sin perder al responsable ni la trazabilidad. */
+/** Administración o el Departamento de IT pueden registrar o corregir marcaciones sin perder al responsable ni la trazabilidad. */
 export async function saveHrAttendanceRecord(record: Partial<AttendanceRecord> & Pick<AttendanceRecord, "employeeId" | "employeeName" | "type">, actorId: string) {
   const actor = await activityActor(actorId);
   const reference = record.id ? doc(db, "attendanceRecords", record.id) : doc(collection(db, "attendanceRecords"));
@@ -630,7 +630,7 @@ export async function bulkDeleteHrAttendanceRecords(ids: string[], actorId: stri
   }
 }
 
-/** Administración/IT puede ajustar íntegramente una ausencia cuando el Personal cometió un error de captura. */
+/** Administración o el Departamento de IT pueden ajustar íntegramente una ausencia cuando el Personal cometió un error de captura. */
 export async function saveHrLeaveRequest(record: Partial<LeaveRequest> & Pick<LeaveRequest, "employeeId" | "employeeName" | "type" | "startDate" | "endDate" | "days" | "status">, actorId: string) {
   const actor = await activityActor(actorId);
   const reference = record.id ? doc(db, "leaveRequests", record.id) : doc(collection(db, "leaveRequests"));

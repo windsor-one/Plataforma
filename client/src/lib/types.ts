@@ -79,7 +79,7 @@ export interface UserProfile {
   updatedAt?: unknown;
 }
 
-/** Expediente privado: titular y Administración/IT. No se mezcla con el perfil de acceso. */
+/** Expediente privado: titular, Administración y Departamento de IT. No se mezcla con el perfil de acceso. */
 export interface HrProfile extends OperationalAuditFields {
   id: string;
   employeeId: string;
@@ -196,6 +196,12 @@ export interface AttendanceGuard {
   assignedAt?: unknown;
   overriddenBy?: string;
   overriddenAt?: unknown;
+  /** Fecha del jueves que cubre esta guardia, asignada por la rotación automática. */
+  plannedFor?: string;
+  replacedGuardUserId?: string;
+  replacedGuardUserName?: string;
+  reassignedReason?: "approved_leave";
+  reassignedAt?: unknown;
   updatedAt?: unknown;
 }
 
@@ -265,7 +271,7 @@ export interface AttendanceWindow {
   maxPerDay: number;
 }
 
-/** Política global para la marcación personal; Administración/IT es la única entidad que la modifica. */
+/** Política global para la marcación personal; Administración y Departamento de IT son los únicos roles que la modifican. */
 export interface AttendanceSettings {
   id: "global";
   timezone?: string;

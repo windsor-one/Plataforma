@@ -1,5 +1,5 @@
 /**
- * Catálogo Heliot Media: base visible para todo el Personal. Administración/IT
+ * Catálogo Heliot Media: base visible para todo el Personal. Administración y Departamento de IT
  * puede sobrescribir cada paquete mediante documentos equivalentes en Firestore.
  */
 import type { Product } from "./types";

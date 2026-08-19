@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
+import { attendanceWeekKey, upcomingAttendanceGuards } from "@/lib/attendanceGuardPlanning";
 import {
   acknowledgeHrPolicy,
   assignAttendanceGuard,
@@ -157,14 +158,7 @@ const timeInput = (value: unknown) => {
     ? ""
     : `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 };
-const isoWeekKey = (date = new Date()) => {
-  const copy = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = copy.getUTCDay() || 7;
-  copy.setUTCDate(copy.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(copy.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((copy.getTime() - yearStart.getTime()) / 86_400_000) + 1) / 7);
-  return `${copy.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
-};
+const guardDateLabel = (date: Date) => new Intl.DateTimeFormat("es-ES", { weekday: "long", day: "2-digit", month: "short" }).format(date);
 
 function Title({
   eyebrow,
@@ -2013,7 +2007,7 @@ export default function HrPanel({
     ]
   );
   const activeEmployees = employees.filter(item => item.status === "active");
-  const activeGuard = guards.find(item => item.weekKey === isoWeekKey());
+  const activeGuard = guards.find(item => item.weekKey === attendanceWeekKey());
   const isCurrentGuard = activeGuard?.guardUserId === user.id;
   const ownPolicyIds = new Set(
     acknowledgments
@@ -3234,10 +3228,11 @@ function Control({
     }
   };
   const recentAttendance = attendance.slice(0, 50);
-  const currentWeekKey = isoWeekKey();
-  const nextWeekKey = isoWeekKey(new Date(Date.now() + 7 * 86_400_000));
+  const currentWeekKey = attendanceWeekKey();
+  const nextWeekKey = attendanceWeekKey(new Date(Date.now() + 7 * 86_400_000));
   const currentGuard = guards.find(item => item.weekKey === currentWeekKey);
   const activeGuardCandidates = employees.filter(item => item.status === "active");
+  const upcomingGuards = upcomingAttendanceGuards(guards);
   const saveGuard = async (weekKey: string, override = false) => {
     const previousGuard = guards.filter(item => String(item.weekKey).localeCompare(weekKey) < 0).sort((left, right) => String(right.weekKey).localeCompare(String(left.weekKey)))[0] || guards.find(item => item.weekKey === currentWeekKey);
     const previousIndex = activeGuardCandidates.findIndex(item => item.id === previousGuard?.guardUserId);
@@ -3335,6 +3330,10 @@ function Control({
       <section className="panel-card mt-7 overflow-hidden">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b px-5 py-4"><div><p className="font-extrabold">Guardia semanal de asistencia</p><p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">Cada jueves, la persona asignada registra la asistencia del equipo. La rotación propone a una persona diferente de la última guardia; Administración/IT puede corregirla en cualquier momento.</p></div><span className="rounded-full bg-[#007AFF]/10 px-3 py-1 text-xs font-bold text-[#007AFF]">{currentWeekKey}</span></div>
         <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end"><div>{currentGuard ? <><p className="text-sm text-muted-foreground">Responsable de esta semana</p><p className="mt-1 text-lg font-extrabold">{currentGuard.guardUserName}</p><p className="mt-1 text-xs text-muted-foreground">Asignada por {currentGuard.assignedByName || "Administración/IT"}{currentGuard.overriddenBy ? " · reasignación registrada" : ""}</p></> : <><p className="text-sm font-bold text-[#C53B53]">Sin guardia asignada</p><p className="mt-1 text-xs text-muted-foreground">Asigna la primera persona disponible usando la rotación.</p></>}</div><div className="flex flex-wrap gap-2"><button type="button" className="secondary-button" onClick={() => void saveGuard(currentGuard ? nextWeekKey : currentWeekKey)}>{currentGuard ? `Asignar ${nextWeekKey}` : "Asignar por rotación"}</button><select className="field !mt-0 !w-auto !py-2" value={selectedGuardId} onChange={event => setSelectedGuardId(event.target.value)}><option value="">Reasignar manualmente…</option>{activeGuardCandidates.map(item => <option key={item.id} value={item.id}>{item.displayName}</option>)}</select><button type="button" className="primary-button" disabled={!selectedGuardId} onClick={() => void saveGuard(currentWeekKey, true)}>Guardar reasignación</button></div></div>
+      </section>
+      <section className="panel-card mt-7 overflow-hidden">
+        <div className="border-b px-5 py-4"><p className="font-extrabold">Planificación de guardia — próximas cuatro semanas</p><p className="mt-1 text-xs leading-5 text-muted-foreground">La automatización prepara cuatro jueves. Si la persona asignada tiene una ausencia aprobada, registra la sustitución, asigna a la siguiente persona disponible y conserva el turno omitido para la rotación futura.</p></div>
+        <div className="divide-y">{upcomingGuards.map(({ date, weekKey, guard }, index) => <article className="flex flex-wrap items-center justify-between gap-4 px-5 py-4" key={weekKey}><div><p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-muted-foreground">{index === 0 ? "Esta semana" : `Semana ${index + 1}`} · {weekKey}</p><p className="mt-1 font-bold capitalize">{guardDateLabel(date)}</p></div><div className="min-w-52 text-right"><p className={guard ? "font-extrabold" : "font-extrabold text-amber-700 dark:text-amber-200"}>{guard?.guardUserName || "Pendiente de asignación"}</p><p className="mt-1 text-xs text-muted-foreground">{guard?.reassignedReason === "approved_leave" ? `Reasignada por ausencia aprobada de ${guard.replacedGuardUserName || "Personal"}` : guard ? `Asignada por ${guard.assignedByName || "Administración/IT"}` : "La automatización la asignará al ejecutarse."}</p></div></article>)}</div>
       </section>
       <section className="panel-card mt-7 overflow-hidden">
         <div className="border-b px-5 py-4">

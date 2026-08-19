@@ -120,7 +120,15 @@ service cloud.firestore {
     }
 
     match /payments/{paymentId} {
-      allow read, create, update, delete: if activeEmployee();
+      allow read, create, delete: if activeEmployee();
+      // Un pago confirmado permanece inmutable; sus correcciones se solicitan y aprueban por separado.
+      allow update: if activeEmployee() && resource.data.status != "paid";
+    }
+
+    match /paymentAdjustmentRequests/{requestId} {
+      allow read: if activeEmployee();
+      allow create: if activeEmployee() && request.resource.data.requestedBy == request.auth.uid;
+      allow update, delete: if admin();
     }
 
     match /tasks/{taskId} {

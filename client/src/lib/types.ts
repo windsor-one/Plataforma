@@ -7,6 +7,22 @@ export type UserRole = "it" | "admin" | "personal";
 export type EmployeeStatus = "active" | "suspended";
 export type ReservationStatus = "pending" | "confirmed" | "completed" | "cancelled";
 export type PaymentStatus = "paid" | "pending" | "refunded";
+
+export interface PaymentAdjustmentRequest {
+  id: string;
+  paymentId: string;
+  paymentCode?: string;
+  requestedBy: string;
+  requestedByName?: string;
+  reason: string;
+  proposedChanges: Partial<Pick<Payment, "amount" | "kind" | "currency" | "method" | "status" | "paidAt" | "notes">>;
+  status: "pending" | "approved" | "rejected" | "cancelled";
+  decisionReason?: string;
+  decidedBy?: string;
+  decidedByName?: string;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
 export type PaymentMethod = "cash" | "card" | "transfer" | "other";
 export type PaymentKind = "deposit" | "partial" | "balance" | "full";
 export type TaskStatus = "pending" | "in_progress" | "review" | "completed" | "cancelled";

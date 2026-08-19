@@ -7,9 +7,9 @@ import { Timestamp, collection, deleteDoc, deleteField, doc, getDoc, getDocs, on
 import { db } from "./firebase";
 import { sortInternalMessagesNewest } from "./internalMail";
 import { sortRecordsNewest, uniqueRecordsById } from "./recordSorting";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PaymentAdjustmentRequest, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "temporaryPermissions" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
+type ManagedCollection = "customers" | "reservations" | "payments" | "paymentAdjustmentRequests" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "temporaryPermissions" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type CascadingDependentCollection = "reservations" | "payments" | "tasks" | "incidents";
 type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses" | "employees";
@@ -209,6 +209,18 @@ export async function deleteUpdateRequest(id: string, actorId: string) {
   batch.set(mailReference, { ...requestNotification(request, actor, `Solicitud cancelada: ${request.module}`, "Administración/IT eliminó la solicitud. Cualquier permiso temporal asociado fue revocado."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "profile", id, `Eliminó una solicitud de actualización para ${request.targetUserName}.`, actor));
   await batch.commit();
+}
+
+export async function requestPaymentAdjustment(payment: Payment, reason: string, proposedChanges: PaymentAdjustmentRequest["proposedChanges"], actorId: string) {
+  if (!reason.trim()) throw new Error("Indica el motivo del ajuste solicitado.");
+  const actor = await activityActor(actorId);
+  const reference = doc(collection(db, "paymentAdjustmentRequests"));
+  const payload: Omit<PaymentAdjustmentRequest, "createdAt" | "updatedAt"> = { id: reference.id, paymentId: payment.id, paymentCode: payment.code, requestedBy: actorId, requestedByName: actor.actorName, reason: reason.trim(), proposedChanges, status: "pending" };
+  const batch = writeBatch(db);
+  batch.set(reference, { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "payment", payment.id, `Solicitó ajuste justificado del pago ${payment.code || payment.id}.`, actor));
+  await batch.commit();
+  return reference.id;
 }
 
 export async function saveAutomation(record: Omit<Automation, "id" | "createdAt" | "updatedAt" | "createdByName"> & { id?: string }, actorId: string) {

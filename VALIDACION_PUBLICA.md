@@ -1,8 +1,22 @@
-# Validación pública de SIGES
+# Validación de producción de SIGES
 
-- **Fecha de comprobación:** 19 de agosto de 2026.
-- **URL:** `https://windsor-one.github.io/Plataforma/`.
-- **Resultado:** la página pública carga el título **SIGES** y la pantalla de acceso seguro con campos de correo y contraseña, recuperación por correo y registro mediante invitación.
-- **Conclusión:** la compilación publicada incluye la configuración pública de Firebase; no aparece la pantalla local de configuración pendiente.
+La comprobación se realizó el **19 de agosto de 2026** sobre la URL pública [`https://windsor-one.github.io/Plataforma/`](https://windsor-one.github.io/Plataforma/). SIGES carga la pantalla de acceso seguro con correo, contraseña, recuperación por correo y registro mediante invitación. Por tanto, la aplicación publicada incluye su configuración pública de Firebase y no muestra la pantalla de configuración local pendiente.
 
-> Esta comprobación no sustituye las pruebas con credenciales reales ni la publicación de las reglas actuales de Firestore, que sigue siendo necesaria para los módulos nuevos protegidos.
+| Comprobación | Resultado | Evidencia |
+|---|---|---|
+| Compilación de producción | Superada | Pruebas, TypeScript y compilación ejecutados localmente antes del despliegue. |
+| Publicación de reglas de Firestore | Correcta | La ejecución de GitHub Actions `32216490110` concluyó correctamente con la API oficial de Firebase Rules. |
+| Automatizaciones programadas | Correctas | Correo programado, guardia semanal, solicitudes vencidas y alertas de RR. HH. fueron validados en la ejecución `32215961282`. |
+| Despliegue de GitHub Pages | Correcto | La ejecución `32216534113` publicó el commit `945f1514` sin errores. |
+
+> Las reglas actuales de **Firestore** están activas en producción, incluidos los permisos de guardias semanales, solicitudes de actualización y automatizaciones. La aplicación continúa sin adjuntos porque **Firebase Storage** exige facturación en este proyecto y se mantiene deshabilitado para respetar el plan gratuito.
+
+La única verificación que requiere una sesión real de personal es recorrer inicio de sesión, pago, invitación, perfil, generación de PDF e historial desde la página pública. No se realizaron pruebas con contraseñas de usuarios para preservar sus credenciales.
+
+## Enlaces de evidencia
+
+[1] [Ejecución exitosa de publicación de reglas de Firestore](https://github.com/windsor-one/Plataforma/actions/runs/32216490110)
+
+[2] [Ejecución validada de automatizaciones de SIGES](https://github.com/windsor-one/Plataforma/actions/runs/32215961282)
+
+[3] [Despliegue exitoso de GitHub Pages](https://github.com/windsor-one/Plataforma/actions/runs/32216534113)

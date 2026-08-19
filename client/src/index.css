@@ -69,6 +69,8 @@
   .table-toolbar { @apply flex items-center gap-2 border-b px-5 py-3 text-muted-foreground; }.table-toolbar input { @apply w-full rounded-lg bg-muted px-3 py-2 text-sm outline-none placeholder:text-muted-foreground; }.table-wrap { @apply overflow-x-auto; } table { @apply w-full text-left text-sm; } th { @apply bg-transparent px-5 py-3 text-[12px] font-medium text-muted-foreground; } td { @apply border-t px-5 py-3.5 align-middle; border-color: color-mix(in srgb, var(--border) 65%, transparent); } td span { @apply text-xs text-muted-foreground; }
   .brand-mark { @apply relative h-10 w-10 shrink-0 overflow-hidden rounded-[.78rem] bg-[#0F8F73]; }.brand-mark::before { content: ""; @apply absolute left-[8px] top-[8px] h-[5px] w-[21px] rounded-sm bg-white; }.brand-mark::after { content: ""; @apply absolute bottom-[8px] left-[8px] h-[5px] w-[21px] rounded-sm bg-white; }.brand-mark i:first-child { @apply absolute right-[8px] top-[8px] h-[14px] w-[5px] rounded-sm bg-white; }.brand-mark i:last-child { @apply absolute left-[8px] top-[18px] h-[5px] w-[14px] rounded-sm bg-white; }
   .siges-wordmark { @apply inline-flex shrink-0 items-center text-[22px] font-bold tracking-[-.055em] text-[#0F8F73]; }
+  .siges-sidebar-wordmark { font-size: 2.05rem; line-height: 1; letter-spacing: -0.07em; }
+  .sidebar-collapse-control { @apply border bg-muted; }
   .legacy-siges + :is(div, b) { display: none; }
   .empty-mark { @apply grid h-24 w-24 place-items-center rounded-full bg-[#0F8F73]/10; }.empty-mark .brand-mark { @apply h-12 w-12; }
   .bulk-action-bar { @apply flex flex-wrap items-center justify-between gap-3 border-b bg-[#0F8F73]/8 px-5 py-3; }

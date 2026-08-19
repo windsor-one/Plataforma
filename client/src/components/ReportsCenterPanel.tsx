@@ -5,6 +5,7 @@ import type { Expense, Payment, Reservation } from "@/lib/types";
 import { downloadStatement } from "./FinancialStatementsPanel";
 import { buildFinanceSummary } from "@/lib/financeReports";
 import { addDownloadFooter } from "@/lib/pdfFooter";
+import { addDocumentHeader, addKeyValueGrid, addSectionHeading, addTable, pdfPalette } from "@/lib/pdfDesign";
 
  type ReportKind = "balance" | "income" | "cash" | "full" | "generic";
  type Report = { id: string; name: string; category: string; description: string; kind: ReportKind };
@@ -54,15 +55,18 @@ const fileSafe = (value: string) => value.toLowerCase().replace(/[^a-z0-9áéí�
 
 function genericPdf(report: Report, period: string, payments: Payment[], expenses: Expense[], reservations: Reservation[]) {
   const document = new jsPDF({ unit: "mm", format: "a4" });
-  const rows: string[] = [];
   const periodPayments = payments.filter(item => String(item.paidAt || "").startsWith(period) && item.status === "paid");
   const periodExpenses = expenses.filter(item => !item.archived && String(item.spentAt || "").startsWith(period));
-  if (report.category === "Ventas" || report.category === "Pagos recibidos") periodPayments.forEach(item => rows.push(`${item.code || item.id} · ${item.customerName} · ${item.productName || item.kind || "Pago"} · ${money(item.amount, item.currency)}`));
-  else if (report.category === "Cuentas por cobrar") reservations.forEach(item => rows.push(`${item.code || item.id} · ${item.customerName} · ${item.service} · ${money(item.totalDue || item.productPrice || 0, item.currency)}`));
-  else periodExpenses.forEach(item => rows.push(`${item.code || item.id} · ${item.concept} · ${item.category} · ${money(item.amount, item.currency)} · ${item.status}`));
-  document.setFont("helvetica", "bold"); document.setFontSize(16); document.text("SIGES · Centro de Informes", 17, 18); document.setFontSize(13); document.text(report.name, 17, 28); document.setFont("helvetica", "normal"); document.setFontSize(9); document.text(`Categoría: ${report.category} · Período: ${period}`, 17, 35); document.text(`Registros: ${rows.length}`, 17, 41);
-  let y = 51; document.setFontSize(9); rows.slice(0, 85).forEach(row => { const wrapped = document.splitTextToSize(row, 176) as string[]; document.text(wrapped, 17, y); y += wrapped.length * 4.5 + 1; if (y > 280) { document.addPage(); y = 20; } });
-  if (!rows.length) document.text("No hay registros suficientes para este informe en el período seleccionado.", 17, y);
+  const rows: string[][] = [];
+  let headers = ["Código", "Cliente", "Concepto", "Importe"];
+  if (report.category === "Ventas" || report.category === "Pagos recibidos") periodPayments.forEach(item => rows.push([item.code || item.id, item.customerName, item.productName || item.kind || "Pago", money(item.amount, item.currency)]));
+  else if (report.category === "Cuentas por cobrar") { headers = ["Código", "Cliente", "Servicio", "Total"]; reservations.forEach(item => rows.push([item.code || item.id, item.customerName, item.service, money(item.totalDue || item.productPrice || 0, item.currency)])); }
+  else { headers = ["Código", "Concepto", "Categoría", "Importe", "Estado"]; periodExpenses.forEach(item => rows.push([item.code || item.id, item.concept, item.category, money(item.amount, item.currency), item.status])); }
+  let y = addDocumentHeader(document, report.name, [`Categoría: ${report.category}`, `Período: ${period}`, `Generado por SIGES: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeStyle: "short" }).format(new Date())}`], pdfPalette.blue);
+  y = addKeyValueGrid(document, [["Registros incluidos", String(rows.length)], ["Origen", "Datos registrados en SIGES"]], y, 2) + 6;
+  y = addSectionHeading(document, "Detalle del informe", y, pdfPalette.blue);
+  if (rows.length) addTable(document, headers, rows, y, headers.length === 5 ? [28, 58, 34, 26, 30] : [32, 60, 52, 32]);
+  else { document.setFillColor(...pdfPalette.pale); document.roundedRect(16, y, 178, 18, 2, 2, "F"); document.setTextColor(...pdfPalette.muted); document.setFont("helvetica", "normal"); document.setFontSize(8.5); document.text("No hay registros suficientes para este informe en el período seleccionado.", 22, y + 10); }
   addDownloadFooter(document);
   document.save(`siges-${fileSafe(report.name)}-${period}.pdf`);
 }

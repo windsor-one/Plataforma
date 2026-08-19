@@ -5,6 +5,7 @@ import { balanceRows, buildFinanceSummary, type FinanceReportPeriod } from "@/li
 import { currencyTotalEntries } from "@/lib/financeMath";
 import type { Expense, Payment, Reservation } from "@/lib/types";
 import { addDownloadFooter } from "@/lib/pdfFooter";
+import { addDocumentHeader, addSectionHeading, addTable, pdfPalette } from "@/lib/pdfDesign";
 
 const money = (amount: number, currency = "USD") => new Intl.NumberFormat("es-ES", { style: "currency", currency, maximumFractionDigits: 2 }).format(amount || 0);
 const labelCategory: Record<string, string> = { materials: "Materiales", equipment: "Equipo", transport: "Transporte", marketing: "Marketing", services: "Servicios", payroll: "Personal", other: "Otros" };
@@ -12,14 +13,10 @@ const lines = (totals: Record<string, number>) => currencyTotalEntries(totals).m
 
 function pdfDocument(title: string, period: FinanceReportPeriod, sections: Array<{ heading: string; rows: Array<[string, string]> }>) {
   const document = new jsPDF({ unit: "mm", format: "a4" });
-  let y = 20;
-  const write = (value: string, size = 10, bold = false) => { document.setFont("helvetica", bold ? "bold" : "normal"); document.setFontSize(size); const wrapped = document.splitTextToSize(value, 176) as string[]; document.text(wrapped, 17, y); y += wrapped.length * (size >= 16 ? 8 : 5) + 2; if (y > 275) { document.addPage(); y = 20; } };
-  write("SIGES · Sistema Integral de Gestión Estratégica", 10, true);
-  write(title, 18, true);
-  write(`Período: ${period.label}`, 10);
-  write(`Generado: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeStyle: "short" }).format(new Date())}`, 9);
-  sections.forEach(section => { y += 4; write(section.heading, 13, true); section.rows.forEach(([name, value]) => write(`${name}: ${value}`, 10)); });
-  write("Nota: este reporte refleja únicamente los registros existentes en SIGES, separados por moneda y sin conversiones implícitas. Debe ser revisado por la persona responsable de contabilidad antes de una presentación fiscal o legal.", 8);
+  let y = addDocumentHeader(document, title, [`Período contable: ${period.label}`, `Generado: ${new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeStyle: "short" }).format(new Date())}`], pdfPalette.teal);
+  sections.forEach(section => { if (y > 252) { document.addPage(); y = 18; } y = addSectionHeading(document, section.heading, y); y = addTable(document, ["Concepto", "Valor"], section.rows.map(([label, value]) => [label, value]), y, [116, 60]) + 8; });
+  if (y > 252) { document.addPage(); y = 22; }
+  document.setFillColor(...pdfPalette.pale); document.roundedRect(16, y, 178, 22, 2, 2, "F"); document.setTextColor(...pdfPalette.muted); document.setFont("helvetica", "normal"); document.setFontSize(7.5); document.text(document.splitTextToSize("Este reporte refleja únicamente los registros existentes en SIGES, separados por moneda y sin conversiones implícitas. Debe ser revisado por la persona responsable de contabilidad antes de una presentación fiscal o legal.", 168) as string[], 21, y + 7);
   addDownloadFooter(document);
   return document;
 }

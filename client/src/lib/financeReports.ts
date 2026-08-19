@@ -16,14 +16,36 @@ export type FinanceSummary = {
   expensesByCategory: Array<{ label: string; currency: string; amount: number }>;
   paymentCount: number;
   expenseCount: number;
+  paymentDetails: Array<{ code: string; date: string; customer: string; concept: string; amount: number; currency: string }>;
 };
 
 const activeExpense = (expense: Expense) => !expense.archived && expense.status !== "cancelled";
-const inPeriod = (value: unknown, period: string) => String(value || "").startsWith(period);
+
+/** Convierte fechas de formularios, Date y Timestamp de Firestore a YYYY-MM. */
+export function financePeriodKey(value: unknown) {
+  if (!value) return "";
+  if (typeof value === "string") {
+    const direct = value.match(/^(\d{4}-\d{2})/);
+    if (direct) return direct[1];
+  }
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? "" : value.toISOString().slice(0, 7);
+  if (typeof value === "object" && "toDate" in value && typeof (value as { toDate?: unknown }).toDate === "function") {
+    const date = (value as { toDate: () => Date }).toDate();
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 7);
+  }
+  if (typeof value === "object" && "seconds" in value) {
+    const seconds = Number((value as { seconds?: unknown }).seconds);
+    if (Number.isFinite(seconds)) return new Date(seconds * 1000).toISOString().slice(0, 7);
+  }
+  const parsed = new Date(String(value));
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 7);
+}
+
+export const inFinancePeriod = (value: unknown, period: string) => financePeriodKey(value) === period;
 
 export function buildFinanceSummary(payments: Payment[], expenses: Expense[], reservations: Reservation[], period: FinanceReportPeriod): FinanceSummary {
-  const periodPayments = payments.filter(payment => inPeriod(payment.paidAt, period.key));
-  const periodExpenses = expenses.filter(expense => activeExpense(expense) && inPeriod(expense.spentAt, period.key));
+  const periodPayments = payments.filter(payment => inFinancePeriod(payment.paidAt, period.key));
+  const periodExpenses = expenses.filter(expense => activeExpense(expense) && inFinancePeriod(expense.spentAt, period.key));
   const paidExpenses = periodExpenses.filter(expense => expense.status === "paid");
   const committedExpenses = periodExpenses.filter(expense => expense.status === "paid" || expense.status === "approved");
   const pendingExpenses = periodExpenses.filter(expense => expense.status === "pending");
@@ -61,6 +83,7 @@ export function buildFinanceSummary(payments: Payment[], expenses: Expense[], re
     expensesByCategory: Array.from(expenseMap.entries()).map(([key, amount]) => { const [label, currency] = key.split("__"); return { label, currency, amount }; }).sort((left, right) => right.amount - left.amount),
     paymentCount: periodPayments.filter(payment => payment.status === "paid").length,
     expenseCount: periodExpenses.length,
+    paymentDetails: periodPayments.filter(payment => payment.status === "paid").map(payment => ({ code: payment.code || `PAG-${payment.id.slice(0, 8).toUpperCase()}`, date: String(payment.paidAt || "—"), customer: payment.customerName, concept: payment.productName || payment.kind || "Pago operativo", amount: Number(payment.amount || 0), currency: payment.currency || "USD" })),
   };
 }
 

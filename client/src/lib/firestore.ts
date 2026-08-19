@@ -76,7 +76,12 @@ function activityEntry(action: ActivityAction, entity: ActivityEntity, entityId:
 
 export function subscribeCollection<T extends { id: string }>(name: ManagedCollection, onData: (data: T[]) => void, onError: (error: Error) => void) {
   const sortField = name === "users" || name === "invitations" || name === "generalReminders" || name === "products" || name === "internalMessages" ? "createdAt" : name === "activityLogs" || name === "accessLogs" || name === "attendanceRecords" ? "occurredAt" : name === "policyAcknowledgments" ? "acknowledgedAt" : name === "hrPolicies" ? "publishedAt" : "updatedAt";
-  return onSnapshot(query(collection(db, name), orderBy(sortField, "desc")), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T)), onError);
+  // No usamos orderBy en la consulta: Firestore excluye documentos que no tienen el campo ordenado.
+  // Esto permite recuperar pagos históricos y registros creados antes de que updatedAt fuera obligatorio.
+  return onSnapshot(collection(db, name), (snapshot) => {
+    const records = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T);
+    onData(sortRecordsNewest(records, (record) => (record as Record<string, unknown>)[sortField]));
+  }, onError);
 }
 
 export function subscribeInternalMessages(userId: string, isAdmin: boolean, onData: (data: InternalMessage[]) => void, onError: (error: Error) => void) {

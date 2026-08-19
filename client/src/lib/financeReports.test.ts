@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { balanceRows, buildFinanceSummary } from "./financeReports";
+import { balanceRows, buildFinanceSummary, financePeriodKey } from "./financeReports";
 import type { Expense, Payment, Reservation } from "./types";
 
 const period = { key: "2026-08", label: "agosto de 2026" };
@@ -13,11 +13,17 @@ describe("reportes financieros", () => {
     expect(summary.income.USD).toBe(100);
     expect(summary.paidExpenses.USD).toBe(40);
     expect(summary.cashFlow.USD).toBe(60);
+    expect(summary.paymentDetails[0]).toMatchObject({ code: "PAG-p1".toUpperCase(), customer: "Cliente", amount: 100, currency: "USD" });
   });
   it("integra cuentas por cobrar desde reservas y pagos", () => {
     const summary = buildFinanceSummary([payment({ amount: 50, reservationId: "r1" })], [], [reservation({})], period);
     expect(summary.receivables.USD?.pendingBalance).toBe(100);
     expect(balanceRows(summary)[0]?.receivable).toBe(100);
+  });
+  it("normaliza fechas provenientes de Firestore y formularios", () => {
+    expect(financePeriodKey("2026-08-19")).toBe("2026-08");
+    expect(financePeriodKey({ toDate: () => new Date("2026-08-19T12:00:00Z") })).toBe("2026-08");
+    expect(financePeriodKey({ seconds: 1787140800 })).toBe("2026-08");
   });
   it("no mezcla monedas en la posición", () => {
     const summary = buildFinanceSummary([payment({ currency: "EUR", amount: 80 })], [expense({ currency: "USD", amount: 20 })], [], period);

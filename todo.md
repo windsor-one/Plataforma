@@ -144,3 +144,4 @@
 - [x] Reorganizar la barra lateral de SIGES con categorías desplegables y submenús para reducir saturación visual.
 - [x] Ampliar la marca SIGES y separar el botón de colapsar en la cabecera lateral.
 - [x] Limitar las categorías desplegables de la barra lateral a una abierta a la vez.
+- [x] Reubicar el control de colapsar, asegurar la composición completa de la barra lateral y cambiar el título del navegador a SIGES.

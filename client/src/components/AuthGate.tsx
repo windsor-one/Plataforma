@@ -96,7 +96,8 @@ export default function AuthGate({ children }: { children: (user: User, profile:
           await signOut(auth);
           throw new Error("Tu cuenta se encuentra suspendida. Contacta al administrador.");
         }
-        await recordAccess(currentUser.uid, completed, "login");
+        try { await recordAccess(currentUser.uid, completed, "login"); }
+        catch (error) { console.warn("No se pudo registrar el inicio de sesión, pero el acceso permanece disponible.", error); }
         setUser(currentUser);
         setProfile(completed);
       } catch (caught) {
@@ -135,8 +136,9 @@ export default function AuthGate({ children }: { children: (user: User, profile:
       setNotice(`Tu sesión se cerró por ${inactivityLabel(inactivityPolicy.value, inactivityPolicy.unit)} de inactividad. Inicia sesión nuevamente para continuar.`);
       window.localStorage.removeItem(activityStorageKey(user.uid));
       window.sessionStorage.removeItem(freshSessionKey(user.uid));
-      await recordAccess(user.uid, profile, "logout");
-      await signOut(auth);
+      try { await recordAccess(user.uid, profile, "logout"); }
+      catch (error) { console.warn("No se pudo registrar el cierre automático de sesión.", error); }
+      finally { await signOut(auth); }
     };
 
     const schedule = () => {

@@ -14,3 +14,7 @@ export const timestampMilliseconds = (value: unknown) => {
 export function sortRecordsNewest<T>(records: T[], timestamp: (record: T) => unknown) {
   return [...records].sort((left, right) => timestampMilliseconds(timestamp(right)) - timestampMilliseconds(timestamp(left)));
 }
+
+export function uniqueRecordsById<T extends { id: string }>(...groups: T[][]) {
+  return Array.from(groups.flat().reduce((records, item) => records.set(item.id, item), new Map<string, T>()).values());
+}

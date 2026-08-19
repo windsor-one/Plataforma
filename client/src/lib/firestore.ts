@@ -6,7 +6,7 @@ import type { User } from "firebase/auth";
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
 import { sortInternalMessagesNewest } from "./internalMail";
-import { sortRecordsNewest } from "./recordSorting";
+import { sortRecordsNewest, uniqueRecordsById } from "./recordSorting";
 import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UpdateRequest, UserProfile, UserRole, WorkSchedule } from "./types";
 
 type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
@@ -170,6 +170,20 @@ export function subscribeOwnHrProfile(userId: string, onData: (profile: HrProfil
 export function subscribeEmployeeHrRecords<T extends { id: string }>(name: HrEmployeeCollection, employeeId: string, isAdmin: boolean, onData: (data: T[]) => void, onError: (error: Error) => void) {
   const source = collection(db, name);
   const sortField = name === "attendanceRecords" ? "occurredAt" : name === "policyAcknowledgments" ? "acknowledgedAt" : "updatedAt";
+  if (!isAdmin && name === "recognitions") {
+    let own: T[] = [];
+    let company: T[] = [];
+    const emit = () => onData(sortRecordsNewest(uniqueRecordsById(own, company), item => (item as Record<string, unknown>)[sortField]));
+    const stopOwn = onSnapshot(query(source, where("employeeId", "==", employeeId)), (snapshot) => {
+      own = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T);
+      emit();
+    }, onError);
+    const stopCompany = onSnapshot(query(source, where("visibility", "==", "company")), (snapshot) => {
+      company = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T);
+      emit();
+    }, onError);
+    return () => { stopOwn(); stopCompany(); };
+  }
   const request = isAdmin ? query(source, orderBy(sortField, "desc")) : query(source, where("employeeId", "==", employeeId));
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as T), item => (item as Record<string, unknown>)[sortField])), onError);
 }

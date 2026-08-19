@@ -20,6 +20,7 @@ export interface PaymentAdjustmentRequest {
   decisionReason?: string;
   decidedBy?: string;
   decidedByName?: string;
+  decidedAt?: unknown;
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -434,6 +435,8 @@ export interface Payment extends OperationalAuditFields {
   status: PaymentStatus;
   paidAt: string;
   notes?: string;
+  /** Solicitud administrativa cuyo dictamen autorizó el último ajuste de un pago confirmado. */
+  lastAdjustmentRequestId?: string;
 }
 
 export interface Task extends OperationalAuditFields {

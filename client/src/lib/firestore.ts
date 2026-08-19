@@ -7,7 +7,7 @@ import { Timestamp, collection, deleteDoc, deleteField, doc, getDoc, getDocs, on
 import { db } from "./firebase";
 import { sortInternalMessagesNewest } from "./internalMail";
 import { sortRecordsNewest, uniqueRecordsById } from "./recordSorting";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PaymentAdjustmentRequest, PerformanceReview, PolicyAcknowledgment, Product, ProductCategorySetting, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PaymentAdjustmentRequest, PerformanceReview, PolicyAcknowledgment, Product, ProductCategory, ProductCategorySetting, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule } from "./types";
 
 type ManagedCollection = "customers" | "reservations" | "payments" | "paymentAdjustmentRequests" | "products" | "productCategorySettings" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "temporaryPermissions" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
 type OperationalCollection = "customers" | "reservations" | "payments";
@@ -112,6 +112,13 @@ export function subscribeUpdateRequests(userId: string, isAdmin: boolean, onData
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as UpdateRequest), item => item.updatedAt)), onError);
 }
 
+/** Las solicitudes de pago se muestran completas a Administración/IT y solo propias al solicitante. */
+export function subscribePaymentAdjustmentRequests(userId: string, isAdmin: boolean, onData: (data: PaymentAdjustmentRequest[]) => void, onError: (error: Error) => void) {
+  const source = collection(db, "paymentAdjustmentRequests");
+  const request = isAdmin ? query(source, orderBy("updatedAt", "desc")) : query(source, where("requestedBy", "==", userId));
+  return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as PaymentAdjustmentRequest), item => item.updatedAt)), onError);
+}
+
 type UpdateRequestDraft = Omit<UpdateRequest, "id" | "createdAt" | "updatedAt" | "assignedBy" | "assignedByName" | "expiresAt" | "permissionId">;
 
 const temporaryPermissionId = (userId: string, module: UpdateRequestModule, scope: UpdateRequest["scope"], recordId?: string) => `${userId}__${module}__${scope === "record" ? recordId || "missing" : scope}`.replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -213,14 +220,111 @@ export async function deleteUpdateRequest(id: string, actorId: string) {
 
 export async function requestPaymentAdjustment(payment: Payment, reason: string, proposedChanges: PaymentAdjustmentRequest["proposedChanges"], actorId: string) {
   if (!reason.trim()) throw new Error("Indica el motivo del ajuste solicitado.");
+  if (!Object.keys(proposedChanges).length) throw new Error("Selecciona al menos un dato que deba corregirse.");
   const actor = await activityActor(actorId);
   const reference = doc(collection(db, "paymentAdjustmentRequests"));
   const payload: Omit<PaymentAdjustmentRequest, "createdAt" | "updatedAt"> = { id: reference.id, paymentId: payment.id, paymentCode: payment.code, requestedBy: actorId, requestedByName: actor.actorName, reason: reason.trim(), proposedChanges, status: "pending" };
+  const recipients = (await getDocs(collection(db, "users"))).docs
+    .map((item) => ({ id: item.id, ...item.data() } as UserProfile))
+    .filter((profile) => profile.status === "active" && (profile.role === "admin" || profile.role === "it"))
+    .map((profile) => profile.id);
   const batch = writeBatch(db);
   batch.set(reference, { ...payload, createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  if (recipients.length) {
+    const mailReference = doc(collection(db, "internalMessages"));
+    batch.set(mailReference, {
+      id: mailReference.id,
+      senderId: actor.actorId,
+      senderName: actor.actorName,
+      senderEmail: actor.actorEmail,
+      recipientIds: recipients,
+      participantIds: Array.from(new Set([actor.actorId, ...recipients])),
+      subject: `Solicitud de ajuste: ${payment.code || payment.id}`,
+      body: `${actor.actorName} solicita ajustar el pago ${payment.code || payment.id}.\n\nMotivo: ${reason.trim()}\n\nCampos propuestos: ${Object.keys(proposedChanges).join(", ")}.\n\nRevisa la solicitud desde Pagos antes de aprobarla o rechazarla.`,
+      status: "sent",
+      sentAt: serverTimestamp(),
+      readByIds: [actor.actorId],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
   batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "payment", payment.id, `Solicitó ajuste justificado del pago ${payment.code || payment.id}.`, actor));
   await batch.commit();
   return reference.id;
+}
+
+function paymentAdjustmentDecisionMessage(request: PaymentAdjustmentRequest, actor: Awaited<ReturnType<typeof activityActor>>, approved: boolean, reason: string) {
+  return {
+    senderId: actor.actorId,
+    senderName: actor.actorName,
+    senderEmail: actor.actorEmail,
+    recipientIds: [request.requestedBy],
+    participantIds: [actor.actorId, request.requestedBy],
+    subject: `${approved ? "Ajuste aprobado" : "Ajuste rechazado"}: ${request.paymentCode || request.paymentId}`,
+    body: approved
+      ? `Se aprobó y aplicó el ajuste solicitado para el pago ${request.paymentCode || request.paymentId}.${reason.trim() ? `\n\nObservación administrativa: ${reason.trim()}` : ""}`
+      : `Se rechazó el ajuste solicitado para el pago ${request.paymentCode || request.paymentId}.${reason.trim() ? `\n\nMotivo: ${reason.trim()}` : ""}`,
+    status: "sent" as const,
+    sentAt: serverTimestamp(),
+    readByIds: [actor.actorId],
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+
+/** Aprueba y aplica una corrección en una transacción: el pago y su dictamen nunca se separan. */
+export async function approvePaymentAdjustmentRequest(requestId: string, decisionReason: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const requestRef = doc(db, "paymentAdjustmentRequests", requestId);
+  await runTransaction(db, async (transaction) => {
+    const requestSnapshot = await transaction.get(requestRef);
+    if (!requestSnapshot.exists()) throw new Error("La solicitud de ajuste ya no existe.");
+    const request = { id: requestSnapshot.id, ...requestSnapshot.data() } as PaymentAdjustmentRequest;
+    if (request.status !== "pending") throw new Error("Esta solicitud ya fue resuelta.");
+    const paymentRef = doc(db, "payments", request.paymentId);
+    const paymentSnapshot = await transaction.get(paymentRef);
+    if (!paymentSnapshot.exists()) throw new Error("El pago asociado ya no existe.");
+    const mailReference = doc(collection(db, "internalMessages"));
+    transaction.update(paymentRef, {
+      ...withoutUndefined(request.proposedChanges as DocumentData),
+      lastAdjustmentRequestId: request.id,
+      updatedBy: actorId,
+      updatedByName: actor.actorName,
+      updatedAt: serverTimestamp(),
+    });
+    transaction.update(requestRef, {
+      status: "approved",
+      decisionReason: decisionReason.trim() || deleteField(),
+      decidedBy: actorId,
+      decidedByName: actor.actorName,
+      decidedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    transaction.set(mailReference, { id: mailReference.id, ...paymentAdjustmentDecisionMessage(request, actor, true, decisionReason) });
+    transaction.set(doc(collection(db, "activityLogs")), activityEntry("updated", "payment", request.paymentId, `Aprobó y aplicó el ajuste del pago ${request.paymentCode || request.paymentId}.`, actor));
+  });
+}
+
+export async function rejectPaymentAdjustmentRequest(requestId: string, decisionReason: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const requestRef = doc(db, "paymentAdjustmentRequests", requestId);
+  await runTransaction(db, async (transaction) => {
+    const requestSnapshot = await transaction.get(requestRef);
+    if (!requestSnapshot.exists()) throw new Error("La solicitud de ajuste ya no existe.");
+    const request = { id: requestSnapshot.id, ...requestSnapshot.data() } as PaymentAdjustmentRequest;
+    if (request.status !== "pending") throw new Error("Esta solicitud ya fue resuelta.");
+    const mailReference = doc(collection(db, "internalMessages"));
+    transaction.update(requestRef, {
+      status: "rejected",
+      decisionReason: decisionReason.trim() || deleteField(),
+      decidedBy: actorId,
+      decidedByName: actor.actorName,
+      decidedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    transaction.set(mailReference, { id: mailReference.id, ...paymentAdjustmentDecisionMessage(request, actor, false, decisionReason) });
+    transaction.set(doc(collection(db, "activityLogs")), activityEntry("updated", "payment", request.paymentId, `Rechazó el ajuste solicitado para el pago ${request.paymentCode || request.paymentId}.`, actor));
+  });
 }
 
 export async function saveAutomation(record: Omit<Automation, "id" | "createdAt" | "updatedAt" | "createdByName"> & { id?: string }, actorId: string) {
@@ -973,6 +1077,22 @@ export async function deleteProduct(id: string, actorId: string) {
   batch.set(doc(db, "products", id), { id, active: false, updatedAt: serverTimestamp() }, { merge: true });
   batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "product", id, "Eliminó un paquete del catálogo", actor));
   try { await batch.commit(); } catch (error) { if (!auditWriteBlocked(error)) throw error; await setDoc(doc(db, "products", id), { id, active: false, updatedAt: serverTimestamp() }, { merge: true }); }
+}
+
+export function subscribeProductCategorySettings(onData: (data: ProductCategorySetting[]) => void, onError: (error: Error) => void) {
+  return onSnapshot(collection(db, "productCategorySettings"), (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as ProductCategorySetting)), onError);
+}
+
+/** Persiste el nombre visible de una categoría sin reescribir paquetes ni su historial. */
+export async function saveProductCategorySetting(category: ProductCategory, label: string, actorId: string) {
+  const normalizedLabel = label.trim();
+  if (!normalizedLabel) throw new Error("Escribe un nombre visible para la categoría.");
+  const actor = await activityActor(actorId);
+  const reference = doc(db, "productCategorySettings", category);
+  const batch = writeBatch(db);
+  batch.set(reference, { id: category, label: normalizedLabel, updatedBy: actorId, updatedByName: actor.actorName, updatedAt: serverTimestamp() } satisfies Omit<ProductCategorySetting, "createdAt">, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "product", category, `Actualizó el nombre visible de la categoría «${normalizedLabel}».`, actor));
+  await batch.commit();
 }
 
 export async function clearReservationAssignment(reservationId: string, actorId: string) {

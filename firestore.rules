@@ -47,6 +47,28 @@ service cloud.firestore {
         || validTemporaryPermission(module, 'module', recordId, action);
     }
 
+    /** Un pago confirmado solo cambia como parte del dictamen administrativo que referencia. */
+    function approvedPaymentAdjustment(paymentId) {
+      let adjustmentId = request.resource.data.lastAdjustmentRequestId;
+      let adjustmentPath = /databases/$(database)/documents/paymentAdjustmentRequests/$(adjustmentId);
+      let adjustment = getAfter(adjustmentPath).data;
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return admin()
+        && adjustment.paymentId == paymentId
+        && adjustment.status == 'approved'
+        && adjustment.decidedBy == request.auth.uid
+        && changed.hasOnly(['amount', 'kind', 'currency', 'method', 'status', 'paidAt', 'notes', 'lastAdjustmentRequestId', 'updatedBy', 'updatedByName', 'updatedAt'])
+        && request.resource.data.lastAdjustmentRequestId == adjustmentId
+        && request.resource.data.updatedBy == request.auth.uid
+        && (!changed.hasAny(['amount']) || (adjustment.proposedChanges.keys().hasAny(['amount']) && request.resource.data.amount == adjustment.proposedChanges.amount))
+        && (!changed.hasAny(['kind']) || (adjustment.proposedChanges.keys().hasAny(['kind']) && request.resource.data.kind == adjustment.proposedChanges.kind))
+        && (!changed.hasAny(['currency']) || (adjustment.proposedChanges.keys().hasAny(['currency']) && request.resource.data.currency == adjustment.proposedChanges.currency))
+        && (!changed.hasAny(['method']) || (adjustment.proposedChanges.keys().hasAny(['method']) && request.resource.data.method == adjustment.proposedChanges.method))
+        && (!changed.hasAny(['status']) || (adjustment.proposedChanges.keys().hasAny(['status']) && request.resource.data.status == adjustment.proposedChanges.status))
+        && (!changed.hasAny(['paidAt']) || (adjustment.proposedChanges.keys().hasAny(['paidAt']) && request.resource.data.paidAt == adjustment.proposedChanges.paidAt))
+        && (!changed.hasAny(['notes']) || (adjustment.proposedChanges.keys().hasAny(['notes']) && request.resource.data.notes == adjustment.proposedChanges.notes));
+    }
+
     match /users/{userId} {
       // El directorio mínimo permite coordinar guardias, asignaciones y comunicaciones internas.
       // La gestión de roles, estados e identidad permanece reservada al Departamento de IT.
@@ -122,7 +144,10 @@ service cloud.firestore {
     match /payments/{paymentId} {
       allow read, create, delete: if activeEmployee();
       // Un pago confirmado permanece inmutable; sus correcciones se solicitan y aprueban por separado.
-      allow update: if activeEmployee() && resource.data.status != "paid";
+      allow update: if activeEmployee() && (
+        resource.data.status != "paid"
+        || approvedPaymentAdjustment(paymentId)
+      );
     }
 
     match /paymentAdjustmentRequests/{requestId} {
@@ -294,6 +319,18 @@ service cloud.firestore {
       allow create: if admin();
       allow update: if admin() || (activeEmployee() && temporaryModulePermission('products', productId, 'edit'));
       allow delete: if admin() || (activeEmployee() && temporaryModulePermission('products', productId, 'delete'));
+    }
+
+    match /productCategorySettings/{categoryId} {
+      // La etiqueta es pública dentro de SIGES; su configuración queda reservada a Administración/IT.
+      allow read: if activeEmployee();
+      allow create, update: if admin()
+        && categoryId in ['tariff', 'promotion']
+        && request.resource.data.id == categoryId
+        && request.resource.data.label is string
+        && request.resource.data.label.size() > 0
+        && request.resource.data.label.size() <= 80;
+      allow delete: if admin();
     }
 
     match /temporaryPermissions/{permissionId} {

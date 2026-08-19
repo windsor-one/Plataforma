@@ -193,12 +193,12 @@
 - [ ] Aplicar en interfaz y Firestore los permisos temporales de edición o eliminación otorgados al Personal exclusivamente sobre el alcance asignado.
 - [ ] Mostrar en Recursos Humanos → Mi espacio la información laboral no sensible del propio empleado, incluyendo supervisor, departamento, área, equipo, cargo, sede y horario, sin exponer expedientes ajenos.
 - [ ] Detectar, reasignar y auditar códigos duplicados o ausentes de empleados y demás entidades secuenciales, preservando relaciones y datos históricos.
-- [ ] Permitir que Administración/IT edite los nombres visibles de las categorías de Productos, incluyendo Aranceles y Promociones Heliot, sin alterar paquetes existentes.
+- [x] Permitir que Administración/IT edite los nombres visibles de las categorías de Productos, incluyendo Aranceles y Promociones Heliot, sin alterar paquetes existentes.
 - [ ] Enviar correo interno automático y actualizar el contador de no leídos ante creación, modificación, rechazo, cancelación, vencimiento o cambio de permiso de una solicitud.
 - [x] Mover el acceso al calendario desde la barra lateral al encabezado, entre Correo interno e Impacto digital, conservando la navegación al módulo.
 - [x] Mostrar un panel lateral derecho con precio, unidad, descripción e inclusiones del paquete seleccionado durante el registro de reservas y pagos.
 - [x] Implementar cuentas por cobrar por reserva y cliente con cuotas ilimitadas, saldo pendiente, historial de abonos y acción para registrar el siguiente pago.
-- [ ] Hacer inmutables los pagos confirmados y permitir ajustes solo mediante solicitud justificada, aprobación administrativa, notificación y auditoría completa.
+- [x] Hacer inmutables los pagos confirmados y permitir ajustes solo mediante solicitud justificada, aprobación administrativa, notificación y auditoría completa.
 - [ ] Ajustar la guardia de asistencia ante ausencias aprobadas: reasignar al siguiente disponible, acumular el turno omitido y mostrar la programación de las próximas cuatro semanas.
 - [ ] Corregir toda la interfaz para diferenciar claramente Departamento de IT y Administración, mostrando permisos conjuntos solo cuando ambos roles estén autorizados.
 - [x] Mover Notificaciones desde la barra lateral al encabezado, a la izquierda de Correo interno, conservando el acceso al módulo.
@@ -207,3 +207,8 @@
 - [ ] Usar “Departamento de IT” como nombre visible único para el rol técnico, manteniéndolo claramente separado de Administración.
 - [x] Mostrar el nombre, correo y datos organizativos del usuario en cada fila de Impacto digital y abrir su ficha al seleccionarla.
 - [x] Definir e implementar eliminación dependiente segura: identificar relaciones entre clientes, pagos, reservas y demás registros antes de borrar datos relacionados.
+- [x] Crear la bandeja administrativa de solicitudes de ajuste de pago, con aprobación o rechazo justificado y control por rol.
+- [x] Aplicar de forma auditable los cambios aprobados sobre pagos confirmados y notificar la decisión al solicitante mediante correo interno.
+- [x] Persistir y suscribir en tiempo real los nombres configurables de categorías de Productos.
+- [x] Incorporar controles de edición de categorías de Productos exclusivos para Administración y Departamento de IT.
+- [ ] Publicar reglas de Firestore para categorías de Productos y validar los flujos de ajustes de pagos y categorías configurables.

@@ -182,3 +182,4 @@
 - [ ] Republicar las reglas de Firestore actualizadas para habilitar en producción las marcaciones colectivas de la guardia semanal.
 - [ ] Corregir el fallo que impide asignar automáticamente o reasignar manualmente la guardia semanal de asistencia.
 - [x] Elaborar una guía completa y actualizada de las funciones disponibles de SIGES por módulo y nivel de permiso.
+- [x] Diseñar la conversión multiempresa de SIGES con IT central, administradores por empresa y aislamiento estricto de cada ecosistema.

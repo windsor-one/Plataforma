@@ -3,6 +3,7 @@ import { CheckCircle2, ClipboardList, Pencil, Plus, Trash2, UserRound, XCircle }
 import { toast } from "sonner";
 import { completeUpdateRequest, deleteUpdateRequest, saveUpdateRequest, updateUpdateRequest } from "@/lib/firestore";
 import type { UpdateRequest, UpdateRequestAction, UpdateRequestModule, UserProfile } from "@/lib/types";
+import { normalizeUpdateRequest } from "@/lib/updateRequests";
 
 const moduleLabels: Record<UpdateRequestModule, string> = {
   profile: "Información personal",
@@ -27,7 +28,7 @@ export default function UpdateRequestsPanel({ requests, employees, profile, isAd
   const [editing, setEditing] = useState<UpdateRequest | null>(null);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
-  const visible = useMemo(() => requests.filter((item) => item.status !== "expired" || isAdmin), [requests, isAdmin]);
+  const visible = useMemo(() => requests.map((item) => normalizeUpdateRequest(item, item.id)).filter((item) => item.status !== "expired" || isAdmin), [requests, isAdmin]);
   const formOpen = creating || Boolean(editing);
   const openCreate = () => { setEditing(null); setCreating(true); };
   const closeForm = () => { setEditing(null); setCreating(false); };

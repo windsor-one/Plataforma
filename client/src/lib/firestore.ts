@@ -7,6 +7,7 @@ import { Timestamp, collection, deleteDoc, deleteField, doc, getDoc, getDocs, on
 import { db } from "./firebase";
 import { sortInternalMessagesNewest } from "./internalMail";
 import { sortRecordsNewest, uniqueRecordsById } from "./recordSorting";
+import { normalizeUpdateRequest } from "./updateRequests";
 import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PaymentAdjustmentRequest, PerformanceReview, PolicyAcknowledgment, Product, ProductCategory, ProductCategorySetting, Recognition, Reservation, SecuritySettings, Task, TemporaryPermission, TrainingRecord, UpdateRequest, UpdateRequestModule, UserProfile, UserRole, WorkSchedule } from "./types";
 
 type ManagedCollection = "customers" | "reservations" | "payments" | "paymentAdjustmentRequests" | "products" | "productCategorySettings" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "temporaryPermissions" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
@@ -109,7 +110,7 @@ export async function recordGuardAttendance(guard: AttendanceGuard, employee: Pi
 export function subscribeUpdateRequests(userId: string, isAdmin: boolean, onData: (data: UpdateRequest[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "updateRequests");
   const request = isAdmin ? query(source, orderBy("updatedAt", "desc")) : query(source, where("targetUserId", "==", userId));
-  return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map(item => ({ id: item.id, ...item.data() }) as UpdateRequest), item => item.updatedAt)), onError);
+  return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => normalizeUpdateRequest({ id: item.id, ...item.data() }, item.id)), item => item.updatedAt)), onError);
 }
 
 /** Las solicitudes de pago se muestran completas a Administración y Departamento de IT, y solo propias al solicitante. */
@@ -175,7 +176,7 @@ export async function completeUpdateRequest(id: string, userId: string) {
   const reference = doc(db, "updateRequests", id);
   const snapshot = await getDoc(reference);
   if (!snapshot.exists()) throw new Error("La solicitud ya no existe.");
-  const request = { id: snapshot.id, ...snapshot.data() } as UpdateRequest;
+  const request = normalizeUpdateRequest({ id: snapshot.id, ...snapshot.data() }, snapshot.id);
   const batch = writeBatch(db);
   batch.update(reference, { status: "completed", completedAt: serverTimestamp(), completedBy: userId, updatedAt: serverTimestamp() });
   if (request.permissionId) batch.set(doc(db, "temporaryPermissions", request.permissionId), { status: "revoked", updatedAt: serverTimestamp() }, { merge: true });
@@ -189,7 +190,7 @@ export async function updateUpdateRequest(id: string, record: UpdateRequestDraft
   const reference = doc(db, "updateRequests", id);
   const snapshot = await getDoc(reference);
   if (!snapshot.exists()) throw new Error("La solicitud ya no existe.");
-  const existing = { id: snapshot.id, ...snapshot.data() } as UpdateRequest;
+  const existing = normalizeUpdateRequest({ id: snapshot.id, ...snapshot.data() }, snapshot.id);
   const active = record.status === "pending" && new Date(record.deadline).getTime() > Date.now();
   const permission = temporaryPermissionPayload(id, record, active ? "active" : "revoked");
   const mailReference = doc(collection(db, "internalMessages"));
@@ -208,7 +209,7 @@ export async function deleteUpdateRequest(id: string, actorId: string) {
   const reference = doc(db, "updateRequests", id);
   const snapshot = await getDoc(reference);
   if (!snapshot.exists()) return;
-  const request = { id: snapshot.id, ...snapshot.data() } as UpdateRequest;
+  const request = normalizeUpdateRequest({ id: snapshot.id, ...snapshot.data() }, snapshot.id);
   const mailReference = doc(collection(db, "internalMessages"));
   const batch = writeBatch(db);
   batch.delete(reference);

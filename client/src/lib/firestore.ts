@@ -3,7 +3,7 @@
  * El registro principal nunca se bloquea por una regla de historial aún no publicada.
  */
 import type { User } from "firebase/auth";
-import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
+import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
 import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceRecord, AttendanceSettings, AttendanceType, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UserProfile, UserRole, WorkSchedule } from "./types";
 
@@ -72,6 +72,14 @@ export async function saveInternalMessage(message: Omit<InternalMessage, "create
 
 export async function markInternalMessageRead(messageId: string, userId: string, readByIds: string[]) {
   await updateDoc(doc(db, "internalMessages", messageId), { readByIds: Array.from(new Set([...readByIds, userId])), updatedAt: serverTimestamp() });
+}
+
+export async function updateInternalMessageDelivery(messageId: string, status: InternalMessage["status"], scheduledFor?: string) {
+  await updateDoc(doc(db, "internalMessages", messageId), { status, scheduledFor: scheduledFor || deleteField(), updatedAt: serverTimestamp() });
+}
+
+export async function deleteInternalMessage(messageId: string) {
+  await deleteDoc(doc(db, "internalMessages", messageId));
 }
 
 const hrEntityForCollection: Record<HrAdminCollection, ActivityEntity> = {

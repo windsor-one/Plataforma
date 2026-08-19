@@ -168,4 +168,8 @@
 - [x] Incorporar correo interno inmediato con bandeja, múltiples destinatarios, enviados, borradores y contador de no leídos.
 - [x] Implementar adjuntos privados del correo mediante Firebase Storage con descarga autenticada y límite de 10 MB por archivo.
 - [ ] Implementar envíos programados persistentes del correo mediante una ejecución de servidor compatible con el esquema de despliegue elegido.
-- [ ] Permitir retirar adjuntos privados de borradores y mensajes autorizados con eliminación sincronizada de Firebase Storage.
+- [x] Permitir retirar adjuntos privados de borradores y mensajes autorizados con eliminación sincronizada de Firebase Storage.
+- [x] Crear una tarea programada de GitHub Actions sin costo para convertir correos internos vencidos de programados a enviados.
+- [x] Añadir controles de edición, pausa y eliminación para los envíos internos pendientes antes de su hora de salida.
+- [x] Documentar y solicitar el secreto administrativo de Firebase que requiere la tarea programada de GitHub Actions.
+- [x] Corregir la composición de la barra lateral colapsada para evitar marca recortada, iconos comprimidos y espacios irregulares.

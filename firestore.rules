@@ -235,8 +235,16 @@ service cloud.firestore {
         && request.resource.data.diff(resource).affectedKeys().hasOnly(['readByIds', 'updatedAt']))
         || (activeEmployee()
           && resource.data.senderId == request.auth.uid
-          && request.resource.data.diff(resource).affectedKeys().hasOnly(['attachments', 'updatedAt']));
-      allow delete: if admin() || (activeEmployee() && resource.data.senderId == request.auth.uid && resource.data.status == 'draft');
+          && request.resource.data.diff(resource).affectedKeys().hasOnly(['attachments', 'updatedAt']))
+        || (activeEmployee()
+          && resource.data.senderId == request.auth.uid
+          && resource.data.status == 'scheduled'
+          && request.resource.data.diff(resource).affectedKeys().hasOnly(['status', 'scheduledFor', 'updatedAt']))
+        || (activeEmployee()
+          && resource.data.senderId == request.auth.uid
+          && (resource.data.status == 'draft' || resource.data.status == 'scheduled')
+          && request.resource.data.diff(resource).affectedKeys().hasOnly(['recipientIds', 'participantIds', 'subject', 'body', 'status', 'scheduledFor', 'sentAt', 'attachments', 'updatedAt']));
+      allow delete: if admin() || (activeEmployee() && resource.data.senderId == request.auth.uid && (resource.data.status == 'draft' || resource.data.status == 'scheduled'));
     }
 
     match /accessLogs/{accessId} {

@@ -1,4 +1,4 @@
-import { getBlob, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getBlob, ref, uploadBytes } from "firebase/storage";
 import { storage } from "./firebase";
 import type { InternalAttachment } from "./types";
 
@@ -19,4 +19,8 @@ export async function downloadInternalMailAttachment(attachment: InternalAttachm
   link.download = attachment.name;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+export async function removeInternalMailAttachment(attachment: InternalAttachment) {
+  await deleteObject(ref(storage, attachment.storagePath));
 }

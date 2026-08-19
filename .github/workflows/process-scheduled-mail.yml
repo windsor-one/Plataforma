@@ -1,0 +1,34 @@
+name: Procesar correo interno programado
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-internal-mail
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    name: Entregar correos vencidos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Instalar dependencias
+        run: pnpm install --frozen-lockfile
+      - name: Procesar correos internos pendientes
+        run: pnpm process:scheduled-mail
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

@@ -41,7 +41,7 @@
 
 @layer components {
   .app-shell { @apply min-h-screen lg:grid lg:grid-cols-[18.5rem_minmax(0,1fr)]; background: var(--background); }
-  .app-shell.sidebar-collapsed { @apply lg:grid-cols-[5.25rem_minmax(0,1fr)]; }
+  .app-shell.sidebar-collapsed { @apply lg:grid-cols-[5.75rem_minmax(0,1fr)]; }
   .sidebar-panel { @apply flex h-full min-h-screen flex-col border-r px-4 py-6 text-foreground; background: var(--card); border-color: var(--border); }
   .sidebar-panel.is-collapsed { @apply px-2; }
   .sidebar-header { @apply flex items-start justify-between gap-2 px-2; }.sidebar-collapse-control { @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground transition-[background-color,transform] duration-150 hover:bg-[#E5E5EA] active:scale-[.97] dark:hover:bg-[#3A3A3C]; }.sidebar-navigation { @apply mt-4; }.sidebar-footer { @apply mt-auto border-t pt-3; }.sidebar-footer p { @apply px-3 pt-2 text-[9px] font-medium uppercase tracking-[.09em] text-muted-foreground; }
@@ -71,6 +71,7 @@
   .brand-mark { @apply relative h-10 w-10 shrink-0 overflow-hidden rounded-[.78rem] bg-[#007AFF]; }.brand-mark::before { content: ""; @apply absolute left-[8px] top-[8px] h-[5px] w-[21px] rounded-sm bg-white; }.brand-mark::after { content: ""; @apply absolute bottom-[8px] left-[8px] h-[5px] w-[21px] rounded-sm bg-white; }.brand-mark i:first-child { @apply absolute right-[8px] top-[8px] h-[14px] w-[5px] rounded-sm bg-white; }.brand-mark i:last-child { @apply absolute left-[8px] top-[18px] h-[5px] w-[14px] rounded-sm bg-white; }
   .siges-wordmark { @apply inline-flex shrink-0 items-center text-[22px] font-bold tracking-[-.055em] text-[#007AFF]; }
   .siges-sidebar-wordmark { font-size: 2.05rem; line-height: 1; letter-spacing: -0.07em; }
+  .siges-collapsed-mark { display: grid; height: 2.5rem; width: 2.5rem; place-items: center; border-radius: .85rem; background: color-mix(in srgb, #007AFF 13%, transparent); color: #007AFF; font-size: 1.1rem; font-weight: 800; letter-spacing: -.04em; }
   .legacy-siges + :is(div, b) { display: none; }
   .empty-mark { @apply grid h-24 w-24 place-items-center rounded-full bg-[#007AFF]/10; }.empty-mark .brand-mark { @apply h-12 w-12; }
   .bulk-action-bar { @apply flex flex-wrap items-center justify-between gap-3 border-b bg-[#007AFF]/8 px-5 py-3; }
@@ -102,6 +103,14 @@
   .app-shell > .hidden.lg\:block { position: sticky; top: 0; height: 100vh; align-self: start; }
   .sidebar-panel { height: 100dvh; min-height: 0; overflow: hidden; overscroll-behavior: contain; scrollbar-width: none; }
   .sidebar-panel::-webkit-scrollbar { display: none; }
+  .sidebar-panel.is-collapsed { padding: 1rem .625rem; align-items: stretch; }
+  .sidebar-panel.is-collapsed .sidebar-header { flex-direction: column; align-items: center; gap: .7rem; padding: 0; }
+  .sidebar-panel.is-collapsed .sidebar-header > button:first-child { width: 100%; min-height: 2.5rem; }
+  .sidebar-panel.is-collapsed .sidebar-collapse-control { height: 2.5rem; width: 2.5rem; border: 1px solid color-mix(in srgb, var(--border) 80%, transparent); background: transparent; }
+  .sidebar-panel.is-collapsed .sidebar-navigation { margin-top: 1.25rem; display: grid; justify-items: center; gap: .35rem; }
+  .sidebar-panel.is-collapsed .side-link, .sidebar-panel.is-collapsed .sidebar-group-trigger { min-height: 2.75rem; width: 2.75rem; padding: 0; justify-content: center; border-radius: .9rem; }
+  .sidebar-panel.is-collapsed .sidebar-group { margin: 0; }
+  .sidebar-panel.is-collapsed .sidebar-footer { display: none; }
   .sidebar-panel nav { margin-top: 1rem; }
   .sidebar-panel .side-link { padding-top: .5rem; padding-bottom: .5rem; }
   @media (max-height: 720px) { .sidebar-panel { padding-top: 1rem; padding-bottom: .75rem; }.sidebar-footer { display: none; }.sidebar-header p { max-width: 11rem; }.sidebar-navigation { margin-top: .7rem; } }

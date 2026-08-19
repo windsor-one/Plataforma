@@ -7,7 +7,7 @@ import { Search, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Customer, Expense, Incident, Payment, Reservation, Task } from "@/lib/types";
 
-export type GlobalSearchDestination = "overview" | "calendar" | "mail" | "reservations" | "customers" | "payments" | "products" | "tasks" | "hr" | "updates" | "automations" | "hr_reports" | "performance" | "impact" | "finance" | "employees" | "history" | "operations" | "access" | "pending" | "reminders" | "profile";
+export type GlobalSearchDestination = "overview" | "calendar" | "mail" | "reservations" | "customers" | "payments" | "products" | "tasks" | "hr" | "updates" | "automations" | "hr_reports" | "performance" | "impact" | "finance" | "reports" | "payroll" | "employees" | "history" | "operations" | "access" | "pending" | "reminders" | "profile";
 export type GlobalSearchIndexEntry = { id: string; destination: GlobalSearchDestination; category: string; title: string; detail: string; searchable?: unknown[] };
 type SearchResult = Omit<GlobalSearchIndexEntry, "searchable">;
 

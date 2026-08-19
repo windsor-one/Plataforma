@@ -161,9 +161,25 @@ export interface AttendanceRecord extends OperationalAuditFields {
   note?: string;
   source: "manual" | "self_service";
   correctionReason?: string;
+  /** Semana ISO de la guardia que capturó la marcación colectiva, cuando aplica. */
+  guardWeekKey?: string;
   adjustedAt?: unknown;
   adjustedBy?: string;
   adjustedByName?: string;
+}
+
+/** Persona responsable de capturar la asistencia colectiva de una semana laboral. */
+export interface AttendanceGuard {
+  id: string;
+  weekKey: string;
+  guardUserId: string;
+  guardUserName: string;
+  assignedBy: string;
+  assignedByName?: string;
+  assignedAt?: unknown;
+  overriddenBy?: string;
+  overriddenAt?: unknown;
+  updatedAt?: unknown;
 }
 
 export interface AttendanceWindow {

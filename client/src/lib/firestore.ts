@@ -5,9 +5,9 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceRecord, AttendanceSettings, AttendanceType, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UserProfile, UserRole, WorkSchedule } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UserProfile, UserRole, WorkSchedule } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
+type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses" | "employees";
 type HrAdminCollection = "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies";
@@ -61,6 +61,28 @@ export function subscribeInternalMessages(userId: string, isAdmin: boolean, onDa
   const source = collection(db, "internalMessages");
   const request = isAdmin ? query(source, orderBy("createdAt", "desc")) : query(source, where("participantIds", "array-contains", userId));
   return onSnapshot(request, (snapshot) => onData(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as InternalMessage).sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))), onError);
+}
+
+export async function assignAttendanceGuard(weekKey: string, guard: Pick<UserProfile, "id" | "displayName">, actorId: string, override = false) {
+  const actor = await activityActor(actorId);
+  const reference = doc(db, "attendanceGuards", weekKey);
+  const previous = await getDoc(reference);
+  const payload = { id: weekKey, weekKey, guardUserId: guard.id, guardUserName: guard.displayName, assignedBy: previous.exists() ? String(previous.data().assignedBy || actorId) : actorId, assignedByName: previous.exists() ? String(previous.data().assignedByName || actor.actorName) : actor.actorName, assignedAt: previous.exists() ? previous.data().assignedAt : serverTimestamp(), ...(override ? { overriddenBy: actorId, overriddenAt: serverTimestamp() } : {}), updatedAt: serverTimestamp() } satisfies Omit<AttendanceGuard, "id"> & { id: string };
+  const batch = writeBatch(db);
+  batch.set(reference, payload, { merge: true });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry(previous.exists() ? "updated" : "created", "attendance", weekKey, `${override ? "Reasignó" : "Asignó"} la guardia semanal a ${guard.displayName}`, actor));
+  await batch.commit();
+}
+
+export async function recordGuardAttendance(guard: AttendanceGuard, employee: Pick<UserProfile, "id" | "displayName">, type: AttendanceRecord["type"], note = "") {
+  const actor = await activityActor(guard.guardUserId);
+  const now = new Date(); const dayKey = dayKeyFor(now); const reference = doc(collection(db, "attendanceRecords"));
+  const payload = { employeeId: employee.id, employeeName: employee.displayName, type, dayKey, guardWeekKey: guard.weekKey, note: note.trim() || undefined, source: "manual" as const, createdBy: guard.guardUserId, createdByName: actor.actorName, createdByEmail: actor.actorEmail, occurredAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.set(reference, withoutUndefined(payload));
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "attendance", reference.id, `Guardia registró ${type === "clock_in" ? "entrada" : type === "clock_out" ? "salida" : type === "break_start" ? "inicio de descanso" : "fin de descanso"} de ${employee.displayName}`, actor));
+  await batch.commit();
+  return reference.id;
 }
 
 export async function saveInternalMessage(message: Omit<InternalMessage, "createdAt" | "updatedAt">) {

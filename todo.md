@@ -150,17 +150,17 @@
 - [x] Sustituir el verde de la interfaz SIGES por una paleta azul consistente, preservando los estados semánticos.
 - [x] Mover Pendientes de configuración a una sección exclusiva de Administración/IT fuera del Resumen.
 - [x] Aplicar animaciones suaves y accesibles a navegación, paneles, listas, botones y menús de SIGES.
-- [ ] Permitir crear unidades organizacionales y horarios desde el expediente de RR. HH. sin cambiar de módulo.
-- [ ] Registrar los cambios de sección de SIGES en el historial del navegador para que Atrás y Adelante permanezcan dentro de la plataforma.
-- [ ] Aplicar fondo translúcido con desenfoque y contraste suficiente a las notificaciones emergentes.
-- [ ] Reemplazar el esquema binario por los roles Departamento de IT, Administrador y Personal con permisos diferenciados.
-- [ ] Añadir un calendario operativo al menú con reservas y actividades programadas.
+- [x] Permitir crear unidades organizacionales y horarios desde el expediente de RR. HH. sin cambiar de módulo.
+- [x] Registrar los cambios de sección de SIGES en el historial del navegador para que Atrás y Adelante permanezcan dentro de la plataforma.
+- [x] Aplicar fondo translúcido con desenfoque y contraste suficiente a las notificaciones emergentes.
+- [x] Reemplazar el esquema binario por los roles Departamento de IT, Administrador y Personal con permisos diferenciados.
+- [x] Añadir un calendario operativo al menú con reservas y actividades programadas.
 - [ ] Crear solicitudes de actualización asignables por persona, módulo y fecha límite, con cierre automático al vencer.
 - [ ] Añadir guardia semanal de asistencia para los jueves con rotación y ajustes de Administración/IT.
 - [ ] Permitir abrir y editar registros tocando sus filas y tarjetas, sin depender de iconos pequeños.
-- [ ] Mostrar las casillas de selección masiva solo al activar un modo de edición por lote.
+- [x] Mostrar las casillas de selección masiva solo al activar un modo de edición por lote.
 - [ ] Añadir filtros por tipo de movimiento en Historial y filtros específicos en los demás listados operativos.
-- [ ] Eliminar el desplazamiento visible de la barra lateral, conservar accesos a la vista y situar el control de colapsar junto a SIGES.
+- [x] Eliminar el desplazamiento visible de la barra lateral, conservar accesos a la vista y situar el control de colapsar junto a SIGES.
 - [x] Añadir correo interno empresarial con bandeja, destinatarios múltiples, borradores y envíos programados.
 - [x] Permitir adjuntar, descargar y retirar archivos privados en los mensajes internos autorizados.
 - [ ] Añadir automatizaciones auditables con creación, edición, pausa y eliminación por personas autorizadas.
@@ -173,3 +173,8 @@
 - [x] Añadir controles de edición, pausa y eliminación para los envíos internos pendientes antes de su hora de salida.
 - [x] Documentar y solicitar el secreto administrativo de Firebase que requiere la tarea programada de GitHub Actions.
 - [x] Corregir la composición de la barra lateral colapsada para evitar marca recortada, iconos comprimidos y espacios irregulares.
+- [ ] Auditar todos los requisitos históricos de SIGES, contrastarlos con la implementación y cerrar las brechas funcionales prioritarias.
+- [ ] Publicar las reglas completas de Firestore y Storage para restablecer Personal, Correo interno, RR. HH., Finanzas, Accesos e Historial.
+- [ ] Implementar y verificar la guardia semanal rotativa que autoriza el registro de asistencia de los jueves.
+- [ ] Mantener adjuntos privados deshabilitados mientras Firebase Storage requiera un plan de pago, preservando correo interno y sincronización sin costo.
+- [ ] Completar autónomamente las mejoras pendientes y guardar puntos de recuperación después de cada bloque estable.

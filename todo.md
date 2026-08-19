@@ -179,8 +179,9 @@
 - [x] Mantener adjuntos privados deshabilitados mientras Firebase Storage requiera un plan de pago, preservando correo interno y sincronización sin costo.
 - [ ] Completar autónomamente las mejoras pendientes y guardar puntos de recuperación después de cada bloque estable.
 - [x] Crear y verificar la primera guardia real de asistencia con rotación automática idempotente para la semana 2026-W34.
-- [ ] Republicar las reglas de Firestore actualizadas para habilitar en producción las marcaciones colectivas de la guardia semanal.
+- [x] Republicar las reglas de Firestore actualizadas para habilitar en producción las marcaciones colectivas de la guardia semanal.
 - [x] Corregir el fallo que impide asignar automáticamente o reasignar manualmente la guardia semanal de asistencia.
+- [x] Publicar mediante la API oficial las reglas actuales de Firestore con la cuenta de servicio configurada, sin habilitar Firebase Storage de pago.
 - [x] Elaborar una guía completa y actualizada de las funciones disponibles de SIGES por módulo y nivel de permiso.
 - [x] Diseñar la conversión multiempresa de SIGES con IT central, administradores por empresa y aislamiento estricto de cada ecosistema.
 - [x] Mantener la implementación actual enfocada exclusivamente en Heliot Media; la arquitectura multiempresa queda documentada para una futura decisión comercial.

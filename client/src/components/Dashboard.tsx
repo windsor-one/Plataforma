@@ -20,6 +20,7 @@ import type { AccessLog, ActivityLog, AttendanceGuard, AttendanceRecord, Attenda
 import { resolveProducts } from "@/lib/products";
 import { downloadPaymentInvoice } from "@/lib/invoice";
 import { sortRecordsNewest } from "@/lib/recordSorting";
+import { currencyTotalEntries, totalsByCurrency } from "@/lib/financeMath";
 import { useTheme } from "@/contexts/ThemeContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import FinancePanel from "@/components/FinancePanel";
@@ -40,7 +41,12 @@ type RecordData = Customer | Reservation | Payment | Product | Expense | UserPro
 type RelatedPanel = "customer" | "reservation" | null;
 
 const dateToday = () => new Date().toISOString().slice(0, 10);
-const currency = (amount: number, code = "USD") => new Intl.NumberFormat("es-ES", { style: "currency", currency: code, maximumFractionDigits: 2 }).format(amount || 0);
+const singleCurrency = (amount: number, code = "USD") => new Intl.NumberFormat("es-ES", { style: "currency", currency: code, maximumFractionDigits: 2 }).format(amount || 0);
+const currencyTotalsLabel = (totals: Record<string, number>) => {
+  const entries = currencyTotalEntries(totals);
+  return entries.length ? entries.map(([code, amount]) => singleCurrency(amount, code)).join(" · ") : singleCurrency(0);
+};
+const currency = (amount: number | Record<string, number>, code = "USD") => typeof amount === "number" ? singleCurrency(amount, code) : currencyTotalsLabel(amount);
 const readableDate = (value: string) => value ? new Intl.DateTimeFormat("es-ES", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`)) : "—";
 const readableTimestamp = (value: unknown) => {
   const date = value && typeof value === "object" && "toDate" in value && typeof (value as { toDate?: unknown }).toDate === "function"
@@ -545,11 +551,14 @@ export default function Dashboard({ user, profile }: { user: User; profile: User
       return rightDate - leftDate;
     });
   }, [reminders]);
-  const paidToday = useMemo(() => payments.filter((payment) => payment.paidAt === dateToday() && payment.status === "paid").reduce((total, payment) => total + payment.amount, 0), [payments]);
+  const paidToday = useMemo(() => totalsByCurrency(payments.filter((payment) => payment.paidAt === dateToday() && payment.status === "paid")), [payments]);
   const paymentBreakdown = useMemo(() => {
-    const values = ["card", "cash", "transfer", "other"].map((method) => ({ method, total: payments.filter((payment) => payment.method === method && payment.status === "paid").reduce((sum, payment) => sum + payment.amount, 0) }));
-    const maximum = Math.max(1, ...values.map((item) => item.total));
-    return values.map((item) => ({ ...item, percent: Math.round((item.total / maximum) * 100) }));
+    const values = ["card", "cash", "transfer", "other"].map((method) => {
+      const confirmed = payments.filter((payment) => payment.method === method && payment.status === "paid");
+      return { method, count: confirmed.length, total: totalsByCurrency(confirmed) };
+    });
+    const maximum = Math.max(1, ...values.map((item) => item.count));
+    return values.map((item) => ({ ...item, percent: Math.round((item.count / maximum) * 100) }));
   }, [payments]);
   const ownCarbonUsage = useMemo(() => carbonUsage.filter((entry) => entry.userId === user.uid).reduce((summary, entry) => ({ grams: summary.grams + Number(entry.estimatedGramsCO2e || 0), bytes: summary.bytes + Number(entry.transferredBytes || 0), sessions: summary.sessions + 1 }), { grams: 0, bytes: 0, sessions: 0 }), [carbonUsage, user.uid]);
   const unreadMailCount = useMemo(() => internalMessages.filter((message) => message.senderId !== user.uid && message.status === "sent" && !(message.readByIds || []).includes(user.uid)).length, [internalMessages, user.uid]);

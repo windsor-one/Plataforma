@@ -5,9 +5,9 @@
 import type { User } from "firebase/auth";
 import { collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
-import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UpdateRequest, UserProfile, UserRole, WorkSchedule } from "./types";
+import type { AccessLog, ActivityAction, ActivityEntity, ActivityLog, AttendanceGuard, AttendanceRecord, AttendanceSettings, AttendanceType, Automation, CarbonUsage, Customer, EmploymentContract, Expense, GeneralReminder, HrDocument, HrGoal, HrPolicy, HrProfile, Incident, InternalMessage, Invitation, LeaveRequest, LifecycleChecklist, OrganizationUnit, Payment, PerformanceReview, PolicyAcknowledgment, Product, Recognition, Reservation, SecuritySettings, Task, TrainingRecord, UpdateRequest, UserProfile, UserRole, WorkSchedule } from "./types";
 
-type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
+type ManagedCollection = "customers" | "reservations" | "payments" | "products" | "users" | "invitations" | "activityLogs" | "generalReminders" | "accessLogs" | "tasks" | "incidents" | "expenses" | "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "attendanceRecords" | "attendanceGuards" | "updateRequests" | "automations" | "leaveRequests" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies" | "policyAcknowledgments" | "internalMessages";
 type OperationalCollection = "customers" | "reservations" | "payments";
 type SequencedCollection = OperationalCollection | "tasks" | "incidents" | "expenses" | "employees";
 type HrAdminCollection = "hrProfiles" | "organizationUnits" | "employmentContracts" | "hrDocuments" | "workSchedules" | "lifecycleChecklists" | "hrGoals" | "performanceReviews" | "trainingRecords" | "recognitions" | "hrPolicies";
@@ -104,6 +104,33 @@ export async function saveUpdateRequest(record: Omit<UpdateRequest, "id" | "crea
 
 export async function completeUpdateRequest(id: string, userId: string) {
   await updateDoc(doc(db, "updateRequests", id), { status: "completed", completedAt: serverTimestamp(), completedBy: userId, updatedAt: serverTimestamp() });
+}
+
+export async function saveAutomation(record: Omit<Automation, "id" | "createdAt" | "updatedAt" | "createdByName">, actorId: string) {
+  const actor = await activityActor(actorId);
+  const reference = doc(collection(db, "automations"));
+  const payload = { ...withoutUndefined(record as unknown as DocumentData), id: reference.id, createdBy: actorId, createdByName: actor.actorName, runCount: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
+  const batch = writeBatch(db);
+  batch.set(reference, payload);
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "task", reference.id, `Creó la automatización ${record.name}`, actor));
+  await batch.commit();
+  return reference.id;
+}
+
+export async function setAutomationStatus(id: string, status: Automation["status"], actorId: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.update(doc(db, "automations", id), { status, updatedAt: serverTimestamp(), updatedBy: actorId });
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "task", id, `${status === "active" ? "Reanudó" : "Pausó"} una automatización`, actor));
+  await batch.commit();
+}
+
+export async function removeAutomation(id: string, actorId: string) {
+  const actor = await activityActor(actorId);
+  const batch = writeBatch(db);
+  batch.delete(doc(db, "automations", id));
+  batch.set(doc(collection(db, "activityLogs")), activityEntry("deleted", "task", id, "Eliminó una automatización", actor));
+  await batch.commit();
 }
 
 export async function saveInternalMessage(message: Omit<InternalMessage, "createdAt" | "updatedAt">) {

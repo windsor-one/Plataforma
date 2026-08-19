@@ -183,6 +183,12 @@ service cloud.firestore {
         && request.resource.data.completedBy == request.auth.uid);
     }
 
+    match /automations/{automationId} {
+      // Las automatizaciones son visibles a personal autorizado y solo Administración/IT las administra.
+      allow read: if admin();
+      allow create, update, delete: if admin();
+    }
+
     match /attendanceCounters/{counterId} {
       allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
       allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid && request.resource.data.count == 1;

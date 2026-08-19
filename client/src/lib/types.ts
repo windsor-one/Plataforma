@@ -199,6 +199,22 @@ export interface UpdateRequest {
   updatedAt?: unknown;
 }
 
+/** Regla determinista administrada por personas autorizadas y ejecutada con trazabilidad. */
+export interface Automation {
+  id: string;
+  name: string;
+  trigger: "weekly_attendance" | "contract_expiry" | "document_expiry" | "update_deadline";
+  action: "assign_guard" | "create_task" | "send_notification" | "close_request";
+  description?: string;
+  status: "active" | "paused";
+  createdBy: string;
+  createdByName?: string;
+  lastRunAt?: unknown;
+  runCount?: number;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
 export interface AttendanceWindow {
   startTime: string;
   endTime: string;

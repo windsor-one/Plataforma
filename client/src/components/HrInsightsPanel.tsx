@@ -5,6 +5,7 @@
 import { useMemo, useState } from "react";
 import { BarChart3, CalendarCheck, Download, FileSpreadsheet, Gauge, GraduationCap, ListChecks, UsersRound } from "lucide-react";
 import type { AttendanceRecord, HrGoal, HrProfile, LeaveRequest, PerformanceReview, Task, TrainingRecord, UserProfile } from "@/lib/types";
+import { downloadFooterText } from "@/lib/pdfFooter";
 
 const asDate = (value: unknown) => value && typeof value === "object" && "toDate" in value && typeof (value as { toDate?: unknown }).toDate === "function" ? (value as { toDate: () => Date }).toDate() : value instanceof Date ? value : null;
 const dateKey = (value: unknown) => { const date = asDate(value); return date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}` : ""; };
@@ -16,7 +17,7 @@ const leaveName: Record<LeaveRequest["type"], string> = { vacation: "Vacaciones"
 
 function Metric({ label, value, note, icon: Icon, tone = "jade" }: { label: string; value: string | number; note: string; icon: typeof BarChart3; tone?: "jade" | "amber" | "ink" }) { return <article className="metric-card"><div><p className="font-mono text-[10px] font-extrabold uppercase tracking-[.12em] text-muted-foreground">{label}</p><p className="metric-number mt-4 text-3xl font-semibold">{value}</p><p className="mt-2 text-xs text-muted-foreground">{note}</p></div><div className={`metric-icon ${tone}`}><Icon size={19} /></div></article>; }
 function Empty({ title, detail }: { title: string; detail: string }) { return <div className="grid min-h-52 place-items-center p-6 text-center"><div><FileSpreadsheet className="mx-auto text-[#0F8F73]" size={27} /><p className="mt-3 font-extrabold">{title}</p><p className="mx-auto mt-1 max-w-md text-sm leading-6 text-muted-foreground">{detail}</p></div></div>; }
-function exportCsv(filename: string, headers: string[], rows: Array<Array<string | number>>) { const escape = (value: string | number) => `"${String(value ?? "").replaceAll('"', '""')}"`; const content = [headers, ...rows].map((row) => row.map(escape).join(",")).join("\n"); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob(["\ufeff", content], { type: "text/csv;charset=utf-8" })); link.download = filename; link.click(); URL.revokeObjectURL(link.href); }
+function exportCsv(filename: string, headers: string[], rows: Array<Array<string | number>>) { const escape = (value: string | number) => `"${String(value ?? "").replaceAll('"', '""')}"`; const content = [headers, ...rows, [downloadFooterText()]].map((row) => row.map(escape).join(",")).join("\n"); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob(["\ufeff", content], { type: "text/csv;charset=utf-8" })); link.download = filename; link.click(); URL.revokeObjectURL(link.href); }
 
 export function HrReportsPanel({ employees, profiles, attendance, leaves }: { employees: UserProfile[]; profiles: HrProfile[]; attendance: AttendanceRecord[]; leaves: LeaveRequest[] }) {
   const [from, setFrom] = useState(firstOfMonth); const [to, setTo] = useState(today); const [employeeId, setEmployeeId] = useState("all"); const [department, setDepartment] = useState("all");

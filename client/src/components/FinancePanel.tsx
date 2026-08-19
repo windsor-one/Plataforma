@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { archiveExpense, createExpense, updateExpense } from "@/lib/firestore";
 import { currencyTotalEntries, subtractCurrencyTotals, totalsByCurrency } from "@/lib/financeMath";
 import type { Expense, ExpenseCategory, Payment, Reservation } from "@/lib/types";
+import { downloadFooterText } from "@/lib/pdfFooter";
 
 const categories: Record<ExpenseCategory, string> = { materials: "Materiales", equipment: "Equipo", transport: "Transporte", marketing: "Marketing", services: "Servicios", payroll: "Personal", other: "Otros" };
 const statuses: Record<Expense["status"], string> = { pending: "Pendiente", approved: "Aprobado", paid: "Pagado", cancelled: "Cancelado" };
@@ -44,6 +45,7 @@ function exportFinancialCsv(payments: Payment[], expenses: Expense[], period: st
     ...payments.filter((payment) => payment.paidAt.startsWith(period)).map((payment) => ["Ingreso", payment.code || `PAG-${payment.id.slice(0, 8)}`, payment.paidAt, payment.customerName, payment.productName || payment.kind || "Pago", payment.status, payment.method, payment.currency, payment.amount, payment.createdByName || ""]),
     ...expenses.filter((expense) => expense.spentAt.startsWith(period) && !expense.archived).map((expense) => ["Gasto", recordCode(expense), expense.spentAt, expense.concept, categories[expense.category], expense.status, expense.method, expense.currency, -expense.amount, expense.createdByName || ""]),
   ];
+  rows.push([downloadFooterText()]);
   const csv = rows.map((row) => row.map((item) => `"${String(item ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }));

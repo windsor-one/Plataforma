@@ -26,7 +26,7 @@ jobs:
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
           chmod 600 "$RUNNER_TEMP/firebase-service-account.json"
 
-      - name: Publicar reglas e índices de Firestore
+      - name: Publicar reglas de Firestore mediante la API oficial
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/firebase-service-account.json
-        run: npx --yes firebase-tools@latest deploy --only firestore --project gestionpro-firebase --non-interactive
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/deploy-firestore-rules.mjs

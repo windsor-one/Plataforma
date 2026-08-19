@@ -196,8 +196,8 @@
 - [ ] Permitir que Administración/IT edite los nombres visibles de las categorías de Productos, incluyendo Aranceles y Promociones Heliot, sin alterar paquetes existentes.
 - [ ] Enviar correo interno automático y actualizar el contador de no leídos ante creación, modificación, rechazo, cancelación, vencimiento o cambio de permiso de una solicitud.
 - [ ] Mover el acceso al calendario desde la barra lateral al encabezado, entre Correo interno e Impacto digital, conservando la navegación al módulo.
-- [ ] Mostrar un panel lateral derecho con precio, unidad, descripción e inclusiones del paquete seleccionado durante el registro de reservas y pagos.
-- [ ] Implementar cuentas por cobrar por reserva y cliente con cuotas ilimitadas, saldo pendiente, historial de abonos y acción para registrar el siguiente pago.
+- [x] Mostrar un panel lateral derecho con precio, unidad, descripción e inclusiones del paquete seleccionado durante el registro de reservas y pagos.
+- [x] Implementar cuentas por cobrar por reserva y cliente con cuotas ilimitadas, saldo pendiente, historial de abonos y acción para registrar el siguiente pago.
 - [ ] Hacer inmutables los pagos confirmados y permitir ajustes solo mediante solicitud justificada, aprobación administrativa, notificación y auditoría completa.
 - [ ] Ajustar la guardia de asistencia ante ausencias aprobadas: reasignar al siguiente disponible, acumular el turno omitido y mostrar la programación de las próximas cuatro semanas.
 - [ ] Corregir toda la interfaz para diferenciar claramente Departamento de IT y Administración, mostrando permisos conjuntos solo cuando ambos roles estén autorizados.

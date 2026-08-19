@@ -389,6 +389,7 @@ export interface Reservation extends OperationalAuditFields {
   durationMinutes: number;
   status: ReservationStatus;
   totalDue?: number;
+  currency?: string;
   groupName?: string;
   groupSize?: number;
   participantNames?: string[];

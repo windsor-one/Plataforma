@@ -159,7 +159,7 @@
 - [ ] Añadir guardia semanal de asistencia para los jueves con rotación y ajustes de Administración/IT.
 - [ ] Permitir abrir y editar registros tocando sus filas y tarjetas, sin depender de iconos pequeños.
 - [x] Mostrar las casillas de selección masiva solo al activar un modo de edición por lote.
-- [ ] Añadir filtros por tipo de movimiento en Historial y filtros específicos en los demás listados operativos.
+- [x] Añadir filtros por tipo de movimiento en Historial y filtros específicos en los demás listados operativos.
 - [x] Eliminar el desplazamiento visible de la barra lateral, conservar accesos a la vista y situar el control de colapsar junto a SIGES.
 - [x] Añadir correo interno empresarial con bandeja, destinatarios múltiples, borradores y envíos programados.
 - [x] Permitir adjuntar, descargar y retirar archivos privados en los mensajes internos autorizados.

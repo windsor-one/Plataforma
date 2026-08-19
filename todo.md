@@ -146,3 +146,5 @@
 - [x] Limitar las categorías desplegables de la barra lateral a una abierta a la vez.
 - [x] Reubicar el control de colapsar, asegurar la composición completa de la barra lateral y cambiar el título del navegador a SIGES.
 - [x] Dejar únicamente iconos en el control de contraer y expandir la barra lateral.
+- [x] Añadir un panel exclusivo de Administración/IT que consolide datos operativos pendientes de completar.
+- [x] Sustituir el verde de la interfaz SIGES por una paleta azul consistente, preservando los estados semánticos.

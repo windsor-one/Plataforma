@@ -178,3 +178,5 @@
 - [ ] Implementar y verificar la guardia semanal rotativa que autoriza el registro de asistencia de los jueves.
 - [ ] Mantener adjuntos privados deshabilitados mientras Firebase Storage requiera un plan de pago, preservando correo interno y sincronización sin costo.
 - [ ] Completar autónomamente las mejoras pendientes y guardar puntos de recuperación después de cada bloque estable.
+- [x] Crear y verificar la primera guardia real de asistencia con rotación automática idempotente para la semana 2026-W34.
+- [ ] Republicar las reglas de Firestore actualizadas para habilitar en producción las marcaciones colectivas de la guardia semanal.

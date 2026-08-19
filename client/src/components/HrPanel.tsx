@@ -34,6 +34,7 @@ import {
   deleteHrAdminRecord,
   deleteHrAttendanceRecord,
   deleteHrLeaveRequest,
+  recordGuardAttendance,
   recordOwnAttendance,
   reviewLeaveRequest,
   saveEmployeeHrProfile,
@@ -469,6 +470,23 @@ function LeaveForm({
       </button>
     </form>
   );
+}
+
+function GuardAttendanceForm({ guard, employees, onDone }: { guard: AttendanceGuard; employees: UserProfile[]; onDone: () => void }) {
+  const [saving, setSaving] = useState(false);
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const employee = employees.find(item => item.id === form.get("employeeId"));
+    if (!employee) return;
+    setSaving(true);
+    try {
+      await recordGuardAttendance(guard, employee, String(form.get("type")) as AttendanceRecord["type"], String(form.get("note")).trim());
+      toast.success(`Marcación de ${employee.displayName} registrada.`);
+      onDone();
+    } catch { toast.error("No se pudo registrar la asistencia. Comprueba tu asignación de guardia."); } finally { setSaving(false); }
+  };
+  return <form className="form-stack" onSubmit={submit}><p className="rounded-xl border border-[#007AFF]/25 bg-[#007AFF]/5 px-4 py-3 text-sm leading-6 text-muted-foreground"><strong className="text-foreground">Guardia {guard.weekKey}:</strong> esta acción queda auditada con tu nombre y solo está disponible para la persona asignada.</p><label>Personal<select className="field" name="employeeId" required><option value="">Selecciona persona</option>{employees.filter(item => item.status === "active").map(item => <option key={item.id} value={item.id}>{item.displayName}</option>)}</select></label><label>Evento<select className="field" name="type"><option value="clock_in">Entrada</option><option value="clock_out">Salida</option><option value="break_start">Inicio de descanso</option><option value="break_end">Fin de descanso</option></select></label><label>Nota <span className="font-normal text-muted-foreground">(opcional)</span><textarea className="field min-h-20" name="note" /></label><button className="primary-button" disabled={saving}>{saving ? "Registrando…" : "Registrar asistencia"}<ChevronRight size={16} /></button></form>;
 }
 
 function AdminEditor({
@@ -1969,6 +1987,7 @@ export default function HrPanel({
   const [editor, setEditor] = useState<Editor>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
+  const [guardOpen, setGuardOpen] = useState(false);
   const own = useMemo(
     () => ({
       attendance: attendance.filter(
@@ -1994,6 +2013,8 @@ export default function HrPanel({
     ]
   );
   const activeEmployees = employees.filter(item => item.status === "active");
+  const activeGuard = guards.find(item => item.weekKey === isoWeekKey());
+  const isCurrentGuard = activeGuard?.guardUserId === user.id;
   const ownPolicyIds = new Set(
     acknowledgments
       .filter(item => item.employeeId === user.id)
@@ -2133,6 +2154,7 @@ export default function HrPanel({
           }}
         />
       )}
+      {tab === "mine" && isCurrentGuard && <section className="panel-card mt-7 border-[#007AFF]/25 bg-[#007AFF]/5 p-5"><div className="flex flex-wrap items-center justify-between gap-4"><div><p className="eyebrow">Guardia semanal</p><h2 className="mt-1 text-lg font-extrabold">Te corresponde registrar la asistencia del equipo</h2><p className="mt-1 text-sm text-muted-foreground">La asignación de {activeGuard?.weekKey} queda registrada y tus marcaciones son auditables.</p></div><button className="primary-button" onClick={() => setGuardOpen(true)}>Registrar equipo<ClipboardCheck size={16} /></button></div></section>}
       {tab === "people" && isAdmin && (
         <People
           employees={employees}
@@ -2218,6 +2240,11 @@ export default function HrPanel({
             profile={hrProfile}
             onDone={() => setLeaveOpen(false)}
           />
+        </Sheet>
+      )}
+      {guardOpen && activeGuard && (
+        <Sheet title="Registrar asistencia del equipo" onClose={() => setGuardOpen(false)}>
+          <GuardAttendanceForm guard={activeGuard} employees={employees} onDone={() => setGuardOpen(false)} />
         </Sheet>
       )}
       {editor && (

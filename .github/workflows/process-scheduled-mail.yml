@@ -32,3 +32,7 @@ jobs:
         run: pnpm process:scheduled-mail
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Asignar guardia semanal de asistencia
+        run: pnpm process:attendance-guard
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}

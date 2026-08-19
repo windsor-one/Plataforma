@@ -3,7 +3,7 @@
  * El registro principal nunca se bloquea por una regla de historial aún no publicada.
  */
 import type { User } from "firebase/auth";
-import { Timestamp, collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
+import { Timestamp, arrayRemove, arrayUnion, collection, deleteDoc, deleteField, doc, getDoc, getDocs, onSnapshot, orderBy, query, runTransaction, serverTimestamp, setDoc, updateDoc, where, writeBatch, type DocumentData } from "firebase/firestore";
 import { db } from "./firebase";
 import { sortInternalMessagesNewest } from "./internalMail";
 import { sortRecordsNewest, uniqueRecordsById } from "./recordSorting";
@@ -356,10 +356,10 @@ export async function removeAutomation(id: string, actorId: string) {
   await batch.commit();
 }
 
-export async function saveInternalMessage(message: Omit<InternalMessage, "createdAt" | "updatedAt">) {
+export async function saveInternalMessage(message: Omit<InternalMessage, "id" | "createdAt" | "updatedAt"> & { id?: string }) {
   const reference = message.id ? doc(db, "internalMessages", message.id) : doc(collection(db, "internalMessages"));
-  const existing = await getDoc(reference);
-  await setDoc(reference, { ...withoutUndefined(message as unknown as DocumentData), id: reference.id, createdAt: existing.exists() ? existing.data().createdAt : serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+  const existing = message.id ? await getDoc(reference) : null;
+  await setDoc(reference, { ...withoutUndefined(message as unknown as DocumentData), id: reference.id, createdAt: existing?.exists() ? existing.data().createdAt : serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
   return reference.id;
 }
 
@@ -371,8 +371,17 @@ export async function updateInternalMessageDelivery(messageId: string, status: I
   await updateDoc(doc(db, "internalMessages", messageId), { status, scheduledFor: scheduledFor || deleteField(), updatedAt: serverTimestamp() });
 }
 
-export async function deleteInternalMessage(messageId: string) {
-  await deleteDoc(doc(db, "internalMessages", messageId));
+export async function moveInternalMessageToTrash(messageId: string, userId: string) {
+  await updateDoc(doc(db, "internalMessages", messageId), { trashedByIds: arrayUnion(userId), deletedByIds: arrayRemove(userId), updatedAt: serverTimestamp() });
+}
+
+export async function restoreInternalMessage(messageId: string, userId: string) {
+  await updateDoc(doc(db, "internalMessages", messageId), { trashedByIds: arrayRemove(userId), updatedAt: serverTimestamp() });
+}
+
+/** Elimina el mensaje de forma definitiva solo del buzón de quien lo solicita. */
+export async function permanentlyDeleteInternalMessage(messageId: string, userId: string) {
+  await updateDoc(doc(db, "internalMessages", messageId), { deletedByIds: arrayUnion(userId), trashedByIds: arrayRemove(userId), updatedAt: serverTimestamp() });
 }
 
 const hrEntityForCollection: Record<HrAdminCollection, ActivityEntity> = {
@@ -529,10 +538,14 @@ export async function updateAttendanceSettings(settings: AttendanceSettings, act
   await batch.commit();
 }
 
-export async function recordOwnAttendance(employeeId: string, employeeName: string, type: AttendanceRecord["type"], note = "") {
+export async function recordOwnAttendance(employeeId: string, employeeName: string, type: AttendanceRecord["type"], note = "", schedule?: WorkSchedule) {
   const actor = await activityActor(employeeId);
   const reference = doc(collection(db, "attendanceRecords"));
   const now = new Date(); const dayKey = dayKeyFor(now); const currentTime = timeFor(now);
+  if (schedule?.active && schedule.days.length) {
+    const scheduledDay = new Intl.DateTimeFormat("es-ES", { weekday: "long" }).format(now).replace(/^./, char => char.toUpperCase());
+    if (!schedule.days.some(day => day.toLocaleLowerCase() === scheduledDay.toLocaleLowerCase())) throw new Error(`Tu jornada no está programada para ${scheduledDay}.`);
+  }
   const settingsRef = doc(db, "attendanceSettings", "global");
   const existingEntries = query(collection(db, "attendanceRecords"), where("employeeId", "==", employeeId), where("dayKey", "==", dayKey), where("type", "==", type));
   const existingSnapshot = await getDocs(existingEntries);

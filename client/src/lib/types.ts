@@ -43,14 +43,6 @@ export type ReviewStatus = "draft" | "shared" | "acknowledged";
 export type ActivityAction = "created" | "updated" | "deleted" | "invited" | "profile_updated";
 export type ActivityEntity = "customer" | "reservation" | "payment" | "product" | "employee" | "profile" | "reminder" | "access" | "task" | "incident" | "expense" | "hr_profile" | "contract" | "document" | "attendance" | "leave" | "goal" | "review" | "training" | "recognition" | "policy";
 
-export interface InternalAttachment {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  storagePath: string;
-}
-
 export interface InternalMessage {
   id: string;
   senderId: string;
@@ -64,7 +56,10 @@ export interface InternalMessage {
   scheduledFor?: string;
   sentAt?: unknown;
   readByIds?: string[];
-  attachments?: InternalAttachment[];
+  /** El mensaje se oculta solo del buzón de quienes lo enviaron a la papelera. */
+  trashedByIds?: string[];
+  /** Eliminación definitiva del buzón propio; no borra la copia de los demás participantes. */
+  deletedByIds?: string[];
   createdAt?: unknown;
   updatedAt?: unknown;
 }
@@ -164,7 +159,17 @@ export interface WorkSchedule extends OperationalAuditFields {
   days: string[];
   startTime: string;
   endTime: string;
+  /** Modalidad principal de la jornada. */
+  workMode?: WorkMode;
+  /** Recesos configurables; se conserva breakMinutes para datos históricos. */
   breakMinutes?: number;
+  breakStartTime?: string;
+  breakEndTime?: string;
+  breakCount?: number;
+  /** Permite reutilizar el horario en un empleado, equipo o departamento. */
+  assignmentScope?: "employee" | "team" | "department";
+  assignedUnitId?: string;
+  assignedUnitName?: string;
   active: boolean;
 }
 
@@ -205,7 +210,7 @@ export interface AttendanceGuard {
   updatedAt?: unknown;
 }
 
-export type UpdateRequestModule = "profile" | "hr" | "products" | "tasks" | "reservations" | "customers" | "payments" | "employees" | "other";
+export type UpdateRequestModule = "profile" | "hr" | "products" | "tasks" | "reservations" | "customers" | "payments" | "employees" | "calendar" | "mail" | "updates" | "automations" | "hr_reports" | "performance" | "impact" | "finance" | "history" | "operations" | "access" | "pending" | "reminders" | "other";
 export type UpdateRequestAction = "edit" | "delete";
 export type UpdateRequestStatus = "pending" | "completed" | "expired" | "cancelled" | "rejected";
 
@@ -218,8 +223,13 @@ export interface UpdateRequest {
   scope: "self" | "record" | "module";
   targetRecordId?: string;
   targetRecordLabel?: string;
+  /** Área concreta dentro del módulo, por ejemplo Expedientes o Asistencia. */
+  submodule?: string;
+  /** Colección o recurso lógico al que aplica el permiso. */
+  targetCollection?: string;
   allowedActions: UpdateRequestAction[];
   permissionId?: string;
+  /** Campos concretos que la persona puede modificar o revisar. */
   fields: string[];
   instructions?: string;
   deadline: string;
@@ -242,6 +252,9 @@ export interface TemporaryPermission {
   module: UpdateRequestModule;
   scope: "self" | "record" | "module";
   recordId?: string;
+  submodule?: string;
+  targetCollection?: string;
+  fieldKeys?: string[];
   actions: UpdateRequestAction[];
   expiresAt: unknown;
   status: "active" | "revoked" | "expired";

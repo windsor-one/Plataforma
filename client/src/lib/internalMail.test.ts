@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterInternalMessages, isMailUnread, sortInternalMessagesNewest } from "./internalMail";
+import { filterInternalMessages, isInTrash, isMailUnread, sortInternalMessagesNewest } from "./internalMail";
 import type { InternalMessage } from "./types";
 
 const message = (overrides: Partial<InternalMessage>): InternalMessage => ({
@@ -12,6 +12,14 @@ describe("correo interno", () => {
     expect(filterInternalMessages(messages, "inbox", "recipient").map((item) => item.id)).toEqual(["inbox"]);
     expect(filterInternalMessages(messages, "sent", "recipient").map((item) => item.id)).toEqual(["sent"]);
     expect(filterInternalMessages(messages, "draft", "recipient").map((item) => item.id)).toEqual(["draft"]);
+  });
+
+  it("mueve mensajes por usuario a la papelera y los restaura", () => {
+    const trashed = message({ trashedByIds: ["recipient"] });
+    expect(isInTrash(trashed, "recipient")).toBe(true);
+    expect(filterInternalMessages([trashed], "inbox", "recipient")).toEqual([]);
+    expect(filterInternalMessages([trashed], "trash", "recipient").map((item) => item.id)).toEqual(["mail-1"]);
+    expect(filterInternalMessages([message()], "trash", "recipient")).toEqual([]);
   });
 
   it("solo marca como no leídos los mensajes recibidos y enviados", () => {

@@ -349,8 +349,8 @@ service cloud.firestore {
         && resource.data.participantIds.hasAny([request.auth.uid])
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readByIds', 'updatedAt']))
         || (activeEmployee()
-          && resource.data.senderId == request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attachments', 'updatedAt']))
+          && resource.data.participantIds.hasAny([request.auth.uid])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['trashedByIds', 'deletedByIds', 'updatedAt']))
         || (activeEmployee()
           && resource.data.senderId == request.auth.uid
           && resource.data.status == 'scheduled'
@@ -358,7 +358,7 @@ service cloud.firestore {
         || (activeEmployee()
           && resource.data.senderId == request.auth.uid
           && (resource.data.status == 'draft' || resource.data.status == 'scheduled')
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipientIds', 'participantIds', 'subject', 'body', 'status', 'scheduledFor', 'sentAt', 'attachments', 'updatedAt']));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipientIds', 'participantIds', 'subject', 'body', 'status', 'scheduledFor', 'sentAt', 'updatedAt']));
       allow delete: if admin() || (activeEmployee() && resource.data.senderId == request.auth.uid && (resource.data.status == 'draft' || resource.data.status == 'scheduled'));
     }
 

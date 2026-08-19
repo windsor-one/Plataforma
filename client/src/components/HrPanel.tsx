@@ -721,13 +721,14 @@ function AdminEditor({
           {
             id,
             name: String(form.get("name")).trim(),
-            days: String(form.get("days"))
-              .split(",")
-              .map(item => item.trim())
-              .filter(Boolean),
+            days: form.getAll("schedule-day").map(String).filter(Boolean),
             startTime: String(form.get("startTime")),
             endTime: String(form.get("endTime")),
+            workMode: String(form.get("workMode") || "onsite") as WorkSchedule["workMode"],
             breakMinutes: Number(form.get("breakMinutes")) || 0,
+            breakStartTime: String(form.get("breakStartTime") || "") || undefined,
+            breakEndTime: String(form.get("breakEndTime") || "") || undefined,
+            breakCount: Math.min(6, Math.max(0, Number(form.get("breakCount")) || 0)),
             active: form.get("active") === "on",
             createdBy: userId,
           } as WorkSchedule,
@@ -1182,74 +1183,58 @@ function AdminEditor({
           </label>
         </>
       )}
-      {editor.type === "schedule" && (
-        <>
+      {editor.type === "schedule" && (() => {
+        const selectedDays = Array.isArray(record.days) ? record.days : String(value("days") || "Lunes, Martes, Miércoles, Jueves, Viernes").split(",").map(item => item.trim());
+        const dayOptions = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+        return <>
           <label>
             Nombre del horario
-            <input
-              required
-              className="field"
-              name="name"
-              defaultValue={value("name")}
-            />
+            <input required className="field" name="name" defaultValue={value("name")} placeholder="Ej. Jornada presencial de oficina" />
           </label>
+          <fieldset className="rounded-xl border bg-muted/20 p-4">
+            <legend className="px-1 text-sm font-extrabold">Días de trabajo</legend>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {dayOptions.map(day => <label key={day} className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm font-semibold"><input type="checkbox" name="schedule-day" value={day} defaultChecked={selectedDays.includes(day)} />{day}</label>)}
+            </div>
+          </fieldset>
           <div className="grid gap-4 sm:grid-cols-2">
             <label>
-              Días{" "}
-              <span className="font-normal text-muted-foreground">
-                (separados por coma)
-              </span>
-              <input
-                className="field"
-                name="days"
-                defaultValue={
-                  Array.isArray(record.days)
-                    ? record.days.join(", ")
-                    : value("days") ||
-                      "Lunes, Martes, Miércoles, Jueves, Viernes"
-                }
-              />
+              Modalidad
+              <select className="field" name="workMode" defaultValue={value("workMode") || "onsite"}>
+                <option value="onsite">Presencial</option>
+                <option value="remote">Home office / remoto</option>
+                <option value="hybrid">Híbrido</option>
+              </select>
             </label>
             <label>
-              Descanso (min)
-              <input
-                className="field"
-                type="number"
-                name="breakMinutes"
-                defaultValue={value("breakMinutes") || "60"}
-              />
+              Recesos durante la jornada
+              <input className="field" type="number" min="0" max="6" name="breakCount" defaultValue={value("breakCount") || "1"} />
             </label>
             <label>
-              Inicio
-              <input
-                className="field"
-                type="time"
-                name="startTime"
-                required
-                defaultValue={value("startTime")}
-              />
+              Inicio de jornada
+              <input className="field" type="time" name="startTime" required defaultValue={value("startTime") || "07:00"} />
             </label>
             <label>
-              Fin
-              <input
-                className="field"
-                type="time"
-                name="endTime"
-                required
-                defaultValue={value("endTime")}
-              />
+              Fin de jornada
+              <input className="field" type="time" name="endTime" required defaultValue={value("endTime") || "16:00"} />
+            </label>
+            <label>
+              Inicio del receso principal
+              <input className="field" type="time" name="breakStartTime" defaultValue={value("breakStartTime")} />
+            </label>
+            <label>
+              Fin del receso principal
+              <input className="field" type="time" name="breakEndTime" defaultValue={value("breakEndTime")} />
+            </label>
+            <label>
+              Duración total de recesos (minutos)
+              <input className="field" type="number" min="0" max="480" name="breakMinutes" defaultValue={value("breakMinutes") || "0"} />
             </label>
           </div>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              name="active"
-              defaultChecked={record.active !== false}
-            />{" "}
-            Horario activo
-          </label>
-        </>
-      )}
+          <p className="rounded-xl border border-[#007AFF]/20 bg-[#007AFF]/5 px-4 py-3 text-sm leading-6 text-muted-foreground">La modalidad se reutiliza en los expedientes y la configuración de asistencia. En “Home office” la jornada sigue siendo controlable, pero no exige presencia física.</p>
+          <label className="flex items-center gap-2"><input type="checkbox" name="active" defaultChecked={record.active !== false} /> Horario activo</label>
+        </>;
+      })()}
       {editor.type === "contract" && <ContractFields value={value} />}
       {editor.type === "document" && (
         <DocumentFields value={value} record={record} />
@@ -2070,9 +2055,10 @@ export default function HrPanel({
       toast.error("No se pudo eliminar la ausencia.");
     }
   };
+  const assignedSchedule = schedules.find(item => item.id === hrProfile?.scheduleId);
   const mark = async (type: AttendanceRecord["type"]) => {
     try {
-      await recordOwnAttendance(user.id, user.displayName, type);
+      await recordOwnAttendance(user.id, user.displayName, type, "", assignedSchedule);
       toast.success("Marcación registrada.");
     } catch {
       toast.error(
@@ -2802,10 +2788,13 @@ function Organization({
                 <div>
                   <p className="font-semibold">{schedule.name}</p>
                   <span className="text-xs text-muted-foreground">
-                    {schedule.days.join(", ")} · {schedule.startTime}–
-                    {schedule.endTime} · descanso {schedule.breakMinutes || 0}{" "}
-                    min
+                    {schedule.days.join(", ")} · {schedule.startTime}–{schedule.endTime}
                   </span>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] font-bold">
+                    <span className="rounded-full bg-[#0F8F73]/10 px-2 py-1 text-[#08745D]">{schedule.workMode === "remote" ? "Home office" : schedule.workMode === "hybrid" ? "Híbrido" : "Presencial"}</span>
+                    <span className="rounded-full bg-muted px-2 py-1">{schedule.breakCount || 0} receso{schedule.breakCount === 1 ? "" : "s"} · {schedule.breakMinutes || 0} min</span>
+                    {schedule.breakStartTime && schedule.breakEndTime && <span className="rounded-full bg-muted px-2 py-1">{schedule.breakStartTime}–{schedule.breakEndTime}</span>}
+                  </div>
                 </div>
                 <ActionButtons
                   onEdit={() =>
@@ -2850,88 +2839,59 @@ function Employment({
     summary: string
   ) => void;
 }) {
+  const [section, setSection] = useState<"contracts" | "documents" | "lifecycle">("contracts");
+  const sections = [
+    { id: "contracts" as const, label: "Contratos", detail: "Vigencias y condiciones laborales", count: contracts.length },
+    { id: "documents" as const, label: "Documentos", detail: "Referencias y vencimientos", count: documents.length },
+    { id: "lifecycle" as const, label: "Ciclo laboral", detail: "Onboarding y offboarding", count: lifecycle.length },
+  ];
   return (
     <>
-      <section className="mt-7 grid gap-7 xl:grid-cols-2">
-        <RecordTable
-          title="Contratos"
-          detail="Vigencias y condiciones de acceso exclusivo administrativo."
-          button="Registrar contrato"
-          rows={contracts}
-          empty="Sin contratos registrados"
-          onCreate={() => onEditor({ type: "contract" })}
-          onEdit={item => onEditor({ type: "contract", record: item })}
-          onDelete={item =>
-            onDelete("employmentContracts", item, "Eliminó un contrato laboral")
-          }
-          render={item => (
-            <>
-              <td>
-                <p className="font-semibold">{item.employeeName}</p>
-                <span>{item.position || "Sin cargo"}</span>
-              </td>
-              <td>{item.contractType}</td>
-              <td>
-                {item.startDate} {item.endDate ? `— ${item.endDate}` : ""}
-              </td>
-              <td>{label[item.status] || item.status}</td>
-            </>
-          )}
-          headers={["Personal", "Tipo", "Vigencia", "Estado"]}
-        />
-        <RecordTable
-          title="Documentos del expediente"
-          detail="Referencias y vigencias; los archivos sensibles permanecen restringidos."
-          button="Registrar documento"
-          rows={documents}
-          empty="Sin documentos registrados"
-          onCreate={() => onEditor({ type: "document" })}
-          onEdit={item => onEditor({ type: "document", record: item })}
-          onDelete={item =>
-            onDelete("hrDocuments", item, `Eliminó el documento «${item.name}»`)
-          }
-          render={item => (
-            <>
-              <td>
-                <p className="font-semibold">{item.name}</p>
-                <span>{item.employeeName}</span>
-              </td>
-              <td>{item.type}</td>
-              <td>{item.expiresAt || "Sin vencimiento"}</td>
-              <td>{label[item.status] || item.status}</td>
-            </>
-          )}
-          headers={["Documento", "Tipo", "Vencimiento", "Estado"]}
-        />
+      <section className="panel-card mt-7 overflow-hidden">
+        <div className="border-b px-5 py-5">
+          <p className="font-extrabold">Vida laboral</p>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">Administra cada parte del ciclo laboral por separado. Selecciona una sección para trabajar sin mezclar contratos, documentos y tareas de incorporación o salida.</p>
+        </div>
+        <div className="grid gap-3 p-4 md:grid-cols-3">
+          {sections.map((item) => <button key={item.id} type="button" onClick={() => setSection(item.id)} className={`rounded-2xl border p-4 text-left transition-colors ${section === item.id ? "border-[#0F8F73] bg-[#0F8F73]/8" : "hover:bg-muted/50"}`}><div className="flex items-center justify-between gap-3"><span className="font-extrabold">{item.label}</span><span className="rounded-full bg-muted px-2.5 py-1 text-xs font-bold">{item.count}</span></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></button>)}
+        </div>
       </section>
-      <RecordTable
+      {section === "contracts" && <RecordTable
+        title="Contratos laborales"
+        detail="Cada contrato queda asociado a un integrante, cargo, vigencia y estado. Los datos sensibles permanecen restringidos a Administración/IT."
+        button="Registrar contrato"
+        rows={contracts}
+        empty="Sin contratos registrados"
+        onCreate={() => onEditor({ type: "contract" })}
+        onEdit={item => onEditor({ type: "contract", record: item })}
+        onDelete={item => onDelete("employmentContracts", item, "Eliminó un contrato laboral")}
+        render={item => <><td><p className="font-semibold">{item.employeeName}</p><span>{item.position || "Sin cargo"}</span></td><td>{item.contractType}</td><td>{item.startDate} {item.endDate ? `— ${item.endDate}` : ""}</td><td>{label[item.status] || item.status}</td></>}
+        headers={["Personal", "Tipo", "Vigencia", "Estado"]}
+      />}
+      {section === "documents" && <RecordTable
+        title="Documentos del expediente"
+        detail="Consulta referencias documentales y fechas de vencimiento sin mezclarlas con contratos u otros procesos."
+        button="Registrar documento"
+        rows={documents}
+        empty="Sin documentos registrados"
+        onCreate={() => onEditor({ type: "document" })}
+        onEdit={item => onEditor({ type: "document", record: item })}
+        onDelete={item => onDelete("hrDocuments", item, `Eliminó el documento «${item.name}»`)}
+        render={item => <><td><p className="font-semibold">{item.name}</p><span>{item.employeeName}</span></td><td>{item.type}</td><td>{item.expiresAt || "Sin vencimiento"}</td><td>{label[item.status] || item.status}</td></>}
+        headers={["Documento", "Tipo", "Vencimiento", "Estado"]}
+      />}
+      {section === "lifecycle" && <RecordTable
         title="Onboarding y offboarding"
-        detail="Pasos que permiten ordenar incorporaciones y salidas."
+        detail="Organiza los pasos de incorporación y salida como una lista de trabajo independiente, con responsable, fecha y estado."
         button="Nuevo paso"
         rows={lifecycle}
         empty="Sin pasos de ciclo laboral"
         onCreate={() => onEditor({ type: "lifecycle" })}
         onEdit={item => onEditor({ type: "lifecycle", record: item })}
-        onDelete={item =>
-          onDelete(
-            "lifecycleChecklists",
-            item,
-            "Eliminó un paso del ciclo laboral"
-          )
-        }
-        render={item => (
-          <>
-            <td>
-              <p className="font-semibold">{item.title}</p>
-              <span>{item.employeeName}</span>
-            </td>
-            <td>{item.stage}</td>
-            <td>{item.dueDate || "Sin fecha"}</td>
-            <td>{label[item.status] || item.status}</td>
-          </>
-        )}
+        onDelete={item => onDelete("lifecycleChecklists", item, "Eliminó un paso del ciclo laboral")}
+        render={item => <><td><p className="font-semibold">{item.title}</p><span>{item.employeeName}</span></td><td>{item.stage}</td><td>{item.dueDate || "Sin fecha"}</td><td>{label[item.status] || item.status}</td></>}
         headers={["Paso", "Etapa", "Vencimiento", "Estado"]}
-      />
+      />}
     </>
   );
 }

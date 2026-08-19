@@ -5,7 +5,6 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -32,14 +31,3 @@ const safeConfig = isFirebaseConfigured
 export const firebaseApp = getApps().length ? getApp() : initializeApp(safeConfig);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
-
-/**
- * Storage se mantiene bajo demanda porque el plan gratuito actual no lo tiene activado
- * y SIGES opera el correo sin adjuntos. Así, un módulo deshabilitado no bloquea Auth ni Firestore.
- */
-export function getInternalMailStorage(): FirebaseStorage {
-  if (!isFirebaseConfigured || !config.storageBucket) {
-    throw new Error("Los adjuntos privados no están disponibles mientras Firebase Storage permanezca deshabilitado.");
-  }
-  return getStorage(firebaseApp);
-}

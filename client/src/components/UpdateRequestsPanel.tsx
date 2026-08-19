@@ -14,6 +14,19 @@ const moduleLabels: Record<UpdateRequestModule, string> = {
   customers: "Clientes",
   payments: "Pagos",
   employees: "Personal",
+  calendar: "Calendario",
+  mail: "Correo interno",
+  updates: "Actualizaciones",
+  automations: "Automatizaciones",
+  hr_reports: "Reportes de RR. HH.",
+  performance: "Rendimiento",
+  impact: "Impacto digital",
+  finance: "Finanzas",
+  history: "Historial",
+  operations: "Operación",
+  access: "Seguridad y actividad",
+  pending: "Pendientes",
+  reminders: "Notificaciones",
   other: "Otro módulo",
 };
 
@@ -22,7 +35,7 @@ const actionLabels: Record<UpdateRequestAction, string> = { edit: "Editar", dele
 const dateText = (value: string) => value ? new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)) : "Sin fecha";
 const inputDateTime = (value?: string) => value ? new Date(value).toISOString().slice(0, 16) : "";
 
-type RequestNavigation = "profile" | "hr" | "products" | "tasks" | "reservations" | "customers" | "payments" | "employees";
+type RequestNavigation = Exclude<UpdateRequestModule, "other">;
 
 export default function UpdateRequestsPanel({ requests, employees, profile, isAdmin, onNavigate }: { requests: UpdateRequest[]; employees: UserProfile[]; profile: UserProfile; isAdmin: boolean; onNavigate: (section: RequestNavigation) => void }) {
   const [editing, setEditing] = useState<UpdateRequest | null>(null);

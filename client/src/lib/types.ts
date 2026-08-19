@@ -575,6 +575,14 @@ export interface GeneralReminder {
 
 export type ProductCategory = "tariff" | "promotion";
 
+export interface ProductCategorySetting {
+  id: ProductCategory;
+  label: string;
+  updatedBy?: string;
+  updatedByName?: string;
+  updatedAt?: unknown;
+}
+
 export interface Product {
   id: string;
   name: string;

@@ -5,11 +5,16 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 function serviceAccountFromEnvironment() {
   const value = process.env.FIREBASE_SERVICE_ACCOUNT;
   if (!value) throw new Error("Falta el secreto FIREBASE_SERVICE_ACCOUNT.");
-  try {
-    return JSON.parse(value);
-  } catch {
-    throw new Error("FIREBASE_SERVICE_ACCOUNT debe contener el JSON completo de una cuenta de servicio de Firebase.");
+  const candidates = [value.trim()];
+  try { candidates.push(Buffer.from(value.trim(), "base64").toString("utf8")); } catch { /* Se conserva el intento con JSON directo. */ }
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      const account = typeof parsed === "string" ? JSON.parse(parsed) : parsed;
+      if (account?.type === "service_account" && account?.project_id && account?.private_key) return account;
+    } catch { /* Se intenta el siguiente formato aceptado. */ }
   }
+  throw new Error("FIREBASE_SERVICE_ACCOUNT debe contener el JSON completo de una cuenta de servicio de Firebase.");
 }
 
 async function processScheduledInternalMail() {
@@ -17,20 +22,23 @@ async function processScheduledInternalMail() {
   const app = getApps()[0] || initializeApp({ credential: cert(serviceAccount), projectId: serviceAccount.project_id });
   const db = getFirestore(app);
   const now = new Date().toISOString();
-  const snapshot = await db.collection("internalMessages")
+  const scheduled = await db.collection("internalMessages")
     .where("status", "==", "scheduled")
-    .where("scheduledFor", "<=", now)
     .get();
+  const dueMessages = scheduled.docs.filter((message) => {
+    const scheduledFor = message.data().scheduledFor;
+    return typeof scheduledFor === "string" && scheduledFor <= now;
+  });
 
-  if (snapshot.empty) {
+  if (!dueMessages.length) {
     console.log(JSON.stringify({ ok: true, processed: 0, checkedAt: now }));
     return;
   }
 
   const batches = [];
-  for (let start = 0; start < snapshot.docs.length; start += 450) {
+  for (let start = 0; start < dueMessages.length; start += 450) {
     const batch = db.batch();
-    snapshot.docs.slice(start, start + 450).forEach((message) => {
+    dueMessages.slice(start, start + 450).forEach((message) => {
       batch.update(message.ref, {
         status: "sent",
         sentAt: FieldValue.serverTimestamp(),
@@ -42,7 +50,7 @@ async function processScheduledInternalMail() {
     batches.push(batch.commit());
   }
   await Promise.all(batches);
-  console.log(JSON.stringify({ ok: true, processed: snapshot.docs.length, checkedAt: now }));
+  console.log(JSON.stringify({ ok: true, processed: dueMessages.length, checkedAt: now }));
 }
 
 processScheduledInternalMail().catch((error) => {

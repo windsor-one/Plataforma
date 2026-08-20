@@ -290,7 +290,7 @@ service cloud.firestore {
     }
 
     match /leaveRequests/{requestId} {
-      allow create: if activeEmployee() && request.resource.data.employeeId == request.auth.uid;
+      allow create: if admin() || (activeEmployee() && request.resource.data.employeeId == request.auth.uid);
       allow get, list: if admin() || (activeEmployee() && resource.data.employeeId == request.auth.uid);
       allow update, delete: if admin();
     }

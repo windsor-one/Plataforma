@@ -1,5 +1,5 @@
 import * as React from "react";
-/** Heliot iPhone Native: menús flotantes translúcidos, legibles y sin sombras. */
+/** SIGES Native: menús flotantes translúcidos, legibles y sin sombras. */
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { CheckIcon, ChevronRightIcon, CircleIcon } from "lucide-react";
 

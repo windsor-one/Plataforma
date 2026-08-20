@@ -1,5 +1,5 @@
 /**
- * Sistema Heliot — Recursos Humanos: experiencia de escritorio con paneles laterales,
+ * Sistema SIGES — Recursos Humanos: experiencia de escritorio con paneles laterales,
  * datos organizacionales reutilizables y privacidad estricta por titular.
  */
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";

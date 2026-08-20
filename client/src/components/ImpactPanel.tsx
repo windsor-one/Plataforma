@@ -1,5 +1,5 @@
 /**
- * Sistema Heliot — Impacto digital: visualiza estimaciones de uso, no emisiones físicas certificadas.
+ * Sistema SIGES — Impacto digital: visualiza estimaciones de uso, no emisiones físicas certificadas.
  */
 import { useMemo, useState } from "react";
 import { Activity, BarChart3, Clock3, Leaf, ShieldCheck, UserRound, Zap } from "lucide-react";

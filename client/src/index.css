@@ -20,7 +20,7 @@
 :root {
   --background: #F2F2F7; --foreground: #1C1C1E; --card: #FFFFFF; --card-foreground: #1C1C1E;
   --muted: #F2F2F7; --muted-foreground: #6D6D72; --border: #D1D1D6; --destructive: #C53B53;
-  --radius: 1rem; --ease-heliot: cubic-bezier(.22, 1, .36, 1);
+  --radius: 1rem; --ease-siges: cubic-bezier(.22, 1, .36, 1);
 }
 .dark {
   --background: #000000; --foreground: #F5F5F7; --card: #1C1C1E; --card-foreground: #F5F5F7;
@@ -31,12 +31,11 @@
   * { @apply border-border; }
   html { -webkit-text-size-adjust: 100%; }
   body { @apply bg-background text-foreground antialiased; font-family: var(--font-sans); letter-spacing: -0.01em; }
-  button, input, select, textarea { font: inherit; transition: color .18s var(--ease-heliot), background-color .18s var(--ease-heliot), border-color .18s var(--ease-heliot), opacity .18s var(--ease-heliot), transform .18s var(--ease-heliot); }
+  button, input, select, textarea { font: inherit; transition: color .18s var(--ease-siges), background-color .18s var(--ease-siges), border-color .18s var(--ease-siges), opacity .18s var(--ease-siges), transform .18s var(--ease-siges); }
   button:not(:disabled) { cursor: pointer; }
   button:disabled { cursor: not-allowed; opacity: .55; }
   button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid color-mix(in srgb, #007AFF 40%, transparent); outline-offset: 2px; }
-  img[src^="/manus-storage/"] { display: none; }
-  ::selection { background: color-mix(in srgb, #007AFF 25%, transparent); }
+    ::selection { background: color-mix(in srgb, #007AFF 25%, transparent); }
 }
 
 @layer components {
@@ -84,15 +83,15 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .app-shell { transition: grid-template-columns .24s var(--ease-heliot); }
-  .sidebar-panel { transition: padding .22s var(--ease-heliot); }
-  .sidebar-submenu { animation: submenu-in .2s var(--ease-heliot) both; transform-origin: top; }
-  .metric-card, .panel-card, .table-wrap tbody tr, .admin-pending-panel { animation: rise .24s var(--ease-heliot) both; }
+  .app-shell { transition: grid-template-columns .24s var(--ease-siges); }
+  .sidebar-panel { transition: padding .22s var(--ease-siges); }
+  .sidebar-submenu { animation: submenu-in .2s var(--ease-siges) both; transform-origin: top; }
+  .metric-card, .panel-card, .table-wrap tbody tr, .admin-pending-panel { animation: rise .24s var(--ease-siges) both; }
   .metric-card:nth-child(2), .panel-card:nth-child(2), .admin-pending-item:nth-child(2) { animation-delay: .04s; }
   .metric-card:nth-child(3), .panel-card:nth-child(3), .admin-pending-item:nth-child(3) { animation-delay: .08s; }
   .metric-card:nth-child(4), .panel-card:nth-child(4), .admin-pending-item:nth-child(4) { animation-delay: .12s; }
-  .admin-pending-item { animation: item-in .22s var(--ease-heliot) both; }
-  .table-wrap tbody tr { transition: background-color .18s var(--ease-heliot), transform .18s var(--ease-heliot); }
+  .admin-pending-item { animation: item-in .22s var(--ease-siges) both; }
+  .table-wrap tbody tr { transition: background-color .18s var(--ease-siges), transform .18s var(--ease-siges); }
   .table-wrap tbody tr:hover { background: color-mix(in srgb, #007AFF 7%, transparent); }
   @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes submenu-in { from { opacity: 0; transform: translateY(-4px) scaleY(.98); } to { opacity: 1; transform: translateY(0) scaleY(1); } }

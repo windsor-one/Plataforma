@@ -1,5 +1,5 @@
 /**
- * Catálogo Heliot Media: base visible para todo el Personal. Administración y Departamento de IT
+ * Catálogo SIGES: base visible para todo el Personal. Administración y Departamento de IT
  * puede sobrescribir cada paquete mediante documentos equivalentes en Firestore.
  */
 import type { Product } from "./types";
@@ -11,7 +11,7 @@ export const defaultProducts: Product[] = [
   { id: "student-basic", name: "Paquete Básico", category: "promotion", price: 1, unit: "promo especial", tagline: "Especial Día del Alumno", active: true, details: [{ label: "Fotos", value: "1 fotografía digital editada" }, { label: "Entrega", value: "Entrega digital por WhatsApp o correo" }, { label: "Estilo", value: "Fondo temático Día del Alumno" }, { label: "Edición", value: "Edición de color profesional" }] },
   { id: "student-friends", name: "Paquete Amigos", category: "promotion", price: 1.75, unit: "promo especial", tagline: "Ideal para compartir", active: true, details: [{ label: "Fotos", value: "3 fotografías digitales editadas" }, { label: "Contenido", value: "Foto individual y grupal" }, { label: "Entrega", value: "Entrega digital inmediata" }, { label: "Estilo", value: "Marcos temáticos del Día del Alumno" }] },
   { id: "student-premium", name: "Paquete Premium", category: "promotion", price: 2.25, unit: "promo especial", tagline: "Para quienes desean conservar más recuerdos", active: true, details: [{ label: "Fotos", value: "5 fotografías digitales editadas" }, { label: "Variedad", value: "Diferentes poses y escenarios" }, { label: "Contenido", value: "Foto individual y grupal" }, { label: "Edición", value: "Retoque profesional" }, { label: "Extra", value: "Diseño con nombre personalizado" }] },
-  { id: "heliot-star", name: "Estrella Heliot", category: "promotion", price: 3, unit: "estrella", tagline: "El paquete más completo", active: true, details: [{ label: "Fotos", value: "10 fotografías digitales editadas" }, { label: "Sesión", value: "Sesión completa de 10 minutos" }, { label: "Contenido", value: "Fotos individuales y grupales ilimitadas durante la sesión" }, { label: "Edición", value: "Edición premium" }, { label: "Diseño", value: "Diseño conmemorativo del Día del Alumno" }, { label: "Redes", value: "Fotografía destacada para redes sociales" }, { label: "Promoción grupal", value: "5 alumnos o más reciben una fotografía grupal adicional GRATIS" }] },
+  { id: "heliot-star", name: "Estrella SIGES", category: "promotion", price: 3, unit: "estrella", tagline: "El paquete más completo", active: true, details: [{ label: "Fotos", value: "10 fotografías digitales editadas" }, { label: "Sesión", value: "Sesión completa de 10 minutos" }, { label: "Contenido", value: "Fotos individuales y grupales ilimitadas durante la sesión" }, { label: "Edición", value: "Edición premium" }, { label: "Diseño", value: "Diseño conmemorativo del Día del Alumno" }, { label: "Redes", value: "Fotografía destacada para redes sociales" }, { label: "Promoción grupal", value: "5 alumnos o más reciben una fotografía grupal adicional GRATIS" }] },
 ];
 
 type ProductDetail = Product["details"][number];
@@ -41,7 +41,7 @@ export function normalizeProduct(value: Partial<Product>, fallback?: Product): P
   const price = Number(value.price);
   return {
     id,
-    name: typeof value.name === "string" && value.name.trim() ? value.name.trim() : base?.name || "Paquete sin nombre",
+    name: typeof value.name === "string" && value.name.trim() ? value.name.trim().replace(/Heliot/gi, "SIGES") : base?.name || "Paquete sin nombre",
     category: isProductCategory(value.category) ? value.category : base?.category || "tariff",
     price: Number.isFinite(price) && price >= 0 ? price : base?.price || 0,
     unit: typeof value.unit === "string" && value.unit.trim() ? value.unit.trim() : base?.unit || "por servicio",

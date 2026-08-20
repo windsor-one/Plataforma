@@ -1,5 +1,5 @@
 /**
- * Sistema Heliot — Reportes y rendimiento: lectura administrativa con datos verificables.
+ * Sistema SIGES — Reportes y rendimiento: lectura administrativa con datos verificables.
  * Ningún indicador sustituye la evaluación humana ni debe utilizarse como decisión automática sobre Personal.
  */
 import { useMemo, useState } from "react";

@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import { attendanceThursdayForOffset, attendanceWeekKey, selectNextAttendanceGuard, upcomingAttendanceGuards } from "@/lib/attendanceGuardPlanning";
 import { businessDateKey } from "@/lib/businessDate";
+import { personalAttendance } from "@/lib/attendanceVisibility";
 import {
   acknowledgeHrPolicy,
   assignAttendanceGuard,
@@ -1984,9 +1985,7 @@ export default function HrPanel({
   const [guardOpen, setGuardOpen] = useState(false);
   const own = useMemo(
     () => ({
-      attendance: attendance.filter(
-        item => isAdmin || item.employeeId === user.id
-      ),
+      attendance: personalAttendance(attendance, user.id),
       leaves: leaves.filter(item => isAdmin || item.employeeId === user.id),
       goals: goals.filter(item => isAdmin || item.employeeId === user.id),
       reviews: reviews.filter(item => isAdmin || item.employeeId === user.id),
@@ -2368,9 +2367,9 @@ function MineSpace({
         <div className="panel-card overflow-hidden">
           <div className="flex items-center justify-between border-b px-5 py-4">
             <div>
-              <p className="font-extrabold">Asistencia</p>
+              <p className="font-extrabold">Mi asistencia personal</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Las marcaciones se validan con la ventana configurada.
+                Registra únicamente tu propia entrada, salida y recesos. Las marcaciones colectivas de guardia se mantienen separadas.
               </p>
             </div>
             <Clock3 className="text-[#0F8F73]" size={20} />

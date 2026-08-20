@@ -252,7 +252,7 @@ export interface AttendanceGuard {
   updatedAt?: unknown;
 }
 
-export type UpdateRequestModule = "profile" | "hr" | "products" | "tasks" | "reservations" | "customers" | "payments" | "employees" | "calendar" | "mail" | "updates" | "automations" | "hr_reports" | "performance" | "impact" | "finance" | "history" | "operations" | "access" | "pending" | "reminders" | "other";
+export type UpdateRequestModule = "profile" | "hr" | "products" | "tasks" | "reservations" | "customers" | "payments" | "employees" | "calendar" | "mail" | "updates" | "automations" | "hr_reports" | "performance" | "impact" | "finance" | "payroll" | "history" | "operations" | "access" | "pending" | "reminders" | "other";
 export type UpdateRequestAction = "edit" | "delete";
 export type UpdateRequestStatus = "pending" | "completed" | "expired" | "cancelled" | "rejected";
 

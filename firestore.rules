@@ -190,8 +190,11 @@ service cloud.firestore {
     }
 
     match /expenses/{expenseId} {
-      // Los gastos alteran la lectura financiera: únicamente Administración/IT puede consultarlos y gestionarlos.
-      allow read, create, update: if admin();
+      // Los gastos alteran la lectura financiera; un permiso temporal limita la edición a lo asignado.
+      allow get: if admin() || (activeEmployee() && temporaryModulePermission('finance', expenseId, 'edit'));
+      allow list: if admin() || (activeEmployee() && validTemporaryPermission('finance', 'module', '', 'edit'));
+      allow create: if admin();
+      allow update: if admin() || (activeEmployee() && temporaryModulePermission('finance', expenseId, 'edit'));
       allow delete: if false;
     }
 
@@ -319,8 +322,11 @@ service cloud.firestore {
     }
 
     match /payrollRuns/{payrollId} {
-      // La planilla contiene salarios, deducciones y pagos: acceso exclusivo administrativo.
-      allow read, create, update: if admin();
+      // La planilla contiene salarios y deducciones; la delegación temporal debe ser explícita.
+      allow get: if admin() || (activeEmployee() && temporaryModulePermission('payroll', payrollId, 'edit'));
+      allow list: if admin() || (activeEmployee() && validTemporaryPermission('payroll', 'module', '', 'edit'));
+      allow create: if admin();
+      allow update: if admin() || (activeEmployee() && temporaryModulePermission('payroll', payrollId, 'edit'));
       allow delete: if false;
     }
 

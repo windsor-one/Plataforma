@@ -8,7 +8,7 @@ import { businessDateTimeInput } from "@/lib/businessDate";
 import { requestModuleFieldOptions, requestSubmodules } from "@/lib/requestTargets";
 
 const moduleLabels: Record<UpdateRequestModule, string> = {
-  profile: "Información personal", hr: "Recursos Humanos", products: "Productos y paquetes", tasks: "Tareas", reservations: "Reservas", customers: "Clientes", payments: "Pagos", employees: "Personal", calendar: "Calendario", mail: "Correo interno", updates: "Actualizaciones", automations: "Automatizaciones", hr_reports: "Reportes de RR. HH.", performance: "Rendimiento", impact: "Impacto digital", finance: "Finanzas", history: "Historial", operations: "Operación", access: "Seguridad y actividad", pending: "Pendientes", reminders: "Notificaciones", other: "Otro módulo",
+  profile: "Información personal", hr: "Recursos Humanos", products: "Productos y paquetes", tasks: "Tareas", reservations: "Reservas", customers: "Clientes", payments: "Pagos", employees: "Personal", calendar: "Calendario", mail: "Correo interno", updates: "Actualizaciones", automations: "Automatizaciones", hr_reports: "Reportes de RR. HH.", performance: "Rendimiento", impact: "Impacto digital", finance: "Finanzas", payroll: "Planilla", history: "Historial", operations: "Operación", access: "Seguridad y actividad", pending: "Pendientes", reminders: "Notificaciones", other: "Otro módulo",
 };
 
 const scopeLabels: Record<UpdateRequest["scope"], string> = { self: "Información propia", record: "Registro específico", module: "Módulo asignado" };

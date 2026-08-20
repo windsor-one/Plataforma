@@ -53,6 +53,10 @@ export const requestSubmodules: Record<UpdateRequestModule, RequestSubmoduleDefi
     { id: "expenses", label: "Gastos y compromisos", description: "Gastos, proveedores, categorías, importes y estados.", collection: "expenses", fields: fields(["concept", "Concepto"], ["category", "Categoría"], ["amount", "Importe"], ["currency", "Moneda"], ["status", "Estado"], ["spentAt", "Fecha"]) },
     { id: "payments", label: "Cobros y cartera", description: "Pagos registrados, cuotas y saldos de reservas.", collection: "payments", fields: fields(["amount", "Importe"], ["currency", "Moneda"], ["status", "Estado"], ["paidAt", "Fecha de pago"]) },
   ]),
+  payroll: definitions([
+    { id: "monthly-salary", label: "Salario mensual base", description: "Salario fijo reutilizado en todos los períodos mensuales.", collection: "payrollRuns", fields: fields(["monthlySalary", "Salario mensual"], ["currency", "Moneda"], ["employeeId", "Empleado"]) },
+    { id: "adjustments", label: "Correcciones de planilla", description: "Horas extra, deducciones, neto y motivo de la corrección.", collection: "payrollRuns", fields: fields(["overtimeHours", "Horas extra"], ["hourlyRate", "Tarifa extra"], ["deductions", "Deducciones"], ["netPay", "Neto"], ["adjustmentReason", "Motivo"], ["periodKey", "Período"]) },
+  ]),
   history: definitions([{ id: "history", label: "Historial de actividad", description: "Eventos inmutables de trazabilidad del sistema.", collection: "activityLogs", fields: fields(["action", "Acción"], ["entity", "Entidad"], ["summary", "Resumen"]) }]),
   operations: definitions([
     { id: "reservations", label: "Operación de reservas", description: "Reservas y agenda de servicios.", collection: "reservations", fields: fields(["status", "Estado"], ["assignedToId", "Responsable"], ["date", "Fecha"], ["time", "Hora"]) },

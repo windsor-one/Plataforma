@@ -93,7 +93,7 @@ async function ensureAttendanceGuard() {
     }
     if (!nominal) throw new Error(`No hay Personal disponible para cubrir la guardia ${weekKey}; todas las personas activas tienen ausencia aprobada.`);
     const owed = rotation.filter((candidate) => (debts.get(candidate.id) || 0) > 0 && !isApprovedAbsence(candidate.id, targetDate, leaves));
-    const selected = owed.find((candidate) => candidate.id !== anchorId) || nominal;
+    const selected = owed.find((candidate) => candidate.id !== anchorId && candidate.id !== previousId) || (nominal.id !== previousId ? nominal : rotation.find((candidate) => candidate.id !== previousId && !isApprovedAbsence(candidate.id, targetDate, leaves))) || nominal;
     if ((debts.get(selected.id) || 0) > 0) {
       const nextDebt = Math.max(0, (debts.get(selected.id) || 0) - 1);
       debts.set(selected.id, nextDebt);

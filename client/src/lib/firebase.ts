@@ -4,7 +4,7 @@
  */
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -30,4 +30,12 @@ const safeConfig = isFirebaseConfigured
 
 export const firebaseApp = getApps().length ? getApp() : initializeApp(safeConfig);
 export const auth = getAuth(firebaseApp);
-export const db = getFirestore(firebaseApp);
+
+/** Firestore conserva lecturas y escrituras pendientes en IndexedDB para trabajar sin conexión. */
+export const db = (() => {
+  try {
+    return initializeFirestore(firebaseApp, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+  } catch {
+    return getFirestore(firebaseApp);
+  }
+})();

@@ -93,11 +93,11 @@ export function subscribeInternalMessages(userId: string, isAdmin: boolean, onDa
   return onSnapshot(request, (snapshot) => onData(sortInternalMessagesNewest(snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as InternalMessage))), onError);
 }
 
-export async function assignAttendanceGuard(weekKey: string, guard: Pick<UserProfile, "id" | "displayName">, actorId: string, override = false) {
+export async function assignAttendanceGuard(weekKey: string, guard: Pick<UserProfile, "id" | "displayName">, actorId: string, override = false, metadata: Partial<Pick<AttendanceGuard, "plannedFor" | "replacedGuardUserId" | "replacedGuardUserName" | "reassignedReason">> = {}) {
   const actor = await activityActor(actorId);
   const reference = doc(db, "attendanceGuards", weekKey);
   const previous = await getDoc(reference);
-  const payload = { id: weekKey, weekKey, guardUserId: guard.id, guardUserName: guard.displayName, assignedBy: previous.exists() ? String(previous.data().assignedBy || actorId) : actorId, assignedByName: previous.exists() ? String(previous.data().assignedByName || actor.actorName) : actor.actorName, assignedAt: previous.exists() ? previous.data().assignedAt : serverTimestamp(), ...(override ? { overriddenBy: actorId, overriddenAt: serverTimestamp() } : {}), updatedAt: serverTimestamp() } satisfies Omit<AttendanceGuard, "id"> & { id: string };
+  const payload = withoutUndefined({ id: weekKey, weekKey, guardUserId: guard.id, guardUserName: guard.displayName, assignedBy: previous.exists() ? String(previous.data().assignedBy || actorId) : actorId, assignedByName: previous.exists() ? String(previous.data().assignedByName || actor.actorName) : actor.actorName, assignedAt: previous.exists() ? previous.data().assignedAt : serverTimestamp(), ...metadata, ...(metadata.reassignedReason ? { reassignedAt: serverTimestamp() } : {}), ...(override ? { overriddenBy: actorId, overriddenAt: serverTimestamp() } : {}), updatedAt: serverTimestamp() }) as Omit<AttendanceGuard, "id"> & { id: string };
   const batch = writeBatch(db);
   batch.set(reference, payload, { merge: true });
   batch.set(doc(collection(db, "activityLogs")), activityEntry(previous.exists() ? "updated" : "created", "attendance", weekKey, `${override ? "Reasignó" : "Asignó"} la guardia semanal a ${guard.displayName}`, actor));

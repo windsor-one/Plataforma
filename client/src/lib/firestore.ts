@@ -132,9 +132,10 @@ type UpdateRequestDraft = Omit<UpdateRequest, "id" | "createdAt" | "updatedAt" |
 
 const temporaryPermissionId = (userId: string, module: UpdateRequestModule, scope: UpdateRequest["scope"], recordId?: string) => `${userId}__${module}__${scope === "record" ? recordId || "missing" : scope}`.replace(/[^a-zA-Z0-9_-]/g, "_");
 const requestExpiry = (deadline: string) => Timestamp.fromDate(new Date(deadline));
-const requestNotification = (request: Pick<UpdateRequest, "targetUserId" | "targetUserName" | "module" | "scope" | "allowedActions" | "deadline" | "fields" | "instructions" | "targetRecordLabel">, actor: Awaited<ReturnType<typeof activityActor>>, subject: string, intro: string) => {
+const requestNotification = (request: Pick<UpdateRequest, "targetUserId" | "targetUserName" | "module" | "scope" | "allowedActions" | "deadline" | "fields" | "instructions" | "targetRecordLabel" | "submodule">, actor: Awaited<ReturnType<typeof activityActor>>, subject: string, intro: string) => {
   const actionText = request.allowedActions.includes("delete") ? "editar o eliminar" : "editar";
   const scopeText = request.scope === "record" ? `el registro «${request.targetRecordLabel || "asignado"}»` : request.scope === "self" ? "tu información propia" : `el módulo ${request.module}`;
+  const submoduleText = request.submodule ? `\n\nÁrea específica: ${request.submodule}.` : "";
   return {
     senderId: actor.actorId,
     senderName: actor.actorName,
@@ -142,7 +143,7 @@ const requestNotification = (request: Pick<UpdateRequest, "targetUserId" | "targ
     recipientIds: [request.targetUserId],
     participantIds: [actor.actorId, request.targetUserId],
     subject,
-    body: `${intro}\n\nTienes autorización temporal para ${actionText} en ${scopeText} hasta ${new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short" }).format(new Date(request.deadline))}.\n\nCampos o resultado: ${request.fields.join(", ") || "Según indicaciones"}.${request.instructions ? `\n\nIndicaciones: ${request.instructions}` : ""}`,
+    body: `${intro}\n\nTienes autorización temporal para ${actionText} en ${scopeText} hasta ${new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short" }).format(new Date(request.deadline))}.${submoduleText}\n\nCampos o resultado: ${request.fields.join(", ") || "Según indicaciones"}.${request.instructions ? `\n\nIndicaciones: ${request.instructions}` : ""}`,
     status: "sent" as const,
     readByIds: [actor.actorId],
   };
@@ -157,6 +158,9 @@ function temporaryPermissionPayload(requestId: string, request: UpdateRequestDra
     module: request.module,
     scope: request.scope,
     recordId: request.targetRecordId,
+    submodule: request.submodule,
+    targetCollection: request.targetCollection,
+    fieldKeys: request.fields,
     actions: request.allowedActions,
     expiresAt: requestExpiry(request.deadline),
     status,

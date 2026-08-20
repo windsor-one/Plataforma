@@ -29,6 +29,16 @@ describe("normalizeUpdateRequest", () => {
     expect(request.status).toBe("completed");
   });
 
+  it("preserves specific module metadata and accepts all supported modules", () => {
+    const request = normalizeUpdateRequest({ id: "request-3", module: "finance", submodule: "Gastos y compromisos", targetCollection: "expenses", scope: "record", targetRecordId: "expense-1", targetRecordLabel: "GAS-00001", fields: ["Importe", "Estado"] });
+
+    expect(request.module).toBe("finance");
+    expect(request.submodule).toBe("Gastos y compromisos");
+    expect(request.targetCollection).toBe("expenses");
+    expect(request.targetRecordId).toBe("expense-1");
+    expect(request.fields).toEqual(["Importe", "Estado"]);
+  });
+
   it("falls back safely when a document is not an object", () => {
     const request = normalizeUpdateRequest(undefined, "missing-document");
 

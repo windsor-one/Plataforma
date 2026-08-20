@@ -1,6 +1,6 @@
 import type { UpdateRequest, UpdateRequestAction, UpdateRequestModule, UpdateRequestStatus } from "./types";
 
-const modules = new Set<UpdateRequestModule>(["profile", "hr", "products", "tasks", "reservations", "customers", "payments", "employees", "other"]);
+const modules = new Set<UpdateRequestModule>(["profile", "hr", "products", "tasks", "reservations", "customers", "payments", "employees", "calendar", "mail", "updates", "automations", "hr_reports", "performance", "impact", "finance", "history", "operations", "access", "pending", "reminders", "other"]);
 const scopes = new Set<UpdateRequest["scope"]>(["self", "record", "module"]);
 const actions = new Set<UpdateRequestAction>(["edit", "delete"]);
 const statuses = new Set<UpdateRequestStatus>(["pending", "completed", "expired", "cancelled", "rejected"]);
@@ -34,6 +34,8 @@ export function normalizeUpdateRequest(value: unknown, fallbackId = ""): UpdateR
     scope: scopes.has(rawScope) ? rawScope : "module",
     targetRecordId: optionalString(raw.targetRecordId),
     targetRecordLabel: optionalString(raw.targetRecordLabel),
+    submodule: optionalString(raw.submodule),
+    targetCollection: optionalString(raw.targetCollection),
     allowedActions: normalizedActions.length ? normalizedActions : ["edit"],
     permissionId: optionalString(raw.permissionId),
     fields: stringArray(raw.fields),

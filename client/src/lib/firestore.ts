@@ -121,6 +121,19 @@ export function subscribeUpdateRequests(userId: string, isAdmin: boolean, onData
   return onSnapshot(request, (snapshot) => onData(sortRecordsNewest(snapshot.docs.map((item) => normalizeUpdateRequest({ id: item.id, ...item.data() }, item.id)), item => item.updatedAt)), onError);
 }
 
+/** Cada empleado puede consultar solo sus propios permisos; el cliente filtra vencidos y revocados. */
+export function subscribeOwnTemporaryPermissions(userId: string, onData: (data: TemporaryPermission[]) => void, onError: (error: Error) => void) {
+  return onSnapshot(query(collection(db, "temporaryPermissions"), where("userId", "==", userId)), (snapshot) => {
+    const now = Date.now();
+    const active = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }) as TemporaryPermission).filter((permission) => {
+      if (permission.status !== "active") return false;
+      const expiresAt = permission.expiresAt && typeof permission.expiresAt === "object" && "toMillis" in permission.expiresAt && typeof permission.expiresAt.toMillis === "function" ? permission.expiresAt.toMillis() : new Date(String(permission.expiresAt)).getTime();
+      return Number.isFinite(expiresAt) && expiresAt > now;
+    });
+    onData(active);
+  }, onError);
+}
+
 /** Las solicitudes de pago se muestran completas a Administración y Departamento de IT, y solo propias al solicitante. */
 export function subscribePaymentAdjustmentRequests(userId: string, isAdmin: boolean, onData: (data: PaymentAdjustmentRequest[]) => void, onError: (error: Error) => void) {
   const source = collection(db, "paymentAdjustmentRequests");

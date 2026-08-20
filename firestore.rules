@@ -354,7 +354,8 @@ service cloud.firestore {
 
     match /temporaryPermissions/{permissionId} {
       // Administración/IT administra permisos; Personal solo puede revocar el suyo al completar la solicitud asociada.
-      allow get, list, create, delete: if admin();
+      allow get, list: if admin() || (activeEmployee() && resource.data.userId == request.auth.uid);
+      allow create, delete: if admin();
       allow update: if admin() || (activeEmployee()
         && resource.data.userId == request.auth.uid
         && request.resource.data.status == 'revoked'

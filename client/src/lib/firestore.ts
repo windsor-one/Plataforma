@@ -151,7 +151,7 @@ const requestNotification = (request: Pick<UpdateRequest, "targetUserId" | "targ
 
 function temporaryPermissionPayload(requestId: string, request: UpdateRequestDraft, status: TemporaryPermission["status"] = "active") {
   const permissionId = temporaryPermissionId(request.targetUserId, request.module, request.scope, request.targetRecordId);
-  return {
+  return withoutUndefined({
     id: permissionId,
     requestId,
     userId: request.targetUserId,
@@ -165,7 +165,7 @@ function temporaryPermissionPayload(requestId: string, request: UpdateRequestDra
     expiresAt: requestExpiry(request.deadline),
     status,
     updatedAt: serverTimestamp(),
-  };
+  });
 }
 
 export async function saveUpdateRequest(record: UpdateRequestDraft, actorId: string) {
@@ -173,14 +173,27 @@ export async function saveUpdateRequest(record: UpdateRequestDraft, actorId: str
   const reference = doc(collection(db, "updateRequests"));
   const permission = temporaryPermissionPayload(reference.id, record);
   const payload = { ...withoutUndefined(record as unknown as DocumentData), id: reference.id, assignedBy: actorId, assignedByName: actor.actorName, permissionId: permission.id, expiresAt: permission.expiresAt, createdAt: serverTimestamp(), updatedAt: serverTimestamp() };
-  const mailReference = doc(collection(db, "internalMessages"));
-  const batch = writeBatch(db);
-  batch.set(reference, payload);
-  batch.set(doc(db, "temporaryPermissions", permission.id), { ...permission, createdAt: serverTimestamp() });
-  batch.set(mailReference, { ...requestNotification(record, actor, `Nueva solicitud: ${record.module}`, "Administración o el Departamento de IT te asignaron una solicitud de actualización."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-  batch.set(doc(collection(db, "activityLogs")), activityEntry("created", "profile", reference.id, `Asignó permiso temporal de ${record.module} a ${record.targetUserName}`, actor));
-  await batch.commit();
-  return reference.id;
+
+  // La solicitud y el permiso son la operación crítica. Las comunicaciones y la auditoría
+  // se escriben después para que una regla secundaria desactualizada no bloquee la asignación.
+  const coreBatch = writeBatch(db);
+  coreBatch.set(reference, payload);
+  coreBatch.set(doc(db, "temporaryPermissions", permission.id), { ...permission, createdAt: serverTimestamp() });
+  await coreBatch.commit();
+
+  let notificationSaved = true;
+  try {
+    const mailReference = doc(collection(db, "internalMessages"));
+    const auditReference = doc(collection(db, "activityLogs"));
+    const communicationBatch = writeBatch(db);
+    communicationBatch.set(mailReference, { ...requestNotification(record, actor, `Nueva solicitud: ${record.module}`, "Administración o el Departamento de IT te asignaron una solicitud de actualización."), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    communicationBatch.set(auditReference, activityEntry("created", "profile", reference.id, `Asignó permiso temporal de ${record.module} a ${record.targetUserName}`, actor));
+    await communicationBatch.commit();
+  } catch (error) {
+    notificationSaved = false;
+    console.error("La solicitud se guardó, pero no fue posible registrar la notificación o auditoría", error);
+  }
+  return { id: reference.id, notificationSaved };
 }
 
 export async function completeUpdateRequest(id: string, userId: string) {
@@ -205,15 +218,27 @@ export async function updateUpdateRequest(id: string, record: UpdateRequestDraft
   const existing = normalizeUpdateRequest({ id: snapshot.id, ...snapshot.data() }, snapshot.id);
   const active = record.status === "pending" && new Date(record.deadline).getTime() > Date.now();
   const permission = temporaryPermissionPayload(id, record, active ? "active" : "revoked");
-  const mailReference = doc(collection(db, "internalMessages"));
-  const batch = writeBatch(db);
-  if (existing.permissionId && existing.permissionId !== permission.id) batch.set(doc(db, "temporaryPermissions", existing.permissionId), { status: "revoked", updatedAt: serverTimestamp() }, { merge: true });
-  batch.set(reference, { ...withoutUndefined(record as unknown as DocumentData), permissionId: permission.id, expiresAt: permission.expiresAt, updatedAt: serverTimestamp(), updatedBy: actorId, updatedByName: actor.actorName }, { merge: true });
-  batch.set(doc(db, "temporaryPermissions", permission.id), { ...permission, createdAt: existing.createdAt || serverTimestamp() }, { merge: true });
-  const changeIntro = record.status === "rejected" ? `La solicitud fue rechazada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "cancelled" ? `La solicitud fue cancelada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "completed" ? "La solicitud fue cerrada por Administración o el Departamento de IT." : "Administración o el Departamento de IT modificaron tu solicitud y permiso temporal.";
-  batch.set(mailReference, { ...requestNotification(record, actor, `Solicitud actualizada: ${record.module}`, changeIntro), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
-  batch.set(doc(collection(db, "activityLogs")), activityEntry("updated", "profile", id, `Actualizó la solicitud de ${record.module} para ${record.targetUserName}.`, actor));
-  await batch.commit();
+
+  const coreBatch = writeBatch(db);
+  if (existing.permissionId && existing.permissionId !== permission.id) coreBatch.set(doc(db, "temporaryPermissions", existing.permissionId), { status: "revoked", updatedAt: serverTimestamp() }, { merge: true });
+  coreBatch.set(reference, { ...withoutUndefined(record as unknown as DocumentData), permissionId: permission.id, expiresAt: permission.expiresAt, updatedAt: serverTimestamp(), updatedBy: actorId, updatedByName: actor.actorName }, { merge: true });
+  coreBatch.set(doc(db, "temporaryPermissions", permission.id), { ...permission, createdAt: existing.createdAt || serverTimestamp() }, { merge: true });
+  await coreBatch.commit();
+
+  let notificationSaved = true;
+  try {
+    const mailReference = doc(collection(db, "internalMessages"));
+    const auditReference = doc(collection(db, "activityLogs"));
+    const changeIntro = record.status === "rejected" ? `La solicitud fue rechazada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "cancelled" ? `La solicitud fue cancelada.${record.decisionReason ? ` Motivo: ${record.decisionReason}` : ""}` : record.status === "completed" ? "La solicitud fue cerrada por Administración o el Departamento de IT." : "Administración o el Departamento de IT modificaron tu solicitud y permiso temporal.";
+    const communicationBatch = writeBatch(db);
+    communicationBatch.set(mailReference, { ...requestNotification(record, actor, `Solicitud actualizada: ${record.module}`, changeIntro), id: mailReference.id, sentAt: serverTimestamp(), createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+    communicationBatch.set(auditReference, activityEntry("updated", "profile", id, `Actualizó la solicitud de ${record.module} para ${record.targetUserName}.`, actor));
+    await communicationBatch.commit();
+  } catch (error) {
+    notificationSaved = false;
+    console.error("La solicitud se actualizó, pero no fue posible registrar la notificación o auditoría", error);
+  }
+  return { notificationSaved };
 }
 
 export async function deleteUpdateRequest(id: string, actorId: string) {

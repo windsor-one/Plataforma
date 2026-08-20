@@ -160,11 +160,19 @@ export default function UpdateRequestsPanel({ requests, employees, profile, isAd
     };
     setSaving(true);
     try {
-      if (editing) { await updateUpdateRequest(editing.id, record, profile.id); toast.success("Solicitud actualizada y notificada."); }
-      else { await saveUpdateRequest(record, profile.id); toast.success("Solicitud asignada con permiso temporal y correo interno."); }
+      if (editing) {
+        const result = await updateUpdateRequest(editing.id, record, profile.id);
+        toast.success(result.notificationSaved ? "Solicitud actualizada y notificada." : "Solicitud actualizada; la notificación no pudo registrarse.");
+      } else {
+        const result = await saveUpdateRequest(record, profile.id);
+        toast.success(result.notificationSaved ? "Solicitud asignada con permiso temporal y correo interno." : "Solicitud y permiso temporal guardados; la notificación no pudo registrarse.");
+      }
       closeForm();
-    } catch { toast.error("No se pudo guardar la solicitud. Comprueba las reglas de Firebase."); }
-    finally { setSaving(false); }
+    } catch (error) {
+      console.error("No se pudo guardar la solicitud o su permiso temporal", error);
+      const code = String((error as { code?: string })?.code || "");
+      toast.error(code.includes("permission-denied") ? "Firebase rechazó este permiso. Verifica el rol de Administración o IT y las reglas publicadas." : "No se pudo guardar la solicitud. Revisa la conexión e inténtalo de nuevo.");
+    } finally { setSaving(false); }
   };
 
   const complete = async (request: UpdateRequest) => { try { await completeUpdateRequest(request.id, profile.id); toast.success("Solicitud marcada como completada."); } catch { toast.error("No se pudo cerrar la solicitud."); } };

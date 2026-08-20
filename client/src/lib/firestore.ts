@@ -490,8 +490,8 @@ export async function saveHrAdminRecord<T extends { id: string }>(name: HrAdminC
 }
 
 /** Los códigos EMP-xxxxx se generan por secuencia y los expedientes existentes preservan su código histórico. */
-export async function savePayrollRun(run: Omit<PayrollRun, "id" | "createdAt" | "updatedAt" | "createdBy" | "createdByName" | "createdByEmail">, actorId: string) {
-  const id = await saveHrAdminRecord("payrollRuns", { ...run, id: "" } as PayrollRun, actorId, `Guardó la planilla ${run.periodKey} en estado ${run.status}`);
+export async function savePayrollRun(run: Omit<PayrollRun, "id" | "createdAt" | "updatedAt" | "createdBy" | "createdByName" | "createdByEmail">, actorId: string, existingId?: string) {
+  const id = await saveHrAdminRecord("payrollRuns", { ...run, id: existingId || "" } as PayrollRun, actorId, `${existingId ? "Corrigió" : "Guardó"} la planilla ${run.periodKey} en estado ${run.status}`);
   return id;
 }
 

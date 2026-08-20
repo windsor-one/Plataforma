@@ -183,6 +183,8 @@ export interface PayrollLine {
   employeeCode?: string;
   regularHours: number;
   overtimeHours: number;
+  /** Salario fijo mensual reutilizable en cada periodo. */
+  monthlySalary?: number;
   hourlyRate: number;
   grossPay: number;
   deductions: number;
@@ -191,6 +193,7 @@ export interface PayrollLine {
   attendanceRecordCount: number;
   leaveDays: number;
   notes?: string;
+  adjustmentReason?: string;
 }
 
 export interface PayrollRun extends OperationalAuditFields {
@@ -204,6 +207,7 @@ export interface PayrollRun extends OperationalAuditFields {
   totalGross: number;
   totalDeductions: number;
   totalNet: number;
+  lastAdjustmentReason?: string;
   approvedBy?: string;
   approvedByName?: string;
   paidAt?: unknown;

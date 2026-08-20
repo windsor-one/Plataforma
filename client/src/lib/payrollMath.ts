@@ -41,16 +41,19 @@ export function buildPayrollLines(employees: UserProfile[], profiles: HrProfile[
     const contract = contracts.find(item => item.employeeId === employee.id && item.status !== "ended");
     const regularHours = workedHoursForEmployee(attendance.filter(item => item.employeeId === employee.id), periodKey);
     const leaveDays = approvedLeaveDaysForEmployee(leaves, employee.id, periodKey);
-    const hourlyRate = Number((contract as EmploymentContract & { hourlyRate?: number })?.hourlyRate || 0);
-    const grossPay = Math.round(regularHours * hourlyRate * 100) / 100;
-    return { employeeId: employee.id, employeeName: employee.displayName, employeeCode: profile?.employeeCode, regularHours, overtimeHours: 0, hourlyRate, grossPay, deductions: 0, netPay: grossPay, currency: contract?.currency || currency, attendanceRecordCount: attendance.filter(item => item.employeeId === employee.id && periodMatch(item.dayKey || (item.occurredAt as string), periodKey)).length, leaveDays, notes: contract?.hourlyRate ? "Tarifa horaria del contrato" : "Configura la tarifa horaria antes de aprobar" };
+    const monthlySalary = Math.max(0, Number(contract?.salaryAmount || 0));
+    const hourlyRate = Math.max(0, Number(contract?.hourlyRate || (monthlySalary ? monthlySalary / 160 : 0)));
+    const grossPay = Math.round((monthlySalary > 0 ? monthlySalary : regularHours * hourlyRate) * 100) / 100;
+    return { employeeId: employee.id, employeeName: employee.displayName, employeeCode: profile?.employeeCode, regularHours, overtimeHours: 0, monthlySalary, hourlyRate, grossPay, deductions: 0, netPay: grossPay, currency: contract?.currency || currency, attendanceRecordCount: attendance.filter(item => item.employeeId === employee.id && periodMatch(item.dayKey || (item.occurredAt as string), periodKey)).length, leaveDays, notes: monthlySalary > 0 ? "Salario mensual fijo del contrato; se reutiliza en cada período" : contract?.hourlyRate ? "Tarifa horaria del contrato" : "Configura salario mensual o tarifa horaria antes de aprobar" };
   });
 }
 
-export function recalculatePayrollLine(line: PayrollLine, hourlyRate: number, overtimeHours = line.overtimeHours, deductions = line.deductions): PayrollLine {
+export function recalculatePayrollLine(line: PayrollLine, hourlyRate: number, overtimeHours = line.overtimeHours, deductions = line.deductions, monthlySalary = line.monthlySalary || 0, adjustmentReason = line.adjustmentReason): PayrollLine {
   const safeRate = Math.max(0, Number(hourlyRate) || 0);
   const safeOvertime = Math.max(0, Number(overtimeHours) || 0);
   const safeDeductions = Math.max(0, Number(deductions) || 0);
-  const grossPay = Math.round((line.regularHours + safeOvertime) * safeRate * 100) / 100;
-  return { ...line, hourlyRate: safeRate, overtimeHours: safeOvertime, deductions: safeDeductions, grossPay, netPay: Math.max(0, Math.round((grossPay - safeDeductions) * 100) / 100) };
+  const safeMonthlySalary = Math.max(0, Number(monthlySalary) || 0);
+  const fixedBase = safeMonthlySalary > 0 ? safeMonthlySalary : line.regularHours * safeRate;
+  const grossPay = Math.round((fixedBase + safeOvertime * safeRate) * 100) / 100;
+  return { ...line, monthlySalary: safeMonthlySalary, hourlyRate: safeRate, overtimeHours: safeOvertime, deductions: safeDeductions, adjustmentReason: adjustmentReason?.trim() || undefined, grossPay, netPay: Math.max(0, Math.round((grossPay - safeDeductions) * 100) / 100) };
 }

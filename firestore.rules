@@ -170,20 +170,23 @@ service cloud.firestore {
     }
 
     match /tasks/{taskId} {
-      // Administración/IT coordina el trabajo. El Personal solo puede actualizar el estado de tareas propias.
+      // Administración/IT coordina el trabajo. Un permiso temporal puede delegar una tarea concreta o todo el módulo.
       allow read: if activeEmployee();
       allow create: if admin() && request.resource.data.createdBy == request.auth.uid;
-      allow update: if admin() || (activeEmployee()
-        && resource.data.assignedToId == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'updatedBy', 'updatedByName']));
-      allow delete: if admin();
+      allow update: if admin()
+        || (activeEmployee() && temporaryModulePermission('tasks', taskId, 'edit'))
+        || (activeEmployee()
+          && resource.data.assignedToId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'updatedBy', 'updatedByName']));
+      allow delete: if admin() || (activeEmployee() && temporaryModulePermission('tasks', taskId, 'delete'));
     }
 
     match /incidents/{incidentId} {
-      // Cualquier integrante activo puede reportar una incidencia propia; la gestión y cierre son administrativos.
+      // Cualquier integrante activo puede reportar una incidencia propia; un permiso temporal puede gestionarla.
       allow read: if activeEmployee();
       allow create: if activeEmployee() && request.resource.data.createdBy == request.auth.uid;
-      allow update, delete: if admin();
+      allow update: if admin() || (activeEmployee() && temporaryModulePermission('tasks', incidentId, 'edit'));
+      allow delete: if admin() || (activeEmployee() && temporaryModulePermission('tasks', incidentId, 'delete'));
     }
 
     match /expenses/{expenseId} {

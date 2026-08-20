@@ -15,4 +15,11 @@ describe("cálculo de planilla", () => {
     expect(result.grossPay).toBe(120);
     expect(result.netPay).toBe(115);
   });
+  it("mantiene el salario mensual fijo y suma solo los conceptos variables", () => {
+    const line: PayrollLine = { employeeId: "u1", employeeName: "Ana", regularHours: 168, overtimeHours: 0, monthlySalary: 900, hourlyRate: 5.625, grossPay: 900, deductions: 0, netPay: 900, currency: "USD", attendanceRecordCount: 4, leaveDays: 0 };
+    const result = recalculatePayrollLine(line, 5.625, 4, 50, 900, "Ajuste de horas extra");
+    expect(result.grossPay).toBe(922.5);
+    expect(result.netPay).toBe(872.5);
+    expect(result.adjustmentReason).toBe("Ajuste de horas extra");
+  });
 });

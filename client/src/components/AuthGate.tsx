@@ -253,17 +253,17 @@ export default function AuthGate({ children }: { children: (user: User, profile:
         <aside className="auth-brand-panel" aria-label="Identidad SIGES">
           <div className="auth-grid-pattern" aria-hidden="true" />
           <div className="auth-brand-inner">
-            <div className="auth-brand-top"><SigesWordmark className="auth-brand-wordmark" /><span>Acceso seguro</span></div>
+            <div className="auth-brand-top"><SigesWordmark className="auth-brand-wordmark" /></div>
             <div className="auth-brand-center">
-              <div className="auth-brand-orbit"><span className="auth-brand-orbit-dot" /><SigesWordmark className="auth-brand-logo" /></div>
-              <p className="auth-brand-caption">SIGES</p>
+              <div className="auth-brand-emblem"><span className="auth-brand-orbit-dot" /><SigesWordmark className="auth-brand-logo" /></div>
+              <p className="auth-brand-caption">SIGES · Acceso del equipo</p>
             </div>
-            <div className="auth-brand-bottom"><LockKeyhole size={16} /><span>Tus permisos se validan en cada sesión.</span></div>
+            <div className="auth-brand-bottom"><ShieldCheck size={16} /><span>Sistema Integral de Gestión Estratégica</span></div>
           </div>
         </aside>
 
         <section className="auth-form-panel">
-          <div className="auth-form-header"><SigesWordmark /><span>Acceso seguro</span></div>
+          <div className="auth-form-header-centered"><SigesWordmark /><span>Acceso seguro</span></div>
           <div className="auth-form-body">
             <span className="auth-kicker">SIGES · Acceso del equipo</span>
             <h1 className="mt-4 text-3xl font-extrabold tracking-[-.045em] sm:text-4xl">{mode === "login" ? "Vuelve a tu operación." : "Activa tu invitación."}</h1>

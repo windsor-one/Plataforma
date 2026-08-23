@@ -12,7 +12,7 @@ import {
   updateProfile,
   type User,
 } from "firebase/auth";
-import { ArrowRight, CalendarDays, CircleDollarSign, Database, Eye, EyeOff, LockKeyhole, Settings2, ShieldCheck, Sparkles, UsersRound, WifiOff } from "lucide-react";
+import { ArrowRight, CalendarDays, CircleDollarSign, Database, Eye, EyeOff, LockKeyhole, Mail, Settings2, ShieldCheck, Sparkles, UsersRound, WifiOff } from "lucide-react";
 import { auth, isFirebaseConfigured } from "@/lib/firebase";
 import { completeInvitationOnboarding, recordAccess, subscribeSecuritySettings } from "@/lib/firestore";
 import type { UserProfile } from "@/lib/types";
@@ -248,41 +248,40 @@ export default function AuthGate({ children }: { children: (user: User, profile:
   if (!isFirebaseConfigured) return <SetupPending />;
 
   return (
-    <main className="ios-auth-shell">
-      <section className="ios-auth-card">
-        <div className="hidden">
-          <div className="absolute inset-0 auth-pattern opacity-80" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0B2027]/55 via-[#0B2027]/35 to-[#0B2027]/80" />
-          <div className="relative flex items-center gap-3"><BrandMark /><span className="text-xl font-extrabold tracking-tight">Sistema <span className="text-[#5DDBC0]">SIGES</span></span></div>
-          <div className="relative mt-auto max-w-md">
-            <div className="mb-6 flex w-fit items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold tracking-[.12em] text-[#B5EFE0] uppercase"><Sparkles size={14} /> Centro de operaciones</div>
-            <h1 className="text-5xl font-extrabold leading-[.96] tracking-[-.055em]">La jornada bajo control.</h1>
-            <p className="mt-6 max-w-sm text-base leading-7 text-white/75">Gestiona clientes, agenda, pagos y tu equipo desde una fuente de datos compartida en tiempo real.</p>
-            <p className="mt-6 text-xs font-semibold tracking-wide text-white/55">Con tecnología de Windsor</p>
+    <main className="auth-shell">
+      <section className="auth-card">
+        <aside className="auth-brand-panel" aria-label="Identidad SIGES">
+          <div className="auth-grid-pattern" aria-hidden="true" />
+          <div className="auth-brand-inner">
+            <div className="auth-brand-top"><SigesWordmark className="auth-brand-wordmark" /><span>Acceso seguro</span></div>
+            <div className="auth-brand-center">
+              <div className="auth-brand-orbit"><span className="auth-brand-orbit-dot" /><SigesWordmark className="auth-brand-logo" /></div>
+              <p className="auth-brand-caption">SIGES</p>
+            </div>
+            <div className="auth-brand-bottom"><LockKeyhole size={16} /><span>Tus permisos se validan en cada sesión.</span></div>
           </div>
-        </div>
+        </aside>
 
-        <div className="ios-auth-content">
-          <div className="mb-10 flex items-center justify-between"><SigesWordmark /><span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acceso seguro</span></div>
-          <div className="max-w-none">
-            <>
-                <span className="inline-flex rounded-full bg-[#0F8F73]/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[.12em] text-[#08745D] dark:text-[#5DDBC0]">SIGES · Acceso del equipo</span>
-                <h2 className="mt-4 text-3xl font-extrabold tracking-tight">{mode === "login" ? "Vuelve a tu operación." : "Activa tu invitación."}</h2>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{mode === "login" ? "Inicia sesión con tus credenciales de empleado." : "Solo puedes registrarte si un administrador autorizó previamente tu correo."}</p>
-                <form className="mt-7 space-y-4" onSubmit={handleSubmit}>
-                  {mode === "register" && <label className="block text-sm font-bold">Nombre completo<input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" className="field mt-1.5" /></label>}
-                  <label className="block text-sm font-bold">Correo<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" className="field mt-1.5" /></label>
-                  <label className="block text-sm font-bold">Contraseña<div className="relative mt-1.5"><input required minLength={6} type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres" className="field pr-12" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
-                  <FriendlyError error={error} />
-                  {notice && <p className="rounded-lg bg-[#0F8F73]/10 px-3 py-2 text-sm font-medium text-[#08745D] dark:text-[#8BE3CB]">{notice}</p>}
-                  <button disabled={submitting} className="primary-button w-full" type="submit">{submitting ? "Validando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}<ArrowRight size={17} /></button>
-                </form>
-                {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="mt-5 w-full text-center text-sm font-bold text-[#0C58C7] hover:underline dark:text-[#87A9FF]">¿Olvidaste tu contraseña? Restablécela por correo</button>}
-                <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }} className="mt-5 w-full text-center text-sm font-bold text-[#08745D] hover:underline dark:text-[#5DDBC0]">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
-                <div className="mt-8 grid grid-cols-2 gap-3 border-t pt-6 text-xs text-muted-foreground"><div className="flex items-start gap-2"><LockKeyhole className="mt-0.5 text-[#0F8F73]" size={15} />Tus permisos se validan en cada sesión.</div><div className="flex items-start gap-2"><ShieldCheck className="mt-0.5 text-[#0F8F73]" size={15} />Datos protegidos por reglas de acceso.</div></div><p className="mt-5 text-center text-[11px] font-semibold tracking-wide text-muted-foreground">SIGES · Sistema Integral de Gestión Estratégica</p>
-            </>
+        <section className="auth-form-panel">
+          <div className="auth-form-header"><SigesWordmark /><span>Acceso seguro</span></div>
+          <div className="auth-form-body">
+            <span className="auth-kicker">SIGES · Acceso del equipo</span>
+            <h1 className="mt-4 text-3xl font-extrabold tracking-[-.045em] sm:text-4xl">{mode === "login" ? "Vuelve a tu operación." : "Activa tu invitación."}</h1>
+            <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">{mode === "login" ? "Inicia sesión con tus credenciales de empleado." : "Solo puedes registrarte si un administrador autorizó previamente tu correo."}</p>
+            <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+              {mode === "register" && <label className="auth-label">Nombre completo<div className="auth-field-wrap"><UsersRound size={18} /><input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" className="field auth-field" /></div></label>}
+              <label className="auth-label">Correo<div className="auth-field-wrap"><Mail size={18} /><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" className="field auth-field" /></div></label>
+              <label className="auth-label">Contraseña<div className="auth-field-wrap"><LockKeyhole size={18} /><input required minLength={6} type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres" className="field auth-field pr-12" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="auth-password-toggle" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
+              <FriendlyError error={error} />
+              {notice && <p className="rounded-xl bg-[#0F8F73]/10 px-3.5 py-3 text-sm font-medium text-[#08745D] dark:text-[#8BE3CB]">{notice}</p>}
+              <button disabled={submitting} className="primary-button auth-submit w-full" type="submit">{submitting ? "Validando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}<ArrowRight size={17} /></button>
+            </form>
+            {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="auth-link mt-5">¿Olvidaste tu contraseña? Restablécela por correo</button>}
+            <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }} className="auth-link auth-link-secondary mt-4">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
+            <div className="auth-trust-grid mt-8"><div><LockKeyhole size={15} />Tus permisos se validan en cada sesión.</div><div><ShieldCheck size={15} />Datos protegidos por reglas de acceso.</div></div>
+            <p className="mt-5 text-center text-[11px] font-semibold tracking-wide text-muted-foreground">SIGES · Sistema Integral de Gestión Estratégica</p>
           </div>
-        </div>
+        </section>
       </section>
     </main>
   );

@@ -263,11 +263,11 @@ export default function AuthGate({ children }: { children: (user: User, profile:
         </aside>
 
         <section className="auth-form-panel">
-          <div className="auth-form-header-centered"><SigesWordmark /><span>Acceso seguro</span></div>
+          <div className="auth-form-header-centered"><SigesWordmark className="auth-form-wordmark" /><span>Acceso seguro</span></div>
           <div className="auth-form-body">
-            <h1 className="auth-form-title mt-5 text-3xl font-extrabold tracking-[-.045em] sm:text-4xl">{mode === "login" ? "Vuelve a tu operación." : "Activa tu invitación."}</h1>
+            <h1 className="auth-form-title mt-5 text-2xl font-extrabold tracking-[-.04em] sm:text-3xl">{mode === "login" ? "Vuelve a tu operación." : "Activa tu invitación."}</h1>
             <p className="auth-form-subtitle mt-2 max-w-md text-sm leading-6 text-muted-foreground">{mode === "login" ? "Inicia sesión con tus credenciales de empleado." : "Regístrate con una invitación autorizada."}</p>
-            <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
+            <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
               {mode === "register" && <label className="auth-label">Nombre completo<div className="auth-field-wrap"><UsersRound size={18} /><input required value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" className="field auth-field" /></div></label>}
               <label className="auth-label">Correo<div className="auth-field-wrap"><Mail size={18} /><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="nombre@empresa.com" className="field auth-field" /></div></label>
               <label className="auth-label">Contraseña<div className="auth-field-wrap"><LockKeyhole size={18} /><input required minLength={6} type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo 6 caracteres" className="field auth-field pr-12" /><button type="button" onClick={() => setShowPassword((visible) => !visible)} className="auth-password-toggle" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
@@ -276,8 +276,8 @@ export default function AuthGate({ children }: { children: (user: User, profile:
               <button disabled={submitting} className="primary-button auth-submit w-full" type="submit">{submitting ? "Validando…" : mode === "login" ? "Iniciar sesión" : "Crear cuenta"}<ArrowRight size={17} /></button>
             </form>
             {mode === "login" && <button type="button" disabled={submitting} onClick={handlePasswordReset} className="auth-link mt-3">¿Olvidaste tu contraseña? Restablécela por correo</button>}
-            <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }} className="auth-link auth-link-secondary mt-3">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
-            <div className="auth-trust-grid mt-5"><div><LockKeyhole size={15} />Tus permisos se validan en cada sesión.</div><div><ShieldCheck size={15} />Datos protegidos por reglas de acceso.</div></div>
+            <button type="button" onClick={() => { setMode(mode === "login" ? "register" : "login"); setError(""); setNotice(""); }} className="auth-link auth-link-secondary mt-2 text-[11px]">{mode === "login" ? "¿Tienes una invitación? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}</button>
+            <div className="auth-trust-line mt-6"><span><LockKeyhole size={14} />Tus permisos se validan en cada sesión.</span><span><ShieldCheck size={14} />Datos protegidos por reglas de acceso.</span></div>
             <p className="mt-3 text-center text-[10px] font-semibold tracking-wide text-muted-foreground">SIGES · Sistema Integral de Gestión Estratégica</p>
           </div>
         </section>

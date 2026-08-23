@@ -2842,6 +2842,20 @@ function Organization({
   const roots = normalizedProfiles.filter(profile => !supervisorByEmployee.get(profile.employeeId)).sort(sortProfiles);
   roots.forEach(root => appendBranch(root, 0, new Set<string>()));
   normalizedProfiles.filter(profile => !chartRows.some(row => row.profile.employeeId === profile.employeeId)).sort(sortProfiles).forEach(profile => appendBranch(profile, 0, new Set<string>()));
+  const renderTreeNode = (profile: HrProfile, level = 0): ReactNode => {
+    const employee = employeeById.get(profile.employeeId);
+    const name = employee?.displayName || profile.employeeId;
+    const children = (childrenBySupervisor.get(profile.employeeId) || []).sort(sortProfiles);
+    const unitPath = [profile.department, profile.area, profile.team].filter(Boolean).join(" · ");
+    return <div className="org-tree-branch" key={profile.employeeId}>
+      <article className="org-tree-node" data-level={level}>
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#0F8F73]/10 text-sm font-extrabold text-[#08745D]">{name.slice(0, 2).toUpperCase()}</div>
+        <div className="min-w-0 text-center"><p className="truncate text-sm font-extrabold">{name}</p><p className="mt-1 truncate text-[11px] font-semibold text-[#08745D]">{profile.position || "Sin cargo"}</p>{unitPath && <p className="mt-1 truncate text-[10px] text-muted-foreground">{unitPath}</p>}</div>
+        <span className="org-tree-level">Nivel {level + 1}</span>
+      </article>
+      {children.length > 0 && <div className="org-tree-children"><div className="org-tree-children-grid">{children.map(child => renderTreeNode(child, level + 1))}</div></div>}
+    </div>;
+  };
   return (
     <section className="mt-7">
       <div className="panel-card overflow-hidden">
@@ -2928,7 +2942,7 @@ function Organization({
           />
         )}
       </div>
-      <section className="panel-card mt-7 overflow-hidden"><div className="border-b px-5 py-4"><p className="font-extrabold">Organigrama y cadena de responsabilidad</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Cada persona aparece una sola vez, ordenada debajo de su supervisor.</p></div>{chartRows.length ? <div>{chartRows.map(({ profile, employee, level }) => { const name = employee?.displayName || profile.employeeId; const unitPath = [profile.department, profile.area, profile.team].filter(Boolean).join(" · "); return <div className="org-chart-row" data-level={level} style={{ paddingLeft: `${1.25 + level * 2}rem` }} key={profile.employeeId}><span className="org-chart-connector" aria-hidden="true" style={{ left: `${0.7 + level * 2}rem` }} /> <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0F8F73]/10 text-xs font-extrabold text-[#08745D]">{name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="font-bold">{name}</p><p className="text-xs text-muted-foreground">{profile.position || "Sin cargo"}{unitPath ? ` · ${unitPath}` : ""}</p></div><div className="org-chart-meta"><span className="org-chart-level">Nivel {level + 1}</span><span>{profile.supervisorName ? `Reporta a ${profile.supervisorName}` : "Nivel superior"}</span></div></div>; })}</div> : <Empty title="Organigrama pendiente" detail="Completa supervisores y cargos en los expedientes para construir la jerarquía." />}</section>
+      <section className="panel-card mt-7 overflow-hidden"><div className="border-b px-5 py-4"><p className="font-extrabold">Organigrama y cadena de responsabilidad</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Cada persona aparece una sola vez, ordenada debajo de su supervisor.</p></div>{chartRows.length ? <div className="org-tree-canvas"><div className="org-tree-roots">{roots.map(root => renderTreeNode(root))}</div></div> : <Empty title="Organigrama pendiente" detail="Completa supervisores y cargos en los expedientes para construir la jerarquía." />}</section>
     </section>
   );
 }

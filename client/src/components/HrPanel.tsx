@@ -3355,7 +3355,7 @@ function Control({
       </section>
       <section className="panel-card mt-7 overflow-hidden">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b px-5 py-4"><div><p className="font-extrabold">Guardia semanal de asistencia</p><p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">Cada jueves, la persona asignada registra la asistencia del equipo. La rotación propone a una persona diferente de la última guardia; Administración/IT puede corregirla en cualquier momento.</p></div><span className="rounded-full bg-[#007AFF]/10 px-3 py-1 text-xs font-bold text-[#007AFF]">{currentWeekKey}</span></div>
-        <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end"><div>{currentGuard ? <><p className="text-sm text-muted-foreground">Responsable de esta semana</p><p className="mt-1 text-lg font-extrabold">{currentGuard.guardUserName}</p><p className="mt-1 text-xs text-muted-foreground">Asignada por {currentGuard.assignedByName || "Administración/IT"}{currentGuard.overriddenBy ? " · reasignación registrada" : ""}</p></> : <><p className="text-sm font-bold text-[#C53B53]">Sin guardia asignada</p><p className="mt-1 text-xs text-muted-foreground">Asigna la primera persona disponible usando la rotación.</p></>}</div><div className="flex flex-wrap gap-2"><button type="button" className="secondary-button" onClick={() => void saveGuard(currentGuard ? nextWeekKey : currentWeekKey)}>{currentGuard ? `Asignar ${nextWeekKey}` : "Asignar por rotación"}</button><select className="field !mt-0 !w-auto !py-2" value={selectedGuardId} onChange={event => setSelectedGuardId(event.target.value)}><option value="">Reasignar manualmente…</option>{activeGuardCandidates.map(item => <option key={item.id} value={item.id}>{item.displayName}</option>)}</select><button type="button" className="primary-button" disabled={!selectedGuardId} onClick={() => void saveGuard(currentWeekKey, true)}>Guardar reasignación</button></div></div>
+        <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end"><div>{currentGuard ? <><p className="text-sm text-muted-foreground">Responsable de esta semana</p><p className="mt-1 text-lg font-extrabold">{currentGuard.guardUserName}</p><p className="mt-1 text-xs text-muted-foreground">Asignada por {currentGuard.assignedByName || "Administración/IT"}{currentGuard.overriddenBy ? " · reasignación registrada" : ""}</p></> : <><p className="text-sm font-bold text-[#C53B53]">Sin guardia asignada</p><p className="mt-1 text-xs text-muted-foreground">Asigna la primera persona disponible usando la rotación.</p></>}</div><div className="flex flex-wrap gap-2"><button type="button" className="secondary-button" onClick={() => void saveGuard(currentGuard ? nextWeekKey : currentWeekKey)}>{currentGuard ? `Asignar ${nextWeekKey}` : "Asignar por rotación"}</button><select className="field !mt-0 !w-auto !py-2.5" value={selectedGuardId} onChange={event => setSelectedGuardId(event.target.value)}><option value="">Reasignar manualmente…</option>{activeGuardCandidates.map(item => <option key={item.id} value={item.id}>{item.displayName}</option>)}</select><button type="button" className="primary-button" disabled={!selectedGuardId} onClick={() => void saveGuard(currentWeekKey, true)}>Guardar reasignación</button></div></div>
       </section>
       <section className="panel-card mt-7 overflow-hidden">
         <div className="border-b px-5 py-4"><p className="font-extrabold">Planificación de guardia — próximas cuatro semanas</p><p className="mt-1 text-xs leading-5 text-muted-foreground">La automatización prepara cuatro jueves. Si la persona asignada tiene una ausencia aprobada, registra la sustitución, asigna a la siguiente persona disponible y conserva el turno omitido para la rotación futura.</p></div>
@@ -3532,7 +3532,7 @@ function Control({
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <select
-                className="field !mt-0 !w-auto !py-2"
+                className="field !mt-0 !w-auto !py-2.5"
                 value={bulkAttendanceType}
                 onChange={event =>
                   setBulkAttendanceType(
@@ -3546,7 +3546,7 @@ function Control({
                 <option value="break_end">Fin de descanso</option>
               </select>
               <input
-                className="field !mt-0 min-w-52 !py-2"
+                className="field !mt-0 min-w-52 !py-2.5"
                 value={bulkAttendanceReason}
                 onChange={event => setBulkAttendanceReason(event.target.value)}
                 placeholder="Motivo de corrección"

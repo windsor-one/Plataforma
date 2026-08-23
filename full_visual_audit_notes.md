@@ -19,3 +19,11 @@ No se deben ocultar problemas con escalado global ni romper tablas en móvil. Lo
 ## Ronda de armonización aplicada
 
 Se normalizaron los encabezados de página en Resumen, Finanzas, Trabajo, Recursos Humanos, Impacto digital, Correo, Planilla, Automatizaciones, Centro de Informes y Solicitudes. Se reforzó la separación responsive entre títulos, descripciones y acciones. Se ajustaron filtros y campos de período, tamaños de entradas numéricas en Planilla, estados vacíos, tablas y métricas compartidas. El icono de conexión quedó como elemento único sin texto visible, conservando `title`, `role=status`, `aria-live` y texto para lector de pantalla.
+
+## Verificación pública
+
+El commit `03c7756` quedó publicado mediante GitHub Pages. La URL pública carga correctamente la pantalla de acceso; la vista autenticada no es accesible sin la sesión del usuario, por lo que la comprobación directa de módulos requiere credenciales o un navegador conectado. La pantalla pública mantiene proporciones equilibradas y controles de acceso con áreas cómodas.
+
+## Rediseño de acceso
+
+Se reemplazó la composición anterior de login por un panel dividido inspirado en la referencia: fondo azul geométrico, panel de identidad SIGES y formulario claro con campos acompañados por iconos. Se conservaron el contexto, los textos funcionales, recuperación de contraseña, registro por invitación, validaciones y flujo Firebase. El contenido visible de acceso incluye SIGES, Acceso seguro, SIGES · Acceso del equipo, Vuelve a tu operación., Inicia sesión con tus credenciales de empleado., Correo, nombre@empresa.com, Contraseña, Mínimo 6 caracteres, Iniciar sesión, recuperación, registro, los dos avisos de seguridad y el pie institucional.

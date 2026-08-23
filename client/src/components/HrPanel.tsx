@@ -2732,9 +2732,14 @@ function Organization({
 }) {
   const kindLabels: Record<OrganizationUnit["kind"], string> = { department: "Departamentos", area: "Áreas", team: "Equipos", position: "Cargos", site: "Sedes" };
   const groupedUnits = (Object.keys(kindLabels) as OrganizationUnit["kind"][]).map(kind => ({ kind, label: kindLabels[kind], units: units.filter(unit => unit.kind === kind) })).filter(group => group.units.length);
-  // Un empleado debe aparecer una sola vez aunque existan expedientes heredados
-  // duplicados en Firestore. El documento canónico usa employeeId como id; si aún
-  // no existe, conservamos el duplicado más recientemente actualizado.
+  const normalizeIdentity = (value: unknown) =>
+    String(value || "")
+      .trim()
+      .toLocaleLowerCase("es")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ");
+  const employeeById = new Map(employees.map(employee => [employee.id, employee]));
   const profileTime = (profile: HrProfile) => {
     const value = profile.updatedAt;
     if (value && typeof value === "object" && "toMillis" in value && typeof (value as { toMillis?: unknown }).toMillis === "function") {
@@ -2743,58 +2748,100 @@ function Organization({
     if (typeof value === "string") return Date.parse(value) || 0;
     return 0;
   };
+  const profileIdentity = (profile: HrProfile) => {
+    const employee = employeeById.get(profile.employeeId);
+    // En expedientes migrados, el id y el correo pueden cambiar; el nombre visible
+    // es la única referencia común que permanece entre esos documentos heredados.
+    if (employee?.displayName) return `name:${normalizeIdentity(employee.displayName)}`;
+    if (profile.employeeCode) return `code:${normalizeIdentity(profile.employeeCode)}`;
+    if (employee?.email) return `email:${normalizeIdentity(employee.email)}`;
+    if (profile.personalEmail) return `email:${normalizeIdentity(profile.personalEmail)}`;
+    return `id:${profile.employeeId}`;
+  };
+  // Firestore puede conservar expedientes antiguos con ids distintos para la misma persona.
+  // Dedupe por email/nombre estable y no solo por employeeId para que el organigrama no repita nodos.
   const uniqueProfiles = Array.from(
-    profiles.reduce((byEmployee, profile) => {
-      const current = byEmployee.get(profile.employeeId);
+    profiles.reduce((byPerson, profile) => {
+      const key = profileIdentity(profile);
+      const current = byPerson.get(key);
       const isCanonical = profile.id === profile.employeeId;
       const currentIsCanonical = current?.id === current?.employeeId;
       if (!current || (isCanonical && !currentIsCanonical) || (isCanonical === currentIsCanonical && profileTime(profile) > profileTime(current))) {
-        byEmployee.set(profile.employeeId, profile);
+        byPerson.set(key, profile);
       }
-      return byEmployee;
+      return byPerson;
     }, new Map<string, HrProfile>()).values()
   );
-  const profileById = new Map(uniqueProfiles.map(profile => [profile.employeeId, profile]));
-  const employeeById = new Map(employees.map(employee => [employee.id, employee]));
-  const childrenBySupervisor = new Map<string, HrProfile[]>();
+  const profileByRef = new Map<string, HrProfile>();
+  const profileByIdentity = new Map(uniqueProfiles.map(profile => [profileIdentity(profile), profile]));
   uniqueProfiles.forEach(profile => {
-    if (profile.supervisorId && profileById.has(profile.supervisorId)) {
-      childrenBySupervisor.set(profile.supervisorId, [
-        ...(childrenBySupervisor.get(profile.supervisorId) || []),
-        profile,
-      ]);
-    }
+    profileByRef.set(profile.employeeId, profile);
+    profileByRef.set(profile.id, profile);
   });
+  const resolveSupervisor = (profile: HrProfile) => {
+    if (!profile.supervisorId) return undefined;
+    const byRef = profileByRef.get(profile.supervisorId);
+    if (byRef) return byRef;
+    const supervisorEmployee = employeeById.get(profile.supervisorId);
+    if (supervisorEmployee) return profileByIdentity.get(`email:${normalizeIdentity(supervisorEmployee.email)}`) || profileByIdentity.get(`name:${normalizeIdentity(supervisorEmployee.displayName)}`);
+    const supervisorName = normalizeIdentity(profile.supervisorName);
+    return supervisorName ? uniqueProfiles.find(candidate => normalizeIdentity(employeeById.get(candidate.employeeId)?.displayName) === supervisorName) : undefined;
+  };
+  const normalizedProfiles = uniqueProfiles.map(profile => {
+    const supervisor = resolveSupervisor(profile);
+    return supervisor && supervisor.employeeId !== profile.employeeId
+      ? { ...profile, supervisorId: supervisor.employeeId, supervisorName: employeeById.get(supervisor.employeeId)?.displayName || supervisor.supervisorName }
+      : { ...profile, supervisorId: undefined };
+  });
+  const normalizedById = new Map(normalizedProfiles.map(profile => [profile.employeeId, profile]));
+  const supervisorByEmployee = new Map(normalizedProfiles.map(profile => [profile.employeeId, profile.supervisorId]));
+  const rootScore = (profile: HrProfile) => {
+    const position = normalizeIdentity(profile.position);
+    const employee = employeeById.get(profile.employeeId);
+    return (position.includes("responsable") || position.includes("director") || position.includes("gerente") || position.includes("jefe") ? 10 : 0) + (employee?.role === "admin" ? 4 : 0);
+  };
+  const state = new Map<string, "visiting" | "visited">();
+  const breakCycle = (employeeId: string, path: string[]) => {
+    if (state.get(employeeId) === "visiting") {
+      const cycle = path.slice(path.indexOf(employeeId));
+      const rootId = cycle.sort((left, right) => {
+        const score = rootScore(normalizedById.get(right)!) - rootScore(normalizedById.get(left)!);
+        return score || (employeeById.get(left)?.displayName || "").localeCompare(employeeById.get(right)?.displayName || "");
+      })[0];
+      supervisorByEmployee.delete(rootId);
+      return;
+    }
+    if (state.get(employeeId) === "visited") return;
+    state.set(employeeId, "visiting");
+    const supervisorId = supervisorByEmployee.get(employeeId);
+    if (supervisorId) breakCycle(supervisorId, [...path, employeeId]);
+    state.set(employeeId, "visited");
+  };
+  normalizedProfiles.forEach(profile => breakCycle(profile.employeeId, []));
+  const childrenBySupervisor = new Map<string, HrProfile[]>();
+  normalizedProfiles.forEach(profile => {
+    const supervisorId = supervisorByEmployee.get(profile.employeeId);
+    if (supervisorId) childrenBySupervisor.set(supervisorId, [...(childrenBySupervisor.get(supervisorId) || []), profile]);
+  });
+  const displayName = (profile: HrProfile) => employeeById.get(profile.employeeId)?.displayName || profile.employeeId;
+  const sortProfiles = (left: HrProfile, right: HrProfile) => displayName(left).localeCompare(displayName(right), "es");
   const chartRows: Array<{ profile: HrProfile; employee?: UserProfile; level: number }> = [];
   const appendBranch = (profile: HrProfile, level: number, path: Set<string>) => {
-    if (path.has(profile.employeeId)) return;
-    chartRows.push({ profile, employee: employeeById.get(profile.employeeId), level });
+    if (path.has(profile.employeeId) || chartRows.some(row => row.profile.employeeId === profile.employeeId)) return;
+    const supervisorId = supervisorByEmployee.get(profile.employeeId);
+    const chartProfile = {
+      ...profile,
+      supervisorId,
+      supervisorName: supervisorId ? employeeById.get(supervisorId)?.displayName : undefined,
+    };
+    chartRows.push({ profile: chartProfile, employee: employeeById.get(profile.employeeId), level });
     const nextPath = new Set(path);
     nextPath.add(profile.employeeId);
-    (childrenBySupervisor.get(profile.employeeId) || [])
-      .sort((left, right) =>
-        (employeeById.get(left.employeeId)?.displayName || "").localeCompare(
-          employeeById.get(right.employeeId)?.displayName || ""
-        )
-      )
-      .forEach(child => appendBranch(child, Math.min(6, level + 1), nextPath));
+    (childrenBySupervisor.get(profile.employeeId) || []).sort(sortProfiles).forEach(child => appendBranch(child, Math.min(6, level + 1), nextPath));
   };
-  const roots = uniqueProfiles
-    .filter(profile => !profile.supervisorId || !profileById.has(profile.supervisorId))
-    .sort((left, right) =>
-      (employeeById.get(left.employeeId)?.displayName || "").localeCompare(
-        employeeById.get(right.employeeId)?.displayName || ""
-      )
-    );
+  const roots = normalizedProfiles.filter(profile => !supervisorByEmployee.get(profile.employeeId)).sort(sortProfiles);
   roots.forEach(root => appendBranch(root, 0, new Set<string>()));
-  uniqueProfiles
-    .filter(profile => !chartRows.some(row => row.profile.employeeId === profile.employeeId))
-    .sort((left, right) =>
-      (employeeById.get(left.employeeId)?.displayName || "").localeCompare(
-        employeeById.get(right.employeeId)?.displayName || ""
-      )
-    )
-    .forEach(profile => appendBranch(profile, 0, new Set<string>()));
+  normalizedProfiles.filter(profile => !chartRows.some(row => row.profile.employeeId === profile.employeeId)).sort(sortProfiles).forEach(profile => appendBranch(profile, 0, new Set<string>()));
   return (
     <section className="mt-7">
       <div className="panel-card overflow-hidden">
@@ -2881,7 +2928,7 @@ function Organization({
           />
         )}
       </div>
-      <section className="panel-card mt-7 overflow-hidden"><div className="border-b px-5 py-4"><p className="font-extrabold">Organigrama y cadena de responsabilidad</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Se actualiza con el supervisor, cargo y unidades asignadas en cada expediente. Los perfiles sin supervisor aparecen como nivel superior.</p></div>{chartRows.length ? <div className="divide-y">{chartRows.map(({ profile, employee, level }) => <div className="flex items-center gap-3 px-5 py-3" style={{ paddingLeft: `${1.25 + level * 1.6}rem` }} key={profile.employeeId}><div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0F8F73]/10 text-xs font-extrabold text-[#08745D]">{(employee?.displayName || "?").slice(0, 2).toUpperCase()}</div><div className="min-w-0"><p className="font-bold">{employee?.displayName || profile.employeeId}</p><p className="text-xs text-muted-foreground">Nivel {level + 1} · {profile.position || "Sin cargo"} · {profile.department || "Sin departamento"}{profile.area ? ` · ${profile.area}` : ""}{profile.team ? ` · ${profile.team}` : ""}</p></div><span className="ml-auto rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold">{profile.supervisorName ? `Reporta a ${profile.supervisorName}` : "Nivel superior"}</span></div>)}</div> : <Empty title="Organigrama pendiente" detail="Completa supervisores y cargos en los expedientes para construir la jerarquía." />}</section>
+      <section className="panel-card mt-7 overflow-hidden"><div className="border-b px-5 py-4"><p className="font-extrabold">Organigrama y cadena de responsabilidad</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Cada persona aparece una sola vez, ordenada debajo de su supervisor.</p></div>{chartRows.length ? <div>{chartRows.map(({ profile, employee, level }) => { const name = employee?.displayName || profile.employeeId; const unitPath = [profile.department, profile.area, profile.team].filter(Boolean).join(" · "); return <div className="org-chart-row" data-level={level} style={{ paddingLeft: `${1.25 + level * 2}rem` }} key={profile.employeeId}><span className="org-chart-connector" aria-hidden="true" style={{ left: `${0.7 + level * 2}rem` }} /> <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#0F8F73]/10 text-xs font-extrabold text-[#08745D]">{name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="font-bold">{name}</p><p className="text-xs text-muted-foreground">{profile.position || "Sin cargo"}{unitPath ? ` · ${unitPath}` : ""}</p></div><div className="org-chart-meta"><span className="org-chart-level">Nivel {level + 1}</span><span>{profile.supervisorName ? `Reporta a ${profile.supervisorName}` : "Nivel superior"}</span></div></div>; })}</div> : <Empty title="Organigrama pendiente" detail="Completa supervisores y cargos en los expedientes para construir la jerarquía." />}</section>
     </section>
   );
 }

@@ -1043,7 +1043,7 @@ function AdminEditor({
               >
                 <option value="">Sin supervisor asignado</option>
                 {employees
-                  .filter(item => item.status === "active")
+                  .filter(item => item.status === "active" && item.role !== "it" && item.id !== value("employeeId"))
                   .map(item => (
                     <option key={item.id} value={item.id}>
                       {item.displayName}
@@ -2853,10 +2853,11 @@ function Organization({
     const name = employee?.displayName || profile.employeeId;
     const children = (childrenBySupervisor.get(profile.employeeId) || []).sort(sortProfiles);
     return <div className="org-tree-branch" key={profile.employeeId}>
-      <article className="org-tree-node" data-level={level}>
+      <button type="button" className="org-tree-node text-left" data-level={level} onClick={() => onEditor({ type: "profile", record: profile })} title={`Editar supervisor de ${name}`} aria-label={`Editar supervisor de ${name}`}>
+        <Pencil className="org-tree-edit-icon" size={14} aria-hidden="true" />
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#0F8F73]/10 text-sm font-extrabold text-[#08745D]">{name.slice(0, 2).toUpperCase()}</div>
-        <div className="min-w-0 max-w-[10.5rem] text-center"><p className="truncate text-sm font-extrabold" title={name}>{name}</p><p className="mt-1 truncate text-[11px] font-semibold text-[#08745D]" title={profile.position || "Sin cargo"}>{profile.position || "Sin cargo"}</p></div>
-      </article>
+        <div className="min-w-0 max-w-[10.5rem] text-center"><p className="org-tree-name truncate text-sm font-extrabold" title={name}>{name}</p><p className="org-tree-position mt-1 truncate text-[11px] font-semibold text-[#08745D]" title={profile.position || "Sin cargo"}>{profile.position || "Sin cargo"}</p></div>
+      </button>
       {children.length > 0 && <div className="org-tree-children"><div className="org-tree-children-grid">{children.map(child => renderTreeNode(child, level + 1))}</div></div>}
     </div>;
   };

@@ -191,7 +191,7 @@ export function AIChatBox({
     <div
       ref={containerRef}
       className={cn(
-        "flex flex-col bg-card text-card-foreground rounded-lg border shadow-sm",
+        "flex min-w-0 flex-col rounded-2xl border bg-card text-card-foreground shadow-sm",
         className
       )}
       style={{ height }}
@@ -306,7 +306,7 @@ export function AIChatBox({
       <form
         ref={inputAreaRef}
         onSubmit={handleSubmit}
-        className="flex gap-2 p-4 border-t bg-background/50 items-end"
+        className="flex items-end gap-3 border-t bg-background/50 p-4"
       >
         <Textarea
           ref={textareaRef}
@@ -314,14 +314,14 @@ export function AIChatBox({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="flex-1 max-h-32 resize-none min-h-9"
+          className="min-h-11 max-h-32 min-w-0 flex-1 resize-none"
           rows={1}
         />
         <Button
           type="submit"
           size="icon"
           disabled={!input.trim() || isLoading}
-          className="shrink-0 h-[38px] w-[38px]"
+          className="h-11 w-11 shrink-0"
         >
           {isLoading ? (
             <Loader2 className="size-4 animate-spin" />

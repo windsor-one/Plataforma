@@ -174,8 +174,8 @@ function Title({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
-      <div>
+    <div className="page-title">
+      <div className="min-w-0">
         <p className="eyebrow">{eyebrow}</p>
         <h1 className="mt-1 text-3xl font-extrabold tracking-[-.045em] sm:text-4xl">
           {title}
@@ -184,7 +184,7 @@ function Title({
           {detail}
         </p>
       </div>
-      {action}
+      {action && <div className="page-title-actions">{action}</div>}
     </div>
   );
 }

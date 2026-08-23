@@ -101,7 +101,7 @@ function Empty({ title, detail }: { title: string; detail: string }) {
 }
 
 function PageTitle({ eyebrow, title, actions }: { eyebrow: string; title: string; actions?: ReactNode }) {
-  return <div className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">{normalizeRoleTerminology(eyebrow)}</p><h1 className="mt-1 text-[34px] font-bold leading-[1.08] tracking-[-.04em] sm:text-[40px]">{title}</h1></div>{actions}</div>;
+  return <div className="page-title"><div className="min-w-0"><p className="eyebrow">{normalizeRoleTerminology(eyebrow)}</p><h1 className="mt-1 text-[34px] font-bold leading-[1.08] tracking-[-.04em] sm:text-[40px]">{title}</h1></div>{actions && <div className="page-title-actions">{actions}</div>}</div>;
 }
 
 function Metric({ label, value, note, icon: Icon, tone = "jade" }: { label: string; value: string; note: string; icon: LucideIcon; tone?: "jade" | "amber" | "ink" | "rose" }) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ChevronRight, Mail, Plus } from "lucide-react";
+import { ChevronRight, Mail, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { moveInternalMessageToTrash, permanentlyDeleteInternalMessage, restoreInternalMessage, saveInternalMessage, updateInternalMessageDelivery } from "@/lib/firestore";
 import { filterInternalMessages, isMailUnread, isSentBy, type MailFolder } from "@/lib/internalMail";
@@ -105,12 +105,12 @@ export default function InternalMailPanel({ messages, employees, profile, onRead
   ];
 
   return <section>
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="page-title">
       <div><p className="eyebrow">Comunicación interna</p><h1 className="mt-1 text-3xl font-extrabold tracking-tight">Correo</h1><p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground">Mensajes privados entre integrantes activos. Puedes enviar, programar o guardar correos internos sin adjuntos.</p></div>
       <button className="primary-button" onClick={() => { setEditing(null); setComposing(true); }}><Mail size={17} />Redactar</button>
     </div>
     {composing && <section className="panel-card mt-6 p-5">
-      <div className="flex items-center justify-between"><div><p className="font-extrabold">{editing ? "Editar mensaje pendiente" : "Redactar correo interno"}</p><p className="mt-1 text-xs text-muted-foreground">Selecciona uno o varios destinatarios con Ctrl o Cmd.</p></div><button type="button" className="icon-button" onClick={closeComposer} aria-label="Cerrar redacción">×</button></div>
+      <div className="flex items-center justify-between"><div><p className="font-extrabold">{editing ? "Editar mensaje pendiente" : "Redactar correo interno"}</p><p className="mt-1 text-xs text-muted-foreground">Selecciona uno o varios destinatarios con Ctrl o Cmd.</p></div><button type="button" className="icon-button" onClick={closeComposer} aria-label="Cerrar redacción" title="Cerrar redacción"><X size={18} /></button></div>
       <form className="form-stack mt-5" onSubmit={submit}>
         <label>Para<select className="field min-h-32" name="recipientIds" multiple required defaultValue={editing?.recipientIds || []}>{employees.filter(employee => employee.status === "active" && employee.id !== profile.id).map(employee => <option key={employee.id} value={employee.id}>{employee.displayName} · {employee.email}</option>)}</select></label>
         <label>Asunto<input className="field" name="subject" maxLength={160} defaultValue={editing?.subject} placeholder="Asunto del mensaje" /></label>

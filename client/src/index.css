@@ -65,11 +65,13 @@
   .form-stack { @apply space-y-5 text-[15px] font-medium; }.form-stack label { @apply block; }
   .workflow-link { @apply -mt-1 inline-flex w-fit text-left text-sm font-semibold text-[#007AFF] hover:underline; }
   .workflow-dialog { @apply grid w-full max-w-2xl overflow-hidden rounded-[1.4rem] border text-card-foreground; background: color-mix(in srgb, var(--card) 84%, transparent); backdrop-filter: blur(26px) saturate(150%); }.workflow-dialog.has-related { @apply max-w-5xl md:grid-cols-[minmax(0,1.12fr)_minmax(20rem,.88fr)]; }.workflow-main-panel { @apply min-w-0; }.workflow-related-panel { @apply min-w-0 border-t bg-muted/70 md:border-l md:border-t-0; }
+  .page-title { @apply flex flex-wrap items-end justify-between gap-5; }
+  .page-title-actions { @apply flex max-w-full flex-wrap items-center gap-2; }
   .eyebrow { @apply text-[11px] font-semibold uppercase tracking-[.08em] text-muted-foreground; }
-  .metric-card { @apply relative flex min-h-32 justify-between overflow-hidden rounded-[1.25rem] bg-card p-5; }.metric-card::before { content: none; }.metric-card:nth-child(1) .metric-icon, .metric-card:nth-child(2) .metric-icon { @apply bg-[#007AFF]/12 text-[#007AFF]; }.metric-card:nth-child(3) .metric-icon { @apply bg-[#FFC72C]/25 text-[#8A6400]; }.metric-card:nth-child(4) .metric-icon { @apply bg-[#C53B53]/12 text-[#C53B53]; }
-  .metric-number, .time-code { font-family: var(--font-mono); letter-spacing: -0.05em; }.metric-icon { @apply grid h-10 w-10 place-items-center rounded-full; }
+  .metric-card { @apply relative flex min-h-32 gap-4 justify-between overflow-hidden rounded-[1.25rem] bg-card p-5; }.metric-card > :first-child { @apply min-w-0; }.metric-card::before { content: none; }.metric-card:nth-child(1) .metric-icon, .metric-card:nth-child(2) .metric-icon { @apply bg-[#007AFF]/12 text-[#007AFF]; }.metric-card:nth-child(3) .metric-icon { @apply bg-[#FFC72C]/25 text-[#8A6400]; }.metric-card:nth-child(4) .metric-icon { @apply bg-[#C53B53]/12 text-[#C53B53]; }
+  .metric-number, .time-code { font-family: var(--font-mono); letter-spacing: -0.05em; }.metric-icon { @apply grid h-11 w-11 shrink-0 place-items-center rounded-full; }
   .panel-card { @apply relative overflow-hidden rounded-[1.35rem] bg-card; }.panel-card > :first-child::before { content: none; }
-  .status-pill { @apply inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-normal; }.status-pill.success { @apply bg-[#007AFF]/15 text-[#005DBB]; }.status-pill.warning { @apply bg-[#FFC72C]/28 text-[#7A5600]; }.status-pill.danger { @apply bg-[#C53B53]/14 text-[#B12E47]; }.status-pill.muted { @apply bg-muted text-muted-foreground; }
+  .status-pill { @apply inline-flex min-h-6 w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-normal; }.status-pill.success { @apply bg-[#007AFF]/15 text-[#005DBB]; }.status-pill.warning { @apply bg-[#FFC72C]/28 text-[#7A5600]; }.status-pill.danger { @apply bg-[#C53B53]/14 text-[#B12E47]; }.status-pill.muted { @apply bg-muted text-muted-foreground; }
   .agenda-row { @apply flex items-center gap-3 px-5 py-4 transition-colors duration-200 hover:bg-muted; }.status-marker { @apply h-2.5 w-2.5 rounded-full bg-[#007AFF]; }.status-marker.confirmed, .status-marker.completed { @apply bg-[#0A84FF]; }.status-marker.pending { @apply bg-[#FFC72C]; }.status-marker.cancelled { @apply bg-[#C53B53]; }
   .signal-card { @apply flex gap-3 rounded-xl bg-muted p-3; }.signal-card p { @apply text-sm leading-5; }.signal-card span { @apply mt-0.5 block text-xs text-muted-foreground; }
   .chart-stat { @apply rounded-xl bg-muted p-3; }.chart-track { @apply mt-3 h-2 overflow-hidden rounded-full bg-[#E5E5EA] dark:bg-[#3A3A3C]; }.chart-fill { @apply block h-full rounded-full; }.chart-fill.fill-1 { @apply bg-[#007AFF]; }.chart-fill.fill-2 { @apply bg-[#0A84FF]; }.chart-fill.fill-3 { @apply bg-[#FFC72C]; }.chart-fill.fill-4 { @apply bg-[#C53B53]; }
@@ -120,6 +122,11 @@
   .sidebar-panel nav { margin-top: 1rem; }
   .sidebar-panel .side-link { padding-top: .5rem; padding-bottom: .5rem; }
   @media (max-height: 720px) { .sidebar-panel { padding-top: 1rem; padding-bottom: .75rem; }.sidebar-footer { display: none; }.sidebar-header p { max-width: 11rem; }.sidebar-navigation { margin-top: .7rem; } }
+}
+@media (max-width: 639px) {
+  .page-title { @apply items-start gap-4; }
+  .page-title-actions { @apply w-full; }
+  .page-title-actions > * { @apply max-w-full; }
 }
 @media (max-width: 1023px) {
   .sidebar-panel { min-height: 0; height: auto; padding: .75rem; }

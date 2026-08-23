@@ -2,7 +2,7 @@
  * Sistema SIGES — Recursos Humanos: experiencia de escritorio con paneles laterales,
  * datos organizacionales reutilizables y privacidad estricta por titular.
  */
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import {
   Award,
   BookOpen,
@@ -2848,17 +2848,59 @@ function Organization({
   const roots = normalizedProfiles.filter(profile => !supervisorByEmployee.get(profile.employeeId)).sort(sortProfiles);
   roots.forEach(root => appendBranch(root, 0, new Set<string>()));
   normalizedProfiles.filter(profile => !chartRows.some(row => row.profile.employeeId === profile.employeeId)).sort(sortProfiles).forEach(profile => appendBranch(profile, 0, new Set<string>()));
+  const orgCanvasRef = useRef<HTMLDivElement>(null);
+  const [orgCanvasSize, setOrgCanvasSize] = useState({ width: 0, height: 0 });
+  const [orgConnectors, setOrgConnectors] = useState<Array<{ key: string; path: string }>>([]);
+  useLayoutEffect(() => {
+    const canvas = orgCanvasRef.current;
+    if (!canvas) return;
+    const measure = () => {
+      const canvasRect = canvas.getBoundingClientRect();
+      const width = Math.max(canvas.scrollWidth, canvas.clientWidth);
+      const height = Math.max(canvas.scrollHeight, canvas.clientHeight);
+      const paths: Array<{ key: string; path: string }> = [];
+      canvas.querySelectorAll<HTMLElement>("[data-org-children]").forEach(childrenContainer => {
+        const parentId = childrenContainer.dataset.orgChildren;
+        if (!parentId) return;
+        const parent = canvas.querySelector<HTMLElement>(`[data-org-id="${CSS.escape(parentId)}"]`);
+        if (!parent) return;
+        const childNodes = Array.from(childrenContainer.querySelectorAll<HTMLElement>(":scope > .org-tree-children-grid > .org-tree-branch > [data-org-id]"));
+        if (!childNodes.length) return;
+        const parentRect = parent.getBoundingClientRect();
+        const parentX = parentRect.left + parentRect.width / 2 - canvasRect.left;
+        const parentY = parentRect.bottom - canvasRect.top;
+        const childPoints = childNodes.map(child => {
+          const rect = child.getBoundingClientRect();
+          return { x: rect.left + rect.width / 2 - canvasRect.left, y: rect.top - canvasRect.top };
+        });
+        const first = childPoints[0];
+        const last = childPoints[childPoints.length - 1];
+        const branchY = Math.max(parentY + 10, Math.min(...childPoints.map(point => point.y)) - 16);
+        const segments = [`M ${parentX} ${parentY}`, `V ${branchY}`];
+        if (Math.abs(first.x - last.x) > 0.5) segments.push(`M ${first.x} ${branchY}`, `H ${last.x}`);
+        childPoints.forEach(point => segments.push(`M ${point.x} ${branchY}`, `V ${point.y}`));
+        paths.push({ key: parentId, path: segments.join(" ") });
+      });
+      setOrgCanvasSize(current => current.width === width && current.height === height ? current : { width, height });
+      setOrgConnectors(current => current.length === paths.length && current.every((item, index) => item.key === paths[index]?.key && item.path === paths[index]?.path) ? current : paths);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(canvas);
+    canvas.querySelectorAll<HTMLElement>("[data-org-id]").forEach(node => observer.observe(node));
+    return () => observer.disconnect();
+  }, [normalizedProfiles, roots]);
   const renderTreeNode = (profile: HrProfile, level = 0): ReactNode => {
     const employee = employeeById.get(profile.employeeId);
     const name = employee?.displayName || profile.employeeId;
     const children = (childrenBySupervisor.get(profile.employeeId) || []).sort(sortProfiles);
-    return <div className="org-tree-branch" key={profile.employeeId}>
-      <button type="button" className="org-tree-node text-left" data-level={level} onClick={() => onEditor({ type: "profile", record: profile })} title={`Editar supervisor de ${name}`} aria-label={`Editar supervisor de ${name}`}>
+    return <div className="org-tree-branch" key={profile.employeeId} data-org-branch={profile.employeeId}>
+      <button type="button" className="org-tree-node text-left" data-org-id={profile.employeeId} data-level={level} onClick={() => onEditor({ type: "profile", record: profile })} title={`Editar supervisor de ${name}`} aria-label={`Editar supervisor de ${name}`}>
         <Pencil className="org-tree-edit-icon" size={14} aria-hidden="true" />
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#0F8F73]/10 text-sm font-extrabold text-[#08745D]">{name.slice(0, 2).toUpperCase()}</div>
         <div className="min-w-0 max-w-[10.5rem] text-center"><p className="org-tree-name truncate text-sm font-extrabold" title={name}>{name}</p><p className="org-tree-position mt-1 truncate text-[11px] font-semibold text-[#08745D]" title={profile.position || "Sin cargo"}>{profile.position || "Sin cargo"}</p></div>
       </button>
-      {children.length > 0 && <div className="org-tree-children"><div className="org-tree-children-grid">{children.map(child => renderTreeNode(child, level + 1))}</div></div>}
+      {children.length > 0 && <div className="org-tree-children" data-org-children={profile.employeeId}><div className="org-tree-children-grid" data-children={children.length}>{children.map(child => renderTreeNode(child, level + 1))}</div></div>}
     </div>;
   };
   return (
@@ -2947,7 +2989,7 @@ function Organization({
           />
         )}
       </div>
-      <section className="panel-card mt-7 overflow-hidden"><div className="border-b px-5 py-4"><p className="font-extrabold">Organigrama y cadena de responsabilidad</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Cada persona aparece una sola vez, ordenada debajo de su supervisor.</p></div>{chartRows.length ? <div className="org-tree-canvas"><div className="org-tree-roots">{roots.map(root => renderTreeNode(root))}</div></div> : <Empty title="Organigrama pendiente" detail="Completa supervisores y cargos en los expedientes para construir la jerarquía." />}</section>
+      <section className="panel-card mt-7 overflow-hidden"><div className="border-b px-5 py-4"><p className="font-extrabold">Organigrama y cadena de responsabilidad</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Cada persona aparece una sola vez, ordenada debajo de su supervisor.</p></div>{chartRows.length ? <div className="org-tree-canvas" ref={orgCanvasRef}>{orgCanvasSize.width > 0 && <svg className="org-tree-connectors" width={orgCanvasSize.width} height={orgCanvasSize.height} viewBox={`0 0 ${orgCanvasSize.width} ${orgCanvasSize.height}`} aria-hidden="true"><g>{orgConnectors.map(connector => <path key={connector.key} d={connector.path} />)}</g></svg>}<div className="org-tree-roots">{roots.map(root => renderTreeNode(root))}</div></div> : <Empty title="Organigrama pendiente" detail="Completa supervisores y cargos en los expedientes para construir la jerarquía." />}</section>
     </section>
   );
 }

@@ -82,11 +82,9 @@ function SigesWordmark({ className = "", compact = false }: { className?: string
 }
 
 function ConnectionStatus({ isOnline }: { isOnline: boolean }) {
-  const label = isOnline ? "Conectado" : "Sin conexión";
-  return <span role="status" aria-live="polite" title={isOnline ? "Conectado a internet" : "Sin conexión a internet; los cambios quedarán pendientes de sincronización"} className={`connection-status ${isOnline ? "is-online" : "is-offline"}`}>
-    <span className="connection-status-icon" aria-hidden="true">{isOnline ? <Wifi size={15} strokeWidth={2.25} /> : <WifiOff size={15} strokeWidth={2.25} />}</span>
-    <span className="hidden sm:inline">{label}</span>
-    <span className="sr-only">{isOnline ? " a internet" : " a internet; los cambios quedarán pendientes de sincronización"}</span>
+  return <span role="status" aria-live="polite" title={isOnline ? "Conectado a internet" : "Sin conexión a internet; los cambios quedarán pendientes de sincronización"} className={`connection-status-icon-only ${isOnline ? "is-online" : "is-offline"}`}>
+    <span aria-hidden="true">{isOnline ? <Wifi size={17} strokeWidth={2.25} /> : <WifiOff size={17} strokeWidth={2.25} />}</span>
+    <span className="sr-only">{isOnline ? "Conectado a internet" : "Sin conexión a internet; los cambios quedarán pendientes de sincronización"}</span>
   </span>;
 }
 

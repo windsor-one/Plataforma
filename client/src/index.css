@@ -54,12 +54,12 @@
   .secondary-button:hover { @apply bg-[#E5E5EA] dark:bg-[#3A3A3C]; }
   .icon-button { @apply grid h-10 w-10 shrink-0 place-items-center rounded-xl text-muted-foreground transition-[transform,background-color,color] duration-150 hover:bg-muted hover:text-foreground active:scale-[.94]; }
   .mobile-header-actions, .desktop-header-actions { @apply flex shrink-0 items-center gap-1.5; }
-  .connection-status { @apply inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border px-2.5 text-xs font-bold; }
-  .connection-status-icon { @apply grid h-5 w-5 shrink-0 place-items-center; }
-  .connection-status.is-online { @apply border-[#007AFF]/20 bg-[#007AFF]/8 text-[#005DBB]; }
-  .connection-status.is-offline { @apply border-[#C53B53]/20 bg-[#C53B53]/8 text-[#B12E47]; }
-  .dark .connection-status.is-online { @apply text-[#64D2FF]; }
-  .dark .connection-status.is-offline { @apply text-[#FF8B98]; }
+  .connection-status-icon-only { @apply grid h-10 w-10 shrink-0 place-items-center rounded-xl border text-muted-foreground transition-[background-color,color,transform] duration-150; }
+  .connection-status-icon-only:hover { @apply bg-muted; }
+  .connection-status-icon-only.is-online { @apply border-[#007AFF]/20 bg-[#007AFF]/8 text-[#005DBB]; }
+  .connection-status-icon-only.is-offline { @apply border-[#C53B53]/20 bg-[#C53B53]/8 text-[#B12E47]; }
+  .dark .connection-status-icon-only.is-online { @apply text-[#64D2FF]; }
+  .dark .connection-status-icon-only.is-offline { @apply text-[#FF8B98]; }
   .icon-button.danger { @apply hover:bg-red-500/10 hover:text-destructive; }
   .field { @apply mt-2 block w-full rounded-xl border bg-card px-3.5 py-3 text-[15px] outline-none placeholder:text-muted-foreground/80 focus:border-[#007AFF]; }
   .form-stack { @apply space-y-5 text-[15px] font-medium; }.form-stack label { @apply block; }

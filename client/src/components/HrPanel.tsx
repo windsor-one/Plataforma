@@ -2748,6 +2748,12 @@ function Organization({
     if (typeof value === "string") return Date.parse(value) || 0;
     return 0;
   };
+  const isItProfile = (profile: HrProfile) => {
+    const department = normalizeIdentity(profile.department);
+    const position = normalizeIdentity(profile.position);
+    const employee = employeeById.get(profile.employeeId);
+    return employee?.role === "it" || department === "it" || department === "informatica" || department.includes("tecnologia de la informacion") || (position === "soporte tecnico" && department === "it");
+  };
   const profileIdentity = (profile: HrProfile) => {
     const employee = employeeById.get(profile.employeeId);
     // En expedientes migrados, el id y el correo pueden cambiar; el nombre visible
@@ -2761,7 +2767,7 @@ function Organization({
   // Firestore puede conservar expedientes antiguos con ids distintos para la misma persona.
   // Dedupe por email/nombre estable y no solo por employeeId para que el organigrama no repita nodos.
   const uniqueProfiles = Array.from(
-    profiles.reduce((byPerson, profile) => {
+    profiles.filter(profile => !isItProfile(profile)).reduce((byPerson, profile) => {
       const key = profileIdentity(profile);
       const current = byPerson.get(key);
       const isCanonical = profile.id === profile.employeeId;
@@ -2846,12 +2852,10 @@ function Organization({
     const employee = employeeById.get(profile.employeeId);
     const name = employee?.displayName || profile.employeeId;
     const children = (childrenBySupervisor.get(profile.employeeId) || []).sort(sortProfiles);
-    const unitPath = [profile.department, profile.area, profile.team].filter(Boolean).join(" · ");
     return <div className="org-tree-branch" key={profile.employeeId}>
       <article className="org-tree-node" data-level={level}>
         <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#0F8F73]/10 text-sm font-extrabold text-[#08745D]">{name.slice(0, 2).toUpperCase()}</div>
-        <div className="min-w-0 text-center"><p className="truncate text-sm font-extrabold">{name}</p><p className="mt-1 truncate text-[11px] font-semibold text-[#08745D]">{profile.position || "Sin cargo"}</p>{unitPath && <p className="mt-1 truncate text-[10px] text-muted-foreground">{unitPath}</p>}</div>
-        <span className="org-tree-level">Nivel {level + 1}</span>
+        <div className="min-w-0 max-w-[10.5rem] text-center"><p className="truncate text-sm font-extrabold" title={name}>{name}</p><p className="mt-1 truncate text-[11px] font-semibold text-[#08745D]" title={profile.position || "Sin cargo"}>{profile.position || "Sin cargo"}</p></div>
       </article>
       {children.length > 0 && <div className="org-tree-children"><div className="org-tree-children-grid">{children.map(child => renderTreeNode(child, level + 1))}</div></div>}
     </div>;
